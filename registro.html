@@ -7,10 +7,22 @@
         body { font-family: sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; padding-top: 50px; }
         .formulario { background: white; padding: 30px; border-radius: 10px; box-shadow: 0px 5px 15px rgba(0,0,0,0.1); width: 350px; }
         h2 { text-align: center; color: #333; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #25d366; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        
+        input, select { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        
+        /* Estilos para el contenedor del teléfono */
+        .telefono-container { display: flex; gap: 10px; margin: 10px 0; align-items: center; }
+        .telefono-container select { width: 35%; margin: 0; }
+        .telefono-container input { width: 65%; margin: 0; }
+
+        button { width: 100%; padding: 12px; margin-top: 10px; background-color: #25d366; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         button:hover { background-color: #128c7e; }
+        
         .mensaje-exito { color: green; text-align: center; font-weight: bold; display: none; }
+        
+        .link-login { text-align: center; margin-top: 15px; font-size: 0.9rem; }
+        .link-login a { color: #2980b9; text-decoration: none; font-weight: bold; }
+        .link-login a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -18,12 +30,28 @@
     <div class="formulario">
         <h2>Registra tu Negocio</h2>
         <input type="text" id="nombreNegocio" placeholder="Nombre del Restaurante">
-        <input type="text" id="telefonoWhatsApp" placeholder="WhatsApp (Ej: 529691234567)">
+        
+        <!-- Nuevo selector de código internacional -->
+        <div class="telefono-container">
+            <select id="codigoPais">
+                <option value="+52">🇲🇽 +52</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+34">🇪🇸 +34</option>
+                <option value="+54">🇦🇷 +54</option>
+                <option value="+57">🇨🇴 +57</option>
+            </select>
+            <input type="tel" id="telefonoWhatsApp" placeholder="WhatsApp (Ej: 9691234567)">
+        </div>
+
         <input type="email" id="correo" placeholder="Tu Correo Electrónico">
+        <!-- Campo de contraseña -->
         <input type="password" id="clave" placeholder="Crea una Contraseña">
         
         <button id="btnRegistro">Crear mi Menú Digital</button>
         <p id="textoExito" class="mensaje-exito">¡Negocio registrado con éxito! Redirigiendo...</p>
+
+        <!-- Enlace para iniciar sesión -->
+        <p class="link-login">¿Ya tienes cuenta? <a href="index.html">Inicia sesión aquí</a></p>
     </div>
 
     <!-- CARGA DE LIBRERÍAS DE FIREBASE -->
@@ -43,28 +71,46 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // --- FUNCIÓN PARA ENCRIPTAR LA CONTRASEÑA (SHA-256) ---
+        async function encriptarContrasena(mensaje) {
+            const msgBuffer = new TextEncoder().encode(mensaje);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
         const btn = document.getElementById('btnRegistro');
         
         btn.addEventListener('click', async () => {
             const nombre = document.getElementById('nombreNegocio').value;
-            const whatsapp = document.getElementById('telefonoWhatsApp').value;
+            const codigoPais = document.getElementById('codigoPais').value;
+            const numeroLocal = document.getElementById('telefonoWhatsApp').value;
             const correo = document.getElementById('correo').value;
+            const claveViva = document.getElementById('clave').value;
 
-            if (nombre === "" || whatsapp === "") {
-                alert("Por favor, llena los campos básicos.");
+            // Validación de campos vacíos
+            if (nombre === "" || numeroLocal === "" || correo === "" || claveViva === "") {
+                alert("Por favor, llena todos los campos.");
                 return;
             }
 
             btn.innerText = "Guardando...";
             btn.disabled = true;
 
+            // Unimos el código del país con el número
+            const whatsappCompleto = codigoPais + numeroLocal;
             const linkPersonalizado = nombre.toLowerCase().trim().replace(/\s+/g, "-");
 
             try {
+                // Encriptamos la contraseña antes de mandarla a Firebase
+                const claveEncriptada = await encriptarContrasena(claveViva);
+
                 const docRef = await addDoc(collection(db, "restaurantes"), {
                     nombre: nombre,
-                    whatsapp: whatsapp,
+                    whatsapp: whatsappCompleto,
                     correo: correo,
+                    clave: claveEncriptada, // Guardamos el Hash, no el texto real
                     slug: linkPersonalizado,
                     fecha: new Date()
                 });
