@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -32,7 +31,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN DE FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
             authDomain: "pedipro-1853f.firebaseapp.com",
@@ -42,11 +40,9 @@
             appId: "1:346303291186:web:7b5e06aead830c54e4812b"
         };
 
-        // Inicializamos Firebase y la Base de Datos
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- LÓGICA DE REGISTRO ---
         const btn = document.getElementById('btnRegistro');
         
         btn.addEventListener('click', async () => {
@@ -65,7 +61,6 @@
             const linkPersonalizado = nombre.toLowerCase().trim().replace(/\s+/g, "-");
 
             try {
-                // 1. Guardamos la información
                 const docRef = await addDoc(collection(db, "restaurantes"), {
                     nombre: nombre,
                     whatsapp: whatsapp,
@@ -74,13 +69,8 @@
                     fecha: new Date()
                 });
 
-                console.log("Documento guardado con ID: ", docRef.id);
-                
-                // 2. Mostramos éxito
                 document.getElementById('textoExito').style.display = "block";
                 
-                // 3. LA MEJORA: Redirigir al Dashboard llevando el ID del nuevo restaurante
-                // Esperamos 1.5 segundos para que el usuario vea el mensaje de éxito y luego redirigimos
                 setTimeout(() => {
                     window.location.href = "dashboard.html?id=" + docRef.id;
                 }, 1500);
@@ -93,104 +83,5 @@
             }
         });
     </script>
-
 </body>
-=======
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Registro de Mi Restaurante</title>
-    <style>
-        body { font-family: sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; padding-top: 50px; }
-        .formulario { background: white; padding: 30px; border-radius: 10px; box-shadow: 0px 5px 15px rgba(0,0,0,0.1); width: 350px; }
-        h2 { text-align: center; color: #333; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #25d366; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        button:hover { background-color: #128c7e; }
-        .mensaje-exito { color: green; text-align: center; font-weight: bold; display: none; }
-    </style>
-</head>
-<body>
-
-    <div class="formulario">
-        <h2>Registra tu Negocio</h2>
-        <input type="text" id="nombreNegocio" placeholder="Nombre del Restaurante">
-        <input type="text" id="telefonoWhatsApp" placeholder="WhatsApp (Ej: 529691234567)">
-        <input type="email" id="correo" placeholder="Tu Correo Electrónico">
-        <input type="password" id="clave" placeholder="Crea una Contraseña">
-        
-        <button id="btnRegistro">Crear mi Menú Digital</button>
-        <p id="textoExito" class="mensaje-exito">¡Negocio registrado con éxito! Redirigiendo...</p>
-    </div>
-
-    <!-- CARGA DE LIBRERÍAS DE FIREBASE -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // --- CONFIGURACIÓN DE FIREBASE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
-            authDomain: "pedipro-1853f.firebaseapp.com",
-            projectId: "pedipro-1853f",
-            storageBucket: "pedipro-1853f.firebasestorage.app",
-            messagingSenderId: "346303291186",
-            appId: "1:346303291186:web:7b5e06aead830c54e4812b"
-        };
-
-        // Inicializamos Firebase y la Base de Datos
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // --- LÓGICA DE REGISTRO ---
-        const btn = document.getElementById('btnRegistro');
-        
-        btn.addEventListener('click', async () => {
-            const nombre = document.getElementById('nombreNegocio').value;
-            const whatsapp = document.getElementById('telefonoWhatsApp').value;
-            const correo = document.getElementById('correo').value;
-
-            if (nombre === "" || whatsapp === "") {
-                alert("Por favor, llena los campos básicos.");
-                return;
-            }
-
-            btn.innerText = "Guardando...";
-            btn.disabled = true;
-
-            const linkPersonalizado = nombre.toLowerCase().trim().replace(/\s+/g, "-");
-
-            try {
-                // 1. Guardamos la información
-                const docRef = await addDoc(collection(db, "restaurantes"), {
-                    nombre: nombre,
-                    whatsapp: whatsapp,
-                    correo: correo,
-                    slug: linkPersonalizado,
-                    fecha: new Date()
-                });
-
-                console.log("Documento guardado con ID: ", docRef.id);
-                
-                // 2. Mostramos éxito
-                document.getElementById('textoExito').style.display = "block";
-                
-                // 3. LA MEJORA: Redirigir al Dashboard llevando el ID del nuevo restaurante
-                // Esperamos 1.5 segundos para que el usuario vea el mensaje de éxito y luego redirigimos
-                setTimeout(() => {
-                    window.location.href = "dashboard.html?id=" + docRef.id;
-                }, 1500);
-
-            } catch (error) {
-                console.error("Error al guardar: ", error);
-                alert("Hubo un error al guardar los datos.");
-                btn.innerText = "Crear mi Menú Digital";
-                btn.disabled = false;
-            }
-        });
-    </script>
-
-</body>
->>>>>>> 1ae933f9805ecb974ea9809b6308cf81961826e6
 </html>
