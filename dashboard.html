@@ -30,10 +30,23 @@
         .variante-item { background: #f9f9f9; padding: 10px; border-left: 3px solid #e67e22; margin-top: 10px; position: relative; }
         .btn-eliminar { color: red; cursor: pointer; border: none; background: none; font-size: 0.8rem; margin-top: 5px; }
         
-        .pedido-card { background: #fdfdfd; border-left: 5px solid #e67e22; padding: 15px; border-radius: 5px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .pedido-card h4 { margin: 0 0 10px 0; color: #2c3e50; }
-        .pedido-card ul { margin: 0; padding-left: 20px; font-size: 0.9rem; color: #555; }
-        .pedido-card .total { font-weight: bold; color: #27ae60; margin-top: 10px; }
+        /* --- NUEVOS ESTILOS PARA LA TABLA Y COMANDAS --- */
+        .tabla-profesional { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95rem; }
+        .tabla-profesional th, .tabla-profesional td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .tabla-profesional th { background-color: #2c3e50; color: white; }
+        .tabla-profesional tr:hover { background-color: #f1f2f6; }
+        
+        .badge-tipo { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; color: white; }
+        .badge-mesa { background-color: #27ae60; }
+        .badge-online { background-color: #2980b9; }
+        .badge-pago { background-color: #f39c12; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; color: white; }
+        
+        .comanda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }
+        .pedido-card { background: #fdfdfd; border-left: 5px solid #e67e22; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; }
+        .pedido-card h4 { margin: 0 0 10px 0; color: #2c3e50; font-size: 1.1rem; }
+        .pedido-card ul { margin: 0 0 15px 0; padding-left: 20px; font-size: 0.95rem; color: #333; }
+        .btn-completar { background: #27ae60; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.2s; }
+        .btn-completar:hover { background: #219653; }
     </style>
 </head>
 <body>
@@ -44,7 +57,7 @@
         <hr style="border-color: #34495e; margin-bottom: 20px;">
         <nav>
             <div class="nav-item activo" onclick="cambiarVista('vista-inicio', this)">🏠 Inicio</div>
-            <div class="nav-item" onclick="cambiarVista('vista-pedidos', this)">📋 Pedidos</div>
+            <div class="nav-item" onclick="cambiarVista('vista-pedidos', this)">📋 Pedidos y Comandas</div>
             <div class="nav-item" onclick="cambiarVista('vista-menu', this)">🍔 Mi Menú</div>
             <div class="nav-item" onclick="cambiarVista('vista-caja', this)">💰 Caja</div>
             <div class="nav-item" onclick="cambiarVista('vista-disponibilidad', this)">✅ Disponibilidad</div>
@@ -63,31 +76,45 @@
             </div>
         </div>
 
+        <!-- 2. VISTA PEDIDOS (ACTUALIZADA CON TABLA Y COMANDAS) -->
         <div id="vista-pedidos" class="vista">
             <div class="card">
-                <h2>Gestión de Pedidos</h2>
+                <h2>Control de Pedidos</h2>
                 <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                    <button class="btn-add" style="background: #2980b9;" onclick="filtrarPestana('online')">🛵 Pedidos en Línea</button>
-                    <button class="btn-add" style="background: #27ae60;" onclick="filtrarPestana('mesa')">🍽️ Pedidos en Mesas</button>
-                    <button class="btn-add" style="background: #95a5a6; width: auto;" onclick="window.cargarPedidos() ">🔄 Actualizar</button>
+                    <button class="btn-add" style="background: #2c3e50;" onclick="filtrarPestana('tabla')">📊 Historial (Tabla)</button>
+                    <button class="btn-add" style="background: #e67e22;" onclick="filtrarPestana('comandas')">👨‍🍳 Comandas Digitales</button>
+                    <button class="btn-add" style="background: #95a5a6; width: auto;" onclick="window.cargarPedidos()">🔄 Actualizar</button>
                 </div>
 
-                <div id="lista-pedidos-online" style="display: block;">
-                    <p style="color: #7f8c8d;">Cargando pedidos online...</p>
+                <!-- TABLA GENERAL -->
+                <div id="lista-pedidos-tabla" style="display: block; overflow-x: auto;">
+                    <table class="tabla-profesional">
+                        <thead>
+                            <tr>
+                                <th># Pedido</th>
+                                <th>Cliente / Mesa</th>
+                                <th>Tipo</th>
+                                <th>Fecha y Hora</th>
+                                <th>Estado Pago</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-pedidos">
+                            <tr><td colspan="6" style="text-align: center; color: #7f8c8d;">Cargando historial...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
                 
-                <div id="lista-pedidos-mesa" style="display: none;">
-                    <p style="color: #7f8c8d;">Cargando pedidos de mesa...</p>
+                <!-- COMANDAS DIGITALES (COCINA) -->
+                <div id="lista-pedidos-comandas" class="comanda-grid" style="display: none;">
+                    <!-- Las tarjetas de cocina irán aquí -->
                 </div>
             </div>
         </div>
 
-        <!-- 3. VISTA MI MENÚ (Formulario con Imagen) -->
         <div id="vista-menu" class="vista">
             <div class="card">
                 <h2>Agregar Producto al Menú</h2>
-                
-                <!-- NUEVO CAMPO: FOTO -->
                 <div class="form-group">
                     <label>Foto del Producto (Opcional):</label>
                     <input type="file" id="prodImagen" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
@@ -155,13 +182,14 @@
             if(idVista === 'vista-pedidos') window.cargarPedidos();
         }
 
+        // --- NUEVA LÓGICA DE FILTRADO (TABLA vs COMANDAS) ---
         function filtrarPestana(tipo) {
-            if (tipo === 'online') {
-                document.getElementById('lista-pedidos-online').style.display = 'block';
-                document.getElementById('lista-pedidos-mesa').style.display = 'none';
+            if (tipo === 'tabla') {
+                document.getElementById('lista-pedidos-tabla').style.display = 'block';
+                document.getElementById('lista-pedidos-comandas').style.display = 'none';
             } else {
-                document.getElementById('lista-pedidos-online').style.display = 'none';
-                document.getElementById('lista-pedidos-mesa').style.display = 'block';
+                document.getElementById('lista-pedidos-tabla').style.display = 'none';
+                document.getElementById('lista-pedidos-comandas').style.display = 'grid'; // Usamos grid para las tarjetas
             }
         }
 
@@ -177,8 +205,8 @@
     <!-- SCRIPT DE FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        // IMPORTAMOS STORAGE PARA LAS FOTOS
+        // AÑADIMOS updateDoc a la importación
+        import { getFirestore, doc, getDoc, collection, addDoc, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -192,7 +220,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app); // Inicializamos Storage
+        const storage = getStorage(app); 
 
         const urlParams = new URLSearchParams(window.location.search);
         const idRestaurante = urlParams.get('id');
@@ -215,42 +243,104 @@
         }
         cargarDatos();
 
+        // --- SISTEMA DE TABLA Y COMANDAS ---
         window.cargarPedidos = async function() {
             const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
             const snapshot = await getDocs(pedidosRef);
             
-            const contOnline = document.getElementById('lista-pedidos-online');
-            const contMesa = document.getElementById('lista-pedidos-mesa');
+            const tbody = document.getElementById('tbody-pedidos');
+            const contComandas = document.getElementById('lista-pedidos-comandas');
             
-            contOnline.innerHTML = '';
-            contMesa.innerHTML = '';
+            tbody.innerHTML = '';
+            contComandas.innerHTML = '';
 
             if(snapshot.empty) {
-                contOnline.innerHTML = '<p style="color: #7f8c8d;">Aún no hay pedidos en línea.</p>';
-                contMesa.innerHTML = '<p style="color: #7f8c8d;">Aún no hay pedidos en mesas.</p>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay pedidos registrados.</td></tr>';
+                contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas por preparar.</p>';
                 return;
             }
 
+            // Convertimos a array para ordenarlos (los más nuevos primero)
+            let ordenes = [];
             snapshot.forEach(doc => {
-                const ped = doc.data();
-                let itemsHtml = '';
-                ped.items.forEach(i => itemsHtml += `<li>${i.nombre} ($${i.precio})</li>`);
-                const tituloPedido = ped.tipoOrigen === 'mesa' ? `Mesa #${ped.numeroMesa}` : `Pedido Para Llevar`;
-                const colorBorde = ped.tipoOrigen === 'mesa' ? '#27ae60' : '#2980b9';
+                ordenes.push({ id: doc.id, ...doc.data() });
+            });
+            ordenes.sort((a, b) => b.fecha.toDate() - a.fecha.toDate());
 
-                const cardHtml = `
-                    <div class="pedido-card" style="border-left-color: ${colorBorde};">
-                        <h4>${tituloPedido}</h4>
-                        <ul>${itemsHtml}</ul>
-                        <div class="total">Total a cobrar: $${ped.total.toFixed(2)}</div>
-                    </div>
+            ordenes.forEach(ped => {
+                // 1. Extraer Datos Generales
+                const numComanda = ped.numeroComanda || "S/N";
+                const fechaObj = ped.fecha.toDate();
+                const fechaFormat = fechaObj.toLocaleDateString() + " " + fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                const esMesa = ped.tipoOrigen === 'mesa';
+                const tipoStr = esMesa ? "En Mesa" : "A Domicilio";
+                const badgeClass = esMesa ? "badge-mesa" : "badge-online";
+                
+                let clienteInfo = esMesa ? `Mesa #${ped.numeroMesa}` : (ped.clienteEnvio ? ped.clienteEnvio.nombre : "Cliente Web");
+                let estadoPago = ped.estadoPago || "Pendiente"; // Por defecto
+
+                // --- LLENAR TABLA HISTORIAL (AQUÍ VAN TODOS) ---
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${numComanda}</strong></td>
+                        <td>${clienteInfo}</td>
+                        <td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td>
+                        <td>${fechaFormat}</td>
+                        <td><span class="badge-pago">${estadoPago}</span></td>
+                        <td><strong>$${ped.total.toFixed(2)}</strong></td>
+                    </tr>
                 `;
 
-                if(ped.tipoOrigen === 'mesa') contMesa.innerHTML += cardHtml;
-                else contOnline.innerHTML += cardHtml;
+                // --- LLENAR COMANDAS (SOLO LOS PENDIENTES DE COCINAR) ---
+                if (ped.estado === 'pendiente') {
+                    let itemsHtml = '';
+                    ped.items.forEach(i => itemsHtml += `<li><strong>${i.cantidad}x</strong> ${i.nombre}</li>`);
+                    
+                    contComandas.innerHTML += `
+                        <div class="pedido-card" style="border-left-color: ${esMesa ? '#27ae60' : '#2980b9'};">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h4>Comanda: ${numComanda}</h4>
+                                <span class="badge-tipo ${badgeClass}">${tipoStr}</span>
+                            </div>
+                            <p style="margin:5px 0; font-size:0.85rem; color:#7f8c8d;">
+                                👤 Cliente: ${clienteInfo} <br>
+                                👨‍💻 Tomado por: Sistema Web
+                            </p>
+                            <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                            <ul>${itemsHtml}</ul>
+                            <button class="btn-completar" onclick="completarComanda('${ped.id}')">✔️ Completar Comanda</button>
+                        </div>
+                    `;
+                }
             });
+            
+            // Si después de filtrar no hay pendientes, mostrar mensaje
+            if (contComandas.innerHTML === '') {
+                contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">Cocina limpia. No hay comandas pendientes. ✨</p>';
+            }
         }
 
+        // --- FUNCIÓN PARA MARCAR COMANDA COMO LISTA ---
+        window.completarComanda = async function(docId) {
+            if(confirm("¿Estás seguro de que esta orden ya está preparada?")) {
+                try {
+                    // Actualizamos el campo 'estado' en Firebase
+                    const pedRef = doc(db, "restaurantes", idRestaurante, "pedidos", docId);
+                    await updateDoc(pedRef, {
+                        estado: 'completado'
+                    });
+                    
+                    // Recargamos la vista para que desaparezca de las tarjetas
+                    window.cargarPedidos();
+                } catch (error) {
+                    console.error("Error al completar la orden:", error);
+                    alert("Hubo un error al actualizar la comanda.");
+                }
+            }
+        }
+
+        // (Lógica de guardar productos INTACTA)
         const contenedorVariantes = document.getElementById('contenedorVariantes');
         document.getElementById('btnNuevaVariante').addEventListener('click', () => {
             const div = document.createElement('div');
@@ -263,7 +353,6 @@
             contenedorVariantes.appendChild(div);
         });
 
-        // --- MAGIA PURA: Función para comprimir imágenes ---
         function comprimirImagen(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -273,25 +362,13 @@
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        // Limitamos el ancho a 600px (Suficiente para celulares)
+                        let width = img.width; let height = img.height;
                         const MAX_WIDTH = 600; 
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                        // Comprimimos al 70% de calidad en formato JPEG
-                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                        resolve(dataUrl);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
                     };
                     img.onerror = error => reject(error);
                 };
@@ -304,13 +381,12 @@
             const nombre = document.getElementById('prodNombre').value;
             const desc = document.getElementById('prodDesc').value;
             const precio = document.getElementById('prodPrecio').value;
-            const imgInput = document.getElementById('prodImagen'); // Tomamos el input de la imagen
+            const imgInput = document.getElementById('prodImagen'); 
 
             if (!nombre || !precio) return alert("Llena el Nombre y el Precio");
 
             const btn = document.getElementById('btnGuardarProd');
-            btn.innerText = "Subiendo y Guardando...";
-            btn.disabled = true;
+            btn.innerText = "Subiendo y Guardando..."; btn.disabled = true;
 
             const variantes = [];
             document.querySelectorAll('.variante-item').forEach(item => {
@@ -320,55 +396,34 @@
             });
 
             try {
-                let imagenUrl = ""; // Por defecto, sin imagen
-
-                // Si el dueño seleccionó una imagen...
+                let imagenUrl = ""; 
                 if (imgInput.files.length > 0) {
                     btn.innerText = "Optimizando foto...";
-                    // 1. Comprimimos la imagen
                     const imagenComprimidaBase64 = await comprimirImagen(imgInput.files[0]);
-                    
                     btn.innerText = "Subiendo foto...";
-                    // 2. Preparamos el espacio en Firebase Storage
-                    const nombreArchivo = Date.now() + ".jpg"; // Nombre único
+                    const nombreArchivo = Date.now() + ".jpg"; 
                     const imgRef = ref(storage, `restaurantes/${idRestaurante}/productos/${nombreArchivo}`);
-                    
-                    // 3. Subimos la imagen y obtenemos el Link público
                     await uploadString(imgRef, imagenComprimidaBase64, 'data_url');
                     imagenUrl = await getDownloadURL(imgRef);
                 }
 
                 btn.innerText = "Guardando producto...";
-                
-                // Guardamos todo en la base de datos (Firestore)
                 await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), {
-                    categoria, 
-                    nombre, 
-                    descripcion: desc, 
-                    precio: parseFloat(precio), 
-                    variantes, 
-                    imagen: imagenUrl, // Se guarda el link de la foto
-                    fecha: new Date()
+                    categoria, nombre, descripcion: desc, precio: parseFloat(precio), variantes, imagen: imagenUrl, fecha: new Date()
                 });
-                
                 alert("¡Producto añadido exitosamente!");
                 
-                // Limpiar formulario
                 document.getElementById('prodNombre').value = '';
                 document.getElementById('prodDesc').value = '';
                 document.getElementById('prodPrecio').value = '';
                 imgInput.value = '';
                 contenedorVariantes.innerHTML = '';
-                
             } catch (e) { 
-                console.error(e);
-                alert("Error al guardar. Si es por la imagen, avisa a soporte."); 
+                alert("Error al guardar."); 
             } finally {
-                btn.innerText = "Guardar Producto";
-                btn.disabled = false;
+                btn.innerText = "Guardar Producto"; btn.disabled = false;
             }
         }
-        
         document.getElementById('btnGuardarProd').addEventListener('click', window.guardarProducto);
     </script>
 </body>
