@@ -5,164 +5,176 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cargando Menú...</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f8f9fa; color: #333; padding-bottom: 120px; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f8f9fa; color: #333; padding-bottom: 120px; scroll-behavior: smooth; }
         
-        /* --- ESTILOS MEJORADOS PARA HEADER CON PORTADA Y LOGO --- */
+        /* CABECERA Y PORTADA */
         .header-portada { 
-            background-color: #2c3e50; /* Color de respaldo */
-            background-size: cover; 
-            background-position: center; 
-            color: white; 
-            padding: 40px 20px; 
-            text-align: center; 
-            position: relative;
+            background-color: #2c3e50; background-size: cover; background-position: center; 
+            color: white; padding: 40px 20px 20px 20px; text-align: center; position: relative;
         }
-        .header-overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6); /* Oscurece la foto para leer bien el texto */
-        }
+        .header-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.65); }
         .header-content { position: relative; z-index: 1; }
+        .logo-restaurante { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3); margin-bottom: 10px; display: none; }
         
-        .logo-restaurante {
-            width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
-            border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            margin-bottom: 10px; display: none; /* Se oculta hasta que cargue de Firebase */
-        }
+        /* ÍCONOS DE ACCIÓN EN PORTADA */
+        .header-acciones { display: flex; justify-content: center; gap: 15px; margin-top: 15px; }
+        .btn-accion { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5); padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; text-decoration: none; backdrop-filter: blur(5px); display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .btn-accion:active { transform: scale(0.95); background: rgba(255,255,255,0.4); }
+
+        /* NAVEGACIÓN FLOTANTE (STICKY) DE CATEGORÍAS */
+        .nav-categorias { position: sticky; top: 0; background: white; padding: 12px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 50; }
+        .nav-categorias::-webkit-scrollbar { display: none; } /* Oculta barra de scroll */
+        .cat-chip { background: #f1f2f6; color: #2c3e50; padding: 6px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid #ddd; }
+        .cat-chip:active { background: #e67e22; color: white; border-color: #e67e22; }
 
         .container { max-width: 600px; margin: auto; padding: 15px; }
         
-        .categoria-titulo { margin-top: 20px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; font-size: 1.3rem; }
+        .categoria-titulo { margin-top: 25px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; font-size: 1.4rem; padding-top: 60px; margin-top: -40px; } /* Offset para que el sticky no tape el título */
         
-        .producto-card { 
-            background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
-            margin-bottom: 15px; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.2s;
-        }
+        /* TARJETAS DE PRODUCTOS */
+        .producto-card { background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 15px; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.2s; }
         .producto-card:active { transform: scale(0.98); }
-
-        .producto-img {
-            width: 100%; height: 180px; background-color: #ffffff; 
-            background-size: contain; background-repeat: no-repeat; background-position: center;
-        }
-
+        .producto-img { width: 100%; height: 180px; background-color: #ffffff; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .producto-contenido { padding: 12px; display: flex; justify-content: space-between; align-items: center; }
         .info { flex: 1; padding-right: 10px; }
         .info h3 { margin: 0; font-size: 1.1rem; color: #2c3e50; }
         .info p { margin: 4px 0; color: #7f8c8d; font-size: 0.85rem; line-height: 1.3; }
         .precio { font-weight: bold; color: #e67e22; font-size: 1rem; display: block; margin-top: 4px; }
         
-        .controles-cantidad {
-            display: flex; align-items: center; background: #f1f2f6; border-radius: 50px;
-            padding: 5px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .btn-qty {
-            background: white; color: #2c3e50; border: none; width: 30px; height: 30px;
-            border-radius: 50%; font-weight: bold; font-size: 1.2rem; cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center;
-        }
+        .controles-cantidad { display: flex; align-items: center; background: #f1f2f6; border-radius: 50px; padding: 5px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .btn-qty { background: white; color: #2c3e50; border: none; width: 30px; height: 30px; border-radius: 50%; font-weight: bold; font-size: 1.2rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; }
         .btn-qty:active { background: #e0e0e0; }
         .cantidad-num { width: 30px; text-align: center; font-weight: bold; color: #2c3e50; font-size: 1rem; }
 
-        .btn-pedir { background: #25d366; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-pedir { background: #25d366; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; box-sizing: border-box; }
 
-        .footer-carrito {
-            position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; 
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px;
-            box-sizing: border-box; z-index: 100;
-        }
+        .footer-carrito { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; z-index: 100; }
         .controles-pedido { display: flex; justify-content: center; align-items: center; }
-        .selector-origen { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; color: #2c3e50; }
         
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
-        .modal-content { background: white; margin: 15% auto; padding: 25px; width: 85%; max-width: 350px; border-radius: 12px; }
-        .modal-content h3 { margin-top: 0; text-align: center; color: #2c3e50; }
-        .form-input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
-        
-        .btn-ubicacion {
-            background: #e8f4fd; color: #2980b9; border: 1px dashed #3498db; width: 100%;
-            padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 10px 0; transition: 0.3s;
-        }
+        /* MODALES */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); overflow-y: auto; }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; width: 90%; max-width: 400px; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; text-align: center; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 1rem; }
+        .btn-ubicacion { background: #e8f4fd; color: #2980b9; border: 1px dashed #3498db; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 10px 0; transition: 0.3s; }
+
+        /* LISTA CARRITO EN MODAL */
+        .item-carrito-modal { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ddd; padding: 10px 0; }
+        .item-carrito-nombre { flex: 1; font-weight: bold; color: #2c3e50; font-size: 0.95rem; }
+        .item-carrito-subtotal { color: #e67e22; font-weight: bold; margin-right: 10px; }
+
+        /* TABLA HORARIOS */
+        .tabla-horarios { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95rem; }
+        .tabla-horarios th, .tabla-horarios td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+        .dia-cerrado { color: #e74c3c; font-weight: bold; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
-    <!-- CABECERA ACTUALIZADA PARA LOGO Y PORTADA -->
+    <!-- CABECERA CON PORTADA, LOGO Y NUEVOS ÍCONOS -->
     <header id="headerRestaurante" class="header-portada">
         <div class="header-overlay"></div>
         <div class="header-content">
-            <img id="logoRestaurante" src="" alt="Logo del Restaurante" class="logo-restaurante">
-            <h1 id="nombreRestaurante" style="margin:0; font-size: 1.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Cargando...</h1>
+            <img id="logoRestaurante" src="" alt="Logo" class="logo-restaurante">
+            <h1 id="nombreRestaurante" style="margin:0; font-size: 2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Cargando Menú...</h1>
+            
+            <div class="header-acciones">
+                <button class="btn-accion" onclick="abrirUbicacionNegocio()">📍 Ubicación</button>
+                <button class="btn-accion" onclick="compartirMenu()">📤 Compartir</button>
+                <button class="btn-accion" onclick="mostrarHorarios()">🕒 Horarios</button>
+            </div>
         </div>
     </header>
 
-    <div class="container">
-        
-        <!-- NUEVO: BANNER DE CERRADO (Oculto por defecto) -->
-        <div id="bannerCerrado" style="display: none; background: #e74c3c; color: white; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-            <h3 style="margin: 0 0 5px 0;">🛑 Restaurante Cerrado</h3>
-            <p style="margin: 0; font-size: 1rem;">Horario de atención: <strong id="txtHorario"></strong></p>
-        </div>
+    <!-- NAVEGACIÓN STICKY DE CATEGORÍAS (Se llena con JS) -->
+    <nav id="navCategorias" class="nav-categorias"></nav>
 
-        <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center;">
-            <h3 style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.2rem;">¿Cómo pedirás hoy?</h3>
-            <select id="tipoPedidoTop" class="selector-origen" onchange="verificarTipoPedido()" style="width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 8px;">
-                <option value="" disabled selected>Elige una opción...</option>
-                <option value="mesa">🍽️ Consumo en Mesa</option>
-                <option value="pickup">🥡 Pick Up (Pasar a recoger)</option>
-                <option value="domicilio">🛵 Domicilio (Repartidor independiente)</option>
-            </select>
-            <div id="infoSeleccion" style="margin-top: 15px; font-weight: bold; color: #27ae60; font-size: 1.1rem; display: none;"></div>
+    <div class="container">
+        <!-- BANNER CERRADO -->
+        <div id="bannerCerrado" style="display: none; background: #e74c3c; color: white; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <h3 style="margin: 0 0 5px 0;">🛑 Estamos Cerrados</h3>
+            <p style="margin: 0; font-size: 0.95rem;">Puedes ver el menú, pero los pedidos están deshabilitados. Revisa el horario arriba.</p>
         </div>
 
         <div id="listaMenu"></div>
     </div>
 
-    <!-- Modal para Mesa -->
-    <div id="modalMesa" class="modal">
-        <div class="modal-content" style="text-align: center; margin-top: 40%;">
-            <h3>¿En qué mesa estás?</h3>
-            <input type="number" id="numMesaInput" class="form-input" style="text-align: center; font-size: 1.2rem;" placeholder="Ej: 5">
-            <button class="btn-pedir" onclick="confirmarMesa()" style="width: 100%; margin-top:10px;">Confirmar Mesa</button>
-            <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d;">Cancelar</button>
-        </div>
-    </div>
-
-    <!-- Modal COMBINADO para Domicilio / Pick Up -->
-    <div id="modalDomicilio" class="modal">
+    <!-- MODAL 1: VER CARRITO Y COMENTARIOS -->
+    <div id="modalCarrito" class="modal">
         <div class="modal-content">
-            <h3 id="tituloModalEnvio">Datos de Envío</h3>
-            <p style="text-align: center; font-size: 0.9rem; color: #7f8c8d; margin-top: 0;">Llena tus datos para completar tu pedido.</p>
+            <h3>🛒 Tu Pedido</h3>
+            <div id="contenidoCarritoLista" style="max-height: 40vh; overflow-y: auto; margin-bottom: 15px;">
+                <!-- Aquí se inyectan los productos del carrito -->
+            </div>
             
-            <input type="text" id="domNombre" class="form-input" placeholder="Tu Nombre Completo" required>
-            <input type="tel" id="domTelefono" class="form-input" placeholder="Tu Teléfono (Para contactarte)" required>
-            
-            <div id="seccionDireccion">
-                <textarea id="domDireccion" class="form-input" rows="3" placeholder="Calle, cruzamientos, colonia y referencias..."></textarea>
-                <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Compartir mi ubicación (Google Maps)</button>
+            <div style="font-size: 1.3rem; font-weight: bold; text-align: right; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                Total: <span id="totalCarritoModal" style="color: #27ae60;">$0.00</span>
             </div>
 
-            <select id="domPago" class="form-input" style="margin-top: 10px; font-weight: bold; color: #2c3e50;" required>
-                <option value="" disabled selected>💳 ¿Cómo vas a pagar?</option>
-                <option value="Efectivo">💵 Efectivo</option>
-                <option value="Tarjeta">💳 Tarjeta de Crédito/Débito</option>
-                <option value="Transferencia">🏦 Transferencia Electrónica</option>
-            </select>
+            <label style="font-weight: bold; color: #2c3e50; font-size: 0.9rem;">📝 Notas o Comentarios para la cocina:</label>
+            <textarea id="comentariosPedido" class="form-input" rows="2" placeholder="Ej: Sin cebolla, extra salsa, billete de $500..."></textarea>
             
-            <button class="btn-pedir" onclick="confirmarDomicilio()" style="width: 100%; margin-top:15px;">Enviar Pedido por WhatsApp</button>
-            <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%;">Volver al Menú</button>
+            <button class="btn-pedir" onclick="pasarADatosDeEnvio()" style="margin-top: 15px;">Continuar a Datos de Envío</button>
+            <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%; font-weight: bold; cursor: pointer;">Volver al Menú</button>
         </div>
     </div>
 
+    <!-- MODAL 2: DATOS DE ENVÍO / PICK UP -->
+    <div id="modalDomicilio" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 5px;">Detalles de Entrega</h3>
+            
+            <select id="tipoPedidoTop" class="form-input" onchange="verificarTipoFormulario()" style="margin-bottom: 15px; font-weight: bold; color: #2980b9; border: 2px solid #2980b9;">
+                <option value="" disabled selected>👉 Selecciona Pick Up o Domicilio...</option>
+                <option value="pickup">🥡 Pick Up (Pasaré a recoger al local)</option>
+                <option value="domicilio">🛵 Servicio a Domicilio</option>
+            </select>
+
+            <div id="formularioDatosEnvio" style="display: none;">
+                <input type="text" id="domNombre" class="form-input" placeholder="Tu Nombre Completo" required>
+                <input type="tel" id="domTelefono" class="form-input" placeholder="Tu Teléfono (Para contactarte)" required>
+                
+                <div id="seccionDireccion">
+                    <textarea id="domDireccion" class="form-input" rows="2" placeholder="Calle, cruzamientos, colonia y referencias..."></textarea>
+                    <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Adjuntar mi ubicación (GPS)</button>
+                </div>
+
+                <select id="domPago" class="form-input" style="margin-top: 10px; font-weight: bold; color: #2c3e50;" required>
+                    <option value="" disabled selected>💳 ¿Cómo vas a pagar?</option>
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Tarjeta">💳 Tarjeta (Terminal)</option>
+                    <option value="Transferencia">🏦 Transferencia Electrónica</option>
+                </select>
+                
+                <button class="btn-pedir" onclick="procesarYEnviarPedido()" style="margin-top:20px; background: #25d366;">📲 Enviar Pedido por WhatsApp</button>
+            </div>
+            
+            <button onclick="volverAlCarrito()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%; cursor: pointer;">⬅ Volver al carrito</button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: HORARIOS DEL NEGOCIO -->
+    <div id="modalHorarios" class="modal">
+        <div class="modal-content">
+            <h3>🕒 Horarios de Atención</h3>
+            <table class="tabla-horarios">
+                <tbody id="tbodyHorariosClientes"></tbody>
+            </table>
+            <button onclick="cerrarModales()" style="background:#34495e; color:white; border:none; margin-top:20px; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- FOOTER FLOTANTE -->
     <div class="footer-carrito">
         <div class="controles-pedido">
-            <span style="font-weight: bold;">Total del Pedido: <span id="totalVenta" style="color: #e67e22; font-size: 1.3rem;">$0.00</span></span>
+            <span style="font-weight: bold; font-size: 1.1rem;">Total: <span id="totalVenta" style="color: #e67e22; font-size: 1.4rem;">$0.00</span></span>
         </div>
-        <!-- Se agregó ID btnProcesar para poder deshabilitarlo si está cerrado -->
-        <button id="btnProcesar" class="btn-pedir" onclick="procesarPedido()">Continuar Pedido</button>
+        <button id="btnProcesar" class="btn-pedir" onclick="abrirCarrito()" style="background: #e67e22;">🛒 Ver Pedido</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, getDocs, addDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -177,341 +189,315 @@
         const db = getFirestore(app);
 
         const urlParams = new URLSearchParams(window.location.search);
-        const idRestaurante = urlParams.get('id');
+        let idRestaurante = urlParams.get('id');
 
         let carrito = {}; 
-        let numWhatsApp = "";
+        let numWhatsApp = ""; 
         let totalGeneral = 0;
-        
-        let mesaCliente = "";
+        let infoNegocioGlobal = null; // Guardará info general
         let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "", metodoPago: "" };
-        
-        // Variable Global para saber cuándo inició el turno (Sirve para reiniciar los tickets a 1)
-        let fechaInicioTurno = new Date();
-        fechaInicioTurno.setHours(0, 0, 0, 0); 
+        let fechaInicioTurno = new Date(); fechaInicioTurno.setHours(0, 0, 0, 0); 
 
         async function cargarMenu() {
             if (!idRestaurante) return;
 
-            const restRef = doc(db, "restaurantes", idRestaurante);
-            const restSnap = await getDoc(restRef);
+            // 1. LÓGICA DE ALIAS/URL PERSONALIZADA
+            let restRef = doc(db, "restaurantes", idRestaurante);
+            let restSnap = await getDoc(restRef);
             
-            if (restSnap.exists()) {
-                const data = restSnap.data();
-                document.getElementById('nombreRestaurante').innerText = data.nombre;
-                document.title = "Menú - " + data.nombre;
-                numWhatsApp = data.whatsapp;
-
-                if(data.portada) {
-                    document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
-                }
-                if(data.logo) {
-                    const logoEl = document.getElementById('logoRestaurante');
-                    logoEl.src = data.logo;
-                    logoEl.style.display = 'inline-block';
-                }
-
-                // NUEVO: LÓGICA DE HORARIOS Y BANNER DE CERRADO
-                if (data.horarioApertura && data.horarioCierre) {
-                    document.getElementById('txtHorario').innerText = `${data.horarioApertura} a ${data.horarioCierre}`;
-                    
-                    const now = new Date();
-                    const [hA, mA] = data.horarioApertura.split(':').map(Number);
-                    const [hC, mC] = data.horarioCierre.split(':').map(Number);
-                    
-                    const timeA = hA * 60 + mA;
-                    const timeC = hC * 60 + mC;
-                    const timeNow = now.getHours() * 60 + now.getMinutes();
-                    
-                    let isCerrado = false;
-                    
-                    // Cálculo inteligente (Soporta turnos que pasan de la medianoche)
-                    if (timeA < timeC) {
-                        isCerrado = timeNow < timeA || timeNow > timeC;
-                        fechaInicioTurno.setHours(hA, mA, 0, 0);
-                    } else {
-                        isCerrado = timeNow < timeA && timeNow > timeC;
-                        if (timeNow <= timeC) {
-                            fechaInicioTurno.setDate(fechaInicioTurno.getDate() - 1);
-                        }
-                        fechaInicioTurno.setHours(hA, mA, 0, 0);
-                    }
-                    
-                    if (isCerrado) {
-                        document.getElementById('bannerCerrado').style.display = 'block';
-                        document.getElementById('btnProcesar').disabled = true;
-                        document.getElementById('btnProcesar').style.background = '#95a5a6';
-                        document.getElementById('btnProcesar').innerText = "Cerrado temporalmente";
-                        document.getElementById('tipoPedidoTop').disabled = true;
-                    }
+            if (!restSnap.exists()) {
+                const qBusquedaAlias = query(collection(db, "restaurantes"), where("slug", "==", idRestaurante));
+                const queryAlias = await getDocs(qBusquedaAlias);
+                if (!queryAlias.empty) {
+                    restSnap = queryAlias.docs[0];
+                    idRestaurante = restSnap.id; 
+                } else {
+                    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; font-family:sans-serif;'>Restaurante no encontrado 😢</h2>";
+                    return;
                 }
             }
+            
+            const data = restSnap.data();
+            infoNegocioGlobal = data;
+            document.getElementById('nombreRestaurante').innerText = data.nombre;
+            document.title = "Menú - " + data.nombre;
+            numWhatsApp = data.whatsapp;
 
-            const productosRef = collection(db, "restaurantes", idRestaurante, "productos");
-            const querySnapshot = await getDocs(productosRef);
-            const contenedor = document.getElementById('listaMenu');
-            contenedor.innerHTML = ""; 
+            if(data.portada) document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
+            if(data.logo) { const logoEl = document.getElementById('logoRestaurante'); logoEl.src = data.logo; logoEl.style.display = 'inline-block'; }
 
+            // 2. LÓGICA DE HORARIOS AVANZADOS O SIMPLES
+            verificarSiEstaCerrado(data);
+            llenarTablaHorarios(data);
+
+            // 3. CARGAR PRODUCTOS Y CATEGORÍAS
+            const querySnapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
+            const contenedor = document.getElementById('listaMenu'); contenedor.innerHTML = ""; 
+            const navCategorias = document.getElementById('navCategorias'); navCategorias.innerHTML = "";
             const categorias = {};
 
             querySnapshot.forEach((doc) => {
-                const p = doc.data();
-                if (p.disponible === false) return; 
-
-                const cat = p.categoria || "Otros";
-                if (!categorias[cat]) categorias[cat] = [];
-                categorias[cat].push(p);
+                const p = doc.data(); if (p.disponible === false) return; 
+                const cat = p.categoria || "Otros"; if (!categorias[cat]) categorias[cat] = []; categorias[cat].push(p);
             });
 
             for (const nombreCat in categorias) {
-                contenedor.innerHTML += `<h2 class="categoria-titulo">${nombreCat}</h2>`;
+                const idCatSafe = "cat-" + nombreCat.replace(/[^a-zA-Z0-9]/g, '');
+                
+                // Agregar al Nav Flotante
+                navCategorias.innerHTML += `<a href="#${idCatSafe}" class="cat-chip">${nombreCat}</a>`;
+                
+                // Agregar Título en el Menú
+                contenedor.innerHTML += `<h2 id="${idCatSafe}" class="categoria-titulo">${nombreCat}</h2>`;
+                
+                // Agregar Productos
                 categorias[nombreCat].forEach(p => {
-                    
-                    let htmlImagen = "";
-                    if (p.imagen && p.imagen !== "") {
-                        htmlImagen = `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>`;
-                    }
-
+                    let htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
                     const idHTML = p.nombre.replace(/[^a-zA-Z0-9]/g, '');
-
                     contenedor.innerHTML += `
-                        <div class="producto-card">
-                            ${htmlImagen}
+                        <div class="producto-card">${htmlImagen}
                             <div class="producto-contenido">
-                                <div class="info">
-                                    <h3>${p.nombre}</h3>
-                                    <p>${p.descripcion}</p>
-                                    <span class="precio">$${p.precio}</span>
-                                </div>
-                                
+                                <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">$${p.precio}</span></div>
                                 <div class="controles-cantidad">
                                     <button class="btn-qty" onclick="modificarItem('${p.nombre}', ${p.precio}, -1, '${idHTML}')">-</button>
                                     <span class="cantidad-num" id="qty-${idHTML}">0</span>
                                     <button class="btn-qty" onclick="modificarItem('${p.nombre}', ${p.precio}, 1, '${idHTML}')">+</button>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
             }
         }
 
+        // FUNCIÓN GLOBAL PARA MODIFICAR EL CARRITO DESDE CUALQUIER LADO (Menú o Modal)
         window.modificarItem = function(nombre, precio, cambio, idHTML) {
-            const tipo = document.getElementById('tipoPedidoTop').value;
-            if (!tipo) {
-                alert("Por favor, selecciona cómo quieres tu pedido en la parte de arriba (Mesa, Pick Up o Domicilio).");
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                return;
-            }
-
             if (!carrito[nombre]) carrito[nombre] = { precio: precio, cantidad: 0 };
             carrito[nombre].cantidad += cambio;
-
-            if (carrito[nombre].cantidad <= 0) {
-                carrito[nombre].cantidad = 0;
-                delete carrito[nombre];
-            }
-
-            document.getElementById(`qty-${idHTML}`).innerText = carrito[nombre] ? carrito[nombre].cantidad : 0;
-
-            totalGeneral = 0;
+            
+            if (carrito[nombre].cantidad <= 0) { carrito[nombre].cantidad = 0; delete carrito[nombre]; }
+            
+            // Actualizar número en el menú principal si el elemento existe
+            const numEl = document.getElementById(`qty-${idHTML}`);
+            if(numEl) numEl.innerText = carrito[nombre] ? carrito[nombre].cantidad : 0;
+            
+            totalGeneral = 0; 
             for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
             document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
-        }
+            document.getElementById('totalCarritoModal').innerText = `$${totalGeneral.toFixed(2)}`;
 
-        window.verificarTipoPedido = function() {
-            const tipo = document.getElementById('tipoPedidoTop').value;
-            const infoText = document.getElementById('infoSeleccion');
-            
-            if (tipo === 'mesa') {
-                document.getElementById('modalMesa').style.display = 'block';
-                infoText.style.display = 'none';
-            } else if (tipo === 'pickup') {
-                mesaCliente = "";
-                infoText.innerText = "🥡 Pedido configurado para Pick Up";
-                infoText.style.display = 'block';
-            } else if (tipo === 'domicilio') {
-                mesaCliente = "";
-                infoText.innerText = "🛵 Pedido configurado para Domicilio";
-                infoText.style.display = 'block';
+            // Si el modal del carrito está abierto, re-renderizarlo para que se actualice visualmente
+            if(document.getElementById('modalCarrito').style.display === 'block') {
+                renderizarListaCarrito();
+                // Si el carrito quedó vacío, cerramos el modal
+                if(Object.keys(carrito).length === 0) cerrarModales();
             }
         }
 
-        window.cerrarModales = function() {
-            document.getElementById('modalMesa').style.display = 'none';
-            document.getElementById('modalDomicilio').style.display = 'none';
+        // FUNCIONES DE LOS ÍCONOS DE CABECERA
+        window.abrirUbicacionNegocio = function() {
+            if(infoNegocioGlobal && infoNegocioGlobal.nombre) {
+                const queryStr = encodeURIComponent(infoNegocioGlobal.nombre);
+                window.open(`https://www.google.com/maps/search/?api=1&query=${queryStr}`, '_blank');
+            } else { alert("Ubicación no disponible."); }
         }
 
-        window.confirmarMesa = async function() {
-            const numero = parseInt(document.getElementById('numMesaInput').value);
-            if (numero) {
-                mesaCliente = numero;
-                cerrarModales();
-                
-                const infoText = document.getElementById('infoSeleccion');
-                infoText.innerText = `🍽️ Mesa #${numero} seleccionada`;
-                infoText.style.display = 'block';
+        window.compartirMenu = function() {
+            if (navigator.share) {
+                navigator.share({ title: document.title, text: '¡Mira nuestro Menú Digital y pide en línea!', url: window.location.href })
+                .catch(err => console.log('Error al compartir', err));
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert("¡Enlace del menú copiado para compartir!");
+            }
+        }
 
-                try {
-                    const mesasRef = collection(db, "restaurantes", idRestaurante, "mesas");
-                    const q = query(mesasRef, where("numero", "==", numero));
-                    const querySnapshot = await getDocs(q);
-                    
-                    querySnapshot.forEach(async (docSnap) => {
-                        await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", docSnap.id), { estado: 'espera' });
-                    });
-                } catch (e) { console.error("Error actualizando mesa:", e); }
-            } else alert("Por favor, ingresa tu número de mesa.");
+        window.mostrarHorarios = function() { document.getElementById('modalHorarios').style.display = 'block'; }
+
+        // FUNCIONES DE MODALES Y CARRITO
+        window.cerrarModales = function() {
+            document.getElementById('modalCarrito').style.display = 'none';
+            document.getElementById('modalDomicilio').style.display = 'none';
+            document.getElementById('modalHorarios').style.display = 'none';
+        }
+
+        window.abrirCarrito = function() {
+            if (Object.keys(carrito).length === 0) return alert("Aún no has agregado productos a tu pedido. Usa los botones (+) para agregar.");
+            renderizarListaCarrito();
+            document.getElementById('modalCarrito').style.display = 'block';
+        }
+
+        function renderizarListaCarrito() {
+            const contenedor = document.getElementById('contenidoCarritoLista');
+            contenedor.innerHTML = "";
+            for (let nombre in carrito) {
+                const item = carrito[nombre];
+                const subtotal = item.precio * item.cantidad;
+                const idHTML = nombre.replace(/[^a-zA-Z0-9]/g, '');
+                contenedor.innerHTML += `
+                    <div class="item-carrito-modal">
+                        <div class="item-carrito-nombre">${nombre}</div>
+                        <div class="item-carrito-subtotal">$${subtotal.toFixed(2)}</div>
+                        <div class="controles-cantidad" style="transform: scale(0.85); margin: 0;">
+                            <button class="btn-qty" onclick="modificarItem('${nombre}', ${item.precio}, -1, '${idHTML}')">-</button>
+                            <span class="cantidad-num">${item.cantidad}</span>
+                            <button class="btn-qty" onclick="modificarItem('${nombre}', ${item.precio}, 1, '${idHTML}')">+</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.pasarADatosDeEnvio = function() {
+            document.getElementById('modalCarrito').style.display = 'none';
+            document.getElementById('modalDomicilio').style.display = 'block';
+        }
+
+        window.volverAlCarrito = function() {
+            document.getElementById('modalDomicilio').style.display = 'none';
+            document.getElementById('modalCarrito').style.display = 'block';
+        }
+
+        window.verificarTipoFormulario = function() {
+            const tipo = document.getElementById('tipoPedidoTop').value;
+            const form = document.getElementById('formularioDatosEnvio');
+            const secDir = document.getElementById('seccionDireccion');
+            
+            if (tipo) form.style.display = 'block';
+            else form.style.display = 'none';
+
+            if (tipo === 'pickup') secDir.style.display = 'none';
+            if (tipo === 'domicilio') secDir.style.display = 'block';
         }
 
         window.obtenerUbicacion = function() {
-            const btnUbi = document.getElementById('btnUbi');
-            btnUbi.innerText = "Obteniendo coordenadas...";
-            
+            const btnUbi = document.getElementById('btnUbi'); btnUbi.innerText = "Obteniendo coordenadas...";
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (posicion) => {
-                        datosEnvio.mapsLink = `https://www.google.com/maps?q=${posicion.coords.latitude},${posicion.coords.longitude}`;
-                        btnUbi.innerText = "¡Ubicación guardada con éxito! ✅";
-                        btnUbi.style.background = "#27ae60";
-                        btnUbi.style.color = "white";
-                    },
-                    (error) => {
-                        alert("No se pudo obtener la ubicación. Activa tu GPS y recarga.");
-                        btnUbi.innerText = "📍 Reintentar compartir ubicación";
-                    },
-                    { enableHighAccuracy: true }
+                    (posicion) => { datosEnvio.mapsLink = `https://www.google.com/maps?q=${posicion.coords.latitude},${posicion.coords.longitude}`; btnUbi.innerText = "¡Ubicación adjuntada con éxito! ✅"; btnUbi.style.background = "#27ae60"; btnUbi.style.color = "white"; },
+                    (error) => { alert("No se pudo obtener la ubicación. Activa tu GPS."); btnUbi.innerText = "📍 Reintentar compartir ubicación"; }, { enableHighAccuracy: true }
                 );
             } else alert("Tu navegador no soporta esta función.");
         }
 
-        window.procesarPedido = function() {
-            const arrayItems = Object.keys(carrito);
-            if (arrayItems.length === 0) return alert("Agrega al menos un producto con el botón (+).");
-            
+        window.procesarYEnviarPedido = async function() {
             const tipo = document.getElementById('tipoPedidoTop').value;
-            
-            if (!tipo) {
-                alert("Selecciona arriba si estás en mesa, pick up o domicilio.");
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                return;
-            }
-
-            if (tipo === 'mesa' && mesaCliente === "") {
-                document.getElementById('modalMesa').style.display = 'block';
-                return;
-            }
-            
-            if (tipo === 'pickup' || tipo === 'domicilio') {
-                if (tipo === 'pickup') {
-                    document.getElementById('tituloModalEnvio').innerText = "Datos para Pick Up";
-                    document.getElementById('seccionDireccion').style.display = 'none'; 
-                } else {
-                    document.getElementById('tituloModalEnvio').innerText = "Datos de Envío a Domicilio";
-                    document.getElementById('seccionDireccion').style.display = 'block'; 
-                }
-                document.getElementById('modalDomicilio').style.display = 'block';
-                return;
-            }
-
-            ejecutarEnvioPedido();
-        }
-
-        window.confirmarDomicilio = function() {
-            const tipo = document.getElementById('tipoPedidoTop').value;
-            datosEnvio.nombre = document.getElementById('domNombre').value;
-            datosEnvio.telefono = document.getElementById('domTelefono').value;
+            datosEnvio.nombre = document.getElementById('domNombre').value; 
+            datosEnvio.telefono = document.getElementById('domTelefono').value; 
             datosEnvio.metodoPago = document.getElementById('domPago').value;
+            const comentariosExtra = document.getElementById('comentariosPedido').value.trim();
 
-            if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.metodoPago) {
-                return alert("Por favor llena Nombre, Teléfono y Método de Pago.");
-            }
-
-            if(tipo === 'domicilio') {
-                datosEnvio.direccion = document.getElementById('domDireccion').value;
-                if(!datosEnvio.direccion) return alert("Falta escribir tu dirección de envío.");
-            } else {
-                datosEnvio.direccion = "Pick Up (Pasa a recoger)";
-                datosEnvio.mapsLink = "";
+            if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.metodoPago) return alert("Por favor llena Tu Nombre, Teléfono y Método de Pago.");
+            if(tipo === 'domicilio') { 
+                datosEnvio.direccion = document.getElementById('domDireccion').value; 
+                if(!datosEnvio.direccion) return alert("Por favor escribe tu dirección para el envío."); 
+            } else { 
+                datosEnvio.direccion = "Pick Up (Pasa a recoger al local)"; datosEnvio.mapsLink = ""; 
             }
             
-            cerrarModales();
-            ejecutarEnvioPedido(); 
-        }
-
-        async function ejecutarEnvioPedido() {
-            const arrayItems = Object.keys(carrito).map(nombre => ({
-                nombre: nombre, precio: carrito[nombre].precio, cantidad: carrito[nombre].cantidad
-            }));
-            const tipo = document.getElementById('tipoPedidoTop').value;
+            const arrayItems = Object.keys(carrito).map(nombre => ({ nombre: nombre, precio: carrito[nombre].precio, cantidad: carrito[nombre].cantidad }));
 
             try {
-                const btnPedir = document.getElementById('btnProcesar');
-                btnPedir.innerText = "Generando Comanda...";
-                btnPedir.disabled = true;
+                const btnPedir = document.querySelector('#formularioDatosEnvio .btn-pedir'); 
+                btnPedir.innerText = "Procesando..."; btnPedir.disabled = true;
 
-                // NUEVO: OBTENER EL CONSECUTIVO DEL DÍA ACTUAL
+                // Generar consecutivo
                 const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
                 const qCount = query(pedidosRef, where("fecha", ">=", fechaInicioTurno));
                 const snapPedidos = await getDocs(qCount);
                 
                 let maxConsecutivo = 0;
-                snapPedidos.forEach(d => {
-                    let num = d.data().consecutivoDiario || 0;
-                    if (num > maxConsecutivo) maxConsecutivo = num;
-                });
-                
+                snapPedidos.forEach(d => { let num = d.data().consecutivoDiario || 0; if (num > maxConsecutivo) maxConsecutivo = num; });
                 const nuevoConsecutivo = maxConsecutivo + 1;
                 
-                // Asignar Letra M, P, o D
-                let letraPrefix = 'M';
-                if (tipo === 'pickup') letraPrefix = 'P';
-                else if (tipo === 'domicilio') letraPrefix = 'D';
-
+                let letraPrefix = tipo === 'pickup' ? 'P' : 'D';
                 const comandaId = `${letraPrefix}-${nuevoConsecutivo}`;
 
+                // Guardar en Firebase
                 await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
-                    numeroComanda: comandaId,
-                    consecutivoDiario: nuevoConsecutivo, // Guarda el número para no perder la cuenta
-                    items: arrayItems,
-                    total: totalGeneral,
-                    tipoOrigen: tipo, 
-                    numeroMesa: tipo === 'mesa' ? mesaCliente : null,
-                    clienteEnvio: (tipo === 'pickup' || tipo === 'domicilio') ? datosEnvio : null,
-                    fecha: new Date(),
-                    estado: 'pendiente'
+                    numeroComanda: comandaId, consecutivoDiario: nuevoConsecutivo, items: arrayItems, total: totalGeneral,
+                    tipoOrigen: tipo, clienteEnvio: datosEnvio, fecha: new Date(), estado: 'pendiente', comentarios: comentariosExtra
                 });
 
+                // Crear Mensaje de WhatsApp
                 let mensaje = `*NUEVO PEDIDO: ${comandaId}*%0A`;
-                
-                if(tipo === 'mesa') mensaje += `📍 *MESA:* ${mesaCliente}%0A`;
-                else if(tipo === 'pickup') mensaje += `🥡 *PICK UP (PASAR A RECOGER)*%0A`;
-                else if(tipo === 'domicilio') mensaje += `🛵 *SERVICIO A DOMICILIO (Repartidor Externo)*%0A`;
-                
+                if(tipo === 'pickup') mensaje += `🥡 *PICK UP (Paso a recoger)*%0A`; else mensaje += `🛵 *SERVICIO A DOMICILIO*%0A`;
                 mensaje += `--------------------------%0A`;
-                
-                arrayItems.forEach(item => {
-                    mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toFixed(2)})%0A`;
-                });
+                arrayItems.forEach(item => { mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toFixed(2)})%0A`; });
                 mensaje += `--------------------------%0A*TOTAL A PAGAR: $${totalGeneral.toFixed(2)}*%0A%0A`;
 
-                if (tipo === 'pickup' || tipo === 'domicilio') {
-                    mensaje += `*DATOS DEL CLIENTE:*%0A👤 Nombre: ${datosEnvio.nombre}%0A📞 Tel: ${datosEnvio.telefono}%0A💳 Método de pago: ${datosEnvio.metodoPago}%0A`;
-                    if(tipo === 'domicilio') {
-                        mensaje += `🏠 Dir: ${datosEnvio.direccion}%0A`;
-                        if(datosEnvio.mapsLink !== "") mensaje += `🗺️ Ubicación GPS: ${datosEnvio.mapsLink}%0A`;
-                    }
-                }
+                if(comentariosExtra !== "") mensaje += `📝 *NOTAS/COMENTARIOS:* ${comentariosExtra}%0A%0A`;
 
-                const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`;
-                window.open(url, '_blank');
-                setTimeout(() => location.reload(), 1000);
+                mensaje += `*DATOS DEL CLIENTE:*%0A👤 Nombre: ${datosEnvio.nombre}%0A📞 Tel: ${datosEnvio.telefono}%0A💳 Método: ${datosEnvio.metodoPago}%0A`;
+                if(tipo === 'domicilio') { mensaje += `🏠 Dir: ${datosEnvio.direccion}%0A`; if(datosEnvio.mapsLink !== "") mensaje += `🗺️ GPS: ${datosEnvio.mapsLink}%0A`; }
 
-            } catch (error) {
-                console.error(error);
-                alert("Hubo un problema. Intenta de nuevo.");
-                document.getElementById('btnProcesar').innerText = "Continuar Pedido";
-                document.getElementById('btnProcesar').disabled = false;
+                const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`; 
+                window.open(url, '_blank'); 
+                setTimeout(() => location.reload(), 1500);
+
+            } catch (error) { 
+                console.error(error); alert("Hubo un problema de conexión. Intenta de nuevo."); 
+                document.querySelector('#formularioDatosEnvio .btn-pedir').innerText = "📲 Enviar Pedido por WhatsApp"; document.querySelector('#formularioDatosEnvio .btn-pedir').disabled = false; 
+            }
+        }
+
+        // LÓGICA DE HORARIOS
+        function verificarSiEstaCerrado(data) {
+            const hoy = new Date();
+            const diasStr = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const diaHoy = diasStr[hoy.getDay()];
+
+            let horaApertura, horaCierre;
+
+            // Revisar si tiene el nuevo sistema de horarios por día
+            if(data.horarios && data.horarios[diaHoy]) {
+                if(!data.horarios[diaHoy].activo) return activarCerrado(); // Está cerrado ese día
+                horaApertura = data.horarios[diaHoy].abre;
+                horaCierre = data.horarios[diaHoy].cierra;
+            } else if (data.horarioApertura && data.horarioCierre) {
+                // Sistema viejo
+                horaApertura = data.horarioApertura;
+                horaCierre = data.horarioCierre;
+            } else { return; } // Si no hay horarios configurados, asume abierto
+
+            const [hA, mA] = horaApertura.split(':').map(Number);
+            const [hC, mC] = horaCierre.split(':').map(Number);
+            const timeA = hA * 60 + mA; const timeC = hC * 60 + mC; 
+            const timeNow = hoy.getHours() * 60 + hoy.getMinutes();
+            
+            let isCerrado = false;
+            if (timeA < timeC) {
+                isCerrado = timeNow < timeA || timeNow > timeC; fechaInicioTurno.setHours(hA, mA, 0, 0);
+            } else {
+                isCerrado = timeNow < timeA && timeNow > timeC;
+                if (timeNow <= timeC) fechaInicioTurno.setDate(fechaInicioTurno.getDate() - 1);
+                fechaInicioTurno.setHours(hA, mA, 0, 0);
+            }
+
+            if (isCerrado) activarCerrado();
+        }
+
+        function activarCerrado() {
+            document.getElementById('bannerCerrado').style.display = 'block';
+            document.getElementById('btnProcesar').disabled = true; 
+            document.getElementById('btnProcesar').style.background = '#95a5a6';
+            document.getElementById('btnProcesar').innerText = "Cerrado temporalmente";
+        }
+
+        function llenarTablaHorarios(data) {
+            const tbody = document.getElementById('tbodyHorariosClientes');
+            tbody.innerHTML = '';
+            const ordenDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            
+            if (data.horarios) {
+                ordenDias.forEach(dia => {
+                    const h = data.horarios[dia];
+                    if(h && h.activo) tbody.innerHTML += `<tr><td><strong>${dia}</strong></td><td>${h.abre} a ${h.cierra}</td></tr>`;
+                    else tbody.innerHTML += `<tr><td><strong>${dia}</strong></td><td class="dia-cerrado">Cerrado</td></tr>`;
+                });
+            } else if (data.horarioApertura) {
+                tbody.innerHTML += `<tr><td><strong>Todos los días</strong></td><td>${data.horarioApertura} a ${data.horarioCierre}</td></tr>`;
+            } else {
+                tbody.innerHTML += `<tr><td colspan="2">Horarios no configurados.</td></tr>`;
             }
         }
 
