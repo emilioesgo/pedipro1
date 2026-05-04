@@ -224,8 +224,37 @@
             </div>
         </div>
 
+        <!-- MÓDULO ACTUALIZADO: VISTA CAJA -->
         <div id="vista-caja" class="vista">
-            <div class="card"><h2>Corte de Caja</h2><p>Módulo en construcción...</p></div>
+            <div class="card">
+                <h2>Caja y Sistema de Cobro</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <button class="btn-add" id="btnIniciarTurno" style="background:#2ecc71; width:auto;" onclick="iniciarTurnoCaja()">🟢 Iniciar Turno</button>
+                    <button class="btn-add" id="btnFinalizarTurno" style="background:#e74c3c; width:auto; display:none;" onclick="finalizarTurnoCaja()">🔴 Finalizar Turno</button>
+                    <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="document.getElementById('modalCorteCaja').style.display='block'">📊 Corte a Ciegas</button>
+                </div>
+                
+                <p style="background: #e8f4fd; padding: 10px; border-radius: 5px; color: #2980b9; font-weight: bold;">
+                    👤 Cajero Actual: <span id="txtCajeroActual">Ninguno (Inicia turno para poder cobrar)</span>
+                </p>
+
+                <h3 style="margin-top: 30px; border-bottom: 2px solid #e67e22; padding-bottom: 5px; color:#2c3e50;">Comandas Pendientes de Pago</h3>
+                <div style="overflow-x: auto;">
+                    <table class="tabla-profesional">
+                        <thead>
+                            <tr>
+                                <th># Comanda</th>
+                                <th>Cliente / Origen</th>
+                                <th>Total</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-caja-pendientes">
+                            <tr><td colspan="4" style="text-align: center;">Cargando comandas pendientes...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div id="vista-disponibilidad" class="vista">
@@ -262,7 +291,7 @@
         </div>
     </div>
 
-    <!-- NUEVO: MODAL PUNTO DE VENTA (POS) -->
+    <!-- MODAL PUNTO DE VENTA (POS) -->
     <div id="modalPOS" class="modal">
         <div class="modal-content modal-lg">
             <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 15px;">
@@ -305,11 +334,9 @@
                         <textarea id="posDireccion" placeholder="Dirección de envío (Solo Domicilio)" rows="2" style="margin-bottom: 10px;"></textarea>
                     </div>
 
-                    <label>Método de Pago:</label>
+                    <label>Método de Pago Inicial:</label>
                     <select id="posPago" style="margin-bottom: 15px; padding: 8px;">
-                        <option value="Efectivo">💵 Efectivo</option>
-                        <option value="Tarjeta">💳 Tarjeta</option>
-                        <option value="Transferencia">🏦 Transferencia</option>
+                        <option value="Pendiente">⏳ Dejar Pendiente (Cobrar en Caja)</option>
                     </select>
 
                     <button class="btn-add" id="btnProcesarPOS" onclick="procesarPedidoPOS()" style="background: #27ae60;">✔️ Confirmar y Generar Orden</button>
@@ -318,7 +345,81 @@
         </div>
     </div>
 
+    <!-- NUEVO MODAL: COBRAR COMANDA -->
+    <div id="modalCobro" class="modal">
+        <div class="modal-content modal-sm">
+            <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 10px;">
+                Módulo de Cobro - <span id="cobroComandaId" style="color:#e67e22;"></span>
+            </h3>
+            
+            <h2 style="color:#27ae60; text-align:center; font-size: 2.5rem; margin: 10px 0;">$<span id="cobroTotal">0.00</span></h2>
+            <input type="hidden" id="cobroDbId">
+
+            <div class="form-group">
+                <label>Método de Pago Final:</label>
+                <select id="cobroMetodo" style="font-size: 1.1rem; padding: 10px;" onchange="cambiarFormCobro()">
+                    <option value="">-- Selecciona el método --</option>
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Tarjeta">💳 Tarjeta (Terminal)</option>
+                    <option value="Transferencia">🏦 Transferencia / Depósito</option>
+                </select>
+            </div>
+
+            <!-- Div si escoge Efectivo -->
+            <div id="cobroEfectivoDiv" style="display:none; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label>Monto Recibido del Cliente ($):</label>
+                    <input type="number" id="cobroRecibido" placeholder="Ej. 500" style="font-size: 1.2rem; text-align: center;" onkeyup="calcularCambio()">
+                </div>
+                <h3 style="color:#e67e22; text-align:center; margin-bottom: 0;">Cambio a entregar: $<span id="cobroCambio">0.00</span></h3>
+            </div>
+
+            <!-- Div si escoge Tarjeta -->
+            <div id="cobroTarjetaDiv" style="display:none; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label>Folio o # Autorización del Voucher:</label>
+                    <input type="text" id="cobroVoucher" placeholder="Ej. 000123" style="font-size: 1.1rem; text-align: center;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top:20px;">
+                <button class="btn-add" style="background:#3498db; flex: 1;" onclick="imprimirTicketCobro()">🖨️ Imprimir Ticket</button>
+                <button class="btn-add" style="background:#27ae60; flex: 1;" onclick="procesarPagoFinal()">💰 Procesar Cobro</button>
+            </div>
+            
+            <button onclick="document.getElementById('modalCobro').style.display='none'" style="background:none; border:none; width:100%; margin-top:15px; color:#7f8c8d; font-weight: bold; cursor:pointer;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- NUEVO MODAL: CORTE A CIEGAS -->
+    <div id="modalCorteCaja" class="modal">
+        <div class="modal-content modal-sm">
+            <h3 style="margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px;">📊 Corte de Caja a Ciegas</h3>
+            <p style="font-size: 0.9rem; color: #7f8c8d;">Ingresa el conteo físico de lo que tienes en caja y comprobantes. El sistema verificará si hay diferencias.</p>
+            
+            <div class="form-group">
+                <label>💵 Total en Efectivo (Billetes/Monedas):</label>
+                <input type="number" id="corteEfectivo" placeholder="0.00" style="font-size: 1.1rem;">
+            </div>
+            <div class="form-group">
+                <label>💳 Suma de Vouchers (Terminal):</label>
+                <input type="number" id="corteTarjeta" placeholder="0.00" style="font-size: 1.1rem;">
+            </div>
+            <div class="form-group">
+                <label>🏦 Total Transferencias/Depósitos:</label>
+                <input type="number" id="corteTransferencia" placeholder="0.00" style="font-size: 1.1rem;">
+            </div>
+            
+            <button class="btn-add" style="background:#34495e; margin-top:10px;" onclick="ejecutarCorte()">🔍 Verificar Cuadre de Hoy</button>
+            
+            <div id="resultadoCorte" style="margin-top:20px; display:none; background:#fdfdfd; padding:15px; border-radius:8px; border:1px solid #ddd; font-size: 0.95rem;"></div>
+            
+            <button onclick="document.getElementById('modalCorteCaja').style.display='none'" style="background:none; border:none; width:100%; margin-top:15px; color:#e74c3c; font-weight: bold; cursor:pointer;">Cerrar Pantalla</button>
+        </div>
+    </div>
+
     <script>
+        // Lógica Global de UI
         function cambiarVista(idVista, elementoNav) {
             document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
             document.getElementById(idVista).classList.add('activa');
@@ -330,6 +431,7 @@
                 window.cargarPedidos(); 
             }
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
+            if(idVista === 'vista-caja') { window.cargarCaja(); } // Actualizar caja al entrar
         }
 
         function filtrarPestana(tipo) {
@@ -353,7 +455,7 @@
         function imprimirQR() {
             const qrImg = document.querySelector('#qrcode img').src;
             const ventana = window.open('', '_blank');
-            ventana.document.write(`<html><body style="text-align:center;padding:50px;"><h1>Menú Digital</h1><img src="${qrImg}" style="width:300px;"><p>Escanea para pedir</p></body></html>`);
+            ventana.document.write(`<html><body style="text-align:center;padding:50px;font-family:sans-serif;"><h1>Escanea nuestro Menú</h1><img src="${qrImg}" style="width:300px;"><p>Haz tu pedido rápido y fácil.</p></body></html>`);
             ventana.document.close();
             ventana.print();
         }
@@ -368,14 +470,9 @@
         function compartirEnlace() {
             const enlace = document.getElementById('displayLink').innerText;
             if (navigator.share) {
-                navigator.share({
-                    title: '¡Mira nuestro Menú Digital!',
-                    text: 'Haz tu pedido en línea rápido y fácil aquí:',
-                    url: enlace,
-                }).catch(err => console.log('Compartir cancelado', err));
-            } else {
-                alert("La función de compartir nativa no está soportada en tu dispositivo (Prueba en celular). Puedes usar el botón de 'Copiar Link'.");
-            }
+                navigator.share({ title: '¡Mira nuestro Menú Digital!', text: 'Haz tu pedido en línea rápido y fácil aquí:', url: enlace })
+                .catch(err => console.log('Compartir cancelado', err));
+            } else { alert("La función de compartir nativa no está soportada en tu dispositivo (Prueba en celular)."); }
         }
 
         // LÓGICA DE UI PARA EL POS MANUAL
@@ -414,9 +511,11 @@
         window.pedidosGlobales = [];
         window.restauranteInfo = {}; 
         
-        // Variables para el POS
         let carritoPOS = {};
         let productosCache = [];
+
+        // VARIABLES DE CAJA
+        let cajeroActual = "";
 
         if (!idRestaurante) { window.location.href = "index.html"; }
 
@@ -465,20 +564,242 @@
                 if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('imgPrevLogo').style.display = 'block'; }
                 if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('imgPrevPortada').style.display = 'block'; }
 
-                // Generar tabla de horarios
                 renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
 
             onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), () => {
                 if(document.getElementById('titulo-tabla-info').innerHTML.includes('turno actual')) window.cargarPedidos();
+                // Actualizar bandeja de caja en tiempo real si la vista está activa
+                if(document.getElementById('vista-caja').classList.contains('activa')) window.cargarCaja();
             });
             onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => { window.cargarMesas(); });
         }
         cargarDatos();
 
         // --------------------------------------------------------
-        // GUARDAR CONFIGURACIÓN ACTUALIZADA
+        // SISTEMA DE CAJA, TURNOS Y COBROS
         // --------------------------------------------------------
+        
+        window.iniciarTurnoCaja = function() {
+            let nombre = prompt("Ingresa el nombre del Cajero para iniciar turno:");
+            if(nombre && nombre.trim() !== "") {
+                cajeroActual = nombre.trim();
+                document.getElementById('txtCajeroActual').innerText = cajeroActual;
+                document.getElementById('btnIniciarTurno').style.display = 'none';
+                document.getElementById('btnFinalizarTurno').style.display = 'inline-block';
+            }
+        }
+
+        window.finalizarTurnoCaja = function() {
+            if(confirm("¿Estás seguro de finalizar tu turno en caja? Asegúrate de haber hecho el corte a ciegas primero.")) {
+                cajeroActual = "";
+                document.getElementById('txtCajeroActual').innerText = "Ninguno (Inicia turno para poder cobrar)";
+                document.getElementById('btnIniciarTurno').style.display = 'inline-block';
+                document.getElementById('btnFinalizarTurno').style.display = 'none';
+            }
+        }
+
+        window.cargarCaja = function() {
+            const tbody = document.getElementById('tbody-caja-pendientes');
+            tbody.innerHTML = '';
+            
+            // Filtramos solo los pedidos del turno (window.pedidosGlobales) que NO estén pagados
+            let pendientes = window.pedidosGlobales.filter(p => p.estadoPago !== 'Pagado');
+            
+            if(pendientes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">🎉 Todo al día. No hay comandas pendientes de cobro.</td></tr>';
+                return;
+            }
+            
+            pendientes.forEach(p => {
+                let infoCliente = p.tipoOrigen === 'mesa' ? `Mesa #${p.numeroMesa}` : (p.clienteEnvio ? p.clienteEnvio.nombre : "Mostrador");
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${p.numeroComanda}</strong></td>
+                        <td>${infoCliente}</td>
+                        <td style="color:#27ae60; font-weight:bold; font-size: 1.1rem;">$${p.total.toFixed(2)}</td>
+                        <td><button class="btn-add" style="background:#2ecc71; padding:8px 15px; width:auto; display:flex; align-items:center; gap:5px;" onclick="window.abrirModalCobro('${p.id}')">💰 Cobrar</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.abrirModalCobro = function(id) {
+            if(!cajeroActual) return alert("❌ Acceso Denegado. Debes iniciar turno ingresando tu nombre para poder cobrar.");
+            
+            const ped = window.pedidosGlobales.find(p => p.id === id);
+            if(!ped) return;
+            
+            document.getElementById('cobroDbId').value = ped.id;
+            document.getElementById('cobroComandaId').innerText = ped.numeroComanda;
+            document.getElementById('cobroTotal').innerText = ped.total.toFixed(2);
+            
+            // Reiniciar inputs del formulario
+            document.getElementById('cobroMetodo').value = "";
+            document.getElementById('cobroRecibido').value = "";
+            document.getElementById('cobroCambio').innerText = "0.00";
+            document.getElementById('cobroVoucher').value = "";
+            window.cambiarFormCobro();
+            
+            document.getElementById('modalCobro').style.display = 'block';
+        }
+
+        window.cambiarFormCobro = function() {
+            const metodo = document.getElementById('cobroMetodo').value;
+            document.getElementById('cobroEfectivoDiv').style.display = metodo === 'Efectivo' ? 'block' : 'none';
+            document.getElementById('cobroTarjetaDiv').style.display = metodo === 'Tarjeta' ? 'block' : 'none';
+            // Transferencia no necesita input extra
+        }
+
+        window.calcularCambio = function() {
+            const total = parseFloat(document.getElementById('cobroTotal').innerText);
+            const recibido = parseFloat(document.getElementById('cobroRecibido').value) || 0;
+            const cambio = recibido - total;
+            document.getElementById('cobroCambio').innerText = cambio >= 0 ? cambio.toFixed(2) : "0.00";
+        }
+
+        window.imprimirTicketCobro = function() {
+            const id = document.getElementById('cobroDbId').value;
+            const ped = window.pedidosGlobales.find(p => p.id === id);
+            if(!ped) return;
+            
+            let itemsHtml = '';
+            ped.items.forEach(i => {
+                itemsHtml += `<tr><td style="padding: 2px 0;">${i.cantidad}</td><td style="padding: 2px 0;">${i.nombre}</td><td style="text-align:right; padding: 2px 0;">$${(i.precio*i.cantidad).toFixed(2)}</td></tr>`;
+            });
+
+            const ventana = window.open('', '_blank', 'width=400,height=600');
+            ventana.document.write(`
+                <html>
+                <head>
+                    <title>Ticket ${ped.numeroComanda}</title>
+                    <style>
+                        body { font-family: monospace; width: 300px; margin: 0 auto; padding: 15px; font-size: 14px; }
+                        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                        td, th { text-align: left; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+                        h2, h3, p { margin: 5px 0; }
+                    </style>
+                </head>
+                <body>
+                    <h2 style="text-align:center;">${window.restauranteInfo.nombre || 'Restaurante'}</h2>
+                    <h3 style="text-align:center;">Ticket de Venta</h3>
+                    <p><strong>Comanda:</strong> ${ped.numeroComanda}</p>
+                    <p><strong>Fecha:</strong> ${new Date().toLocaleString()}</p>
+                    <p><strong>Cajero:</strong> ${cajeroActual}</p>
+                    <p><strong>Tipo:</strong> ${ped.tipoOrigen.toUpperCase()}</p>
+                    <table>
+                        <tr><th>Cant</th><th>Producto</th><th style="text-align:right;">Total</th></tr>
+                        ${itemsHtml}
+                    </table>
+                    <h2 style="text-align:right;">TOTAL: $${ped.total.toFixed(2)}</h2>
+                    <p style="text-align:center; margin-top:20px; font-size:12px;">¡Gracias por su preferencia!</p>
+                </body>
+                </html>
+            `);
+            ventana.document.close();
+            setTimeout(() => { ventana.print(); }, 500);
+        }
+
+        window.procesarPagoFinal = async function() {
+            const id = document.getElementById('cobroDbId').value;
+            const ped = window.pedidosGlobales.find(p => p.id === id);
+            if(!ped) return;
+
+            const metodo = document.getElementById('cobroMetodo').value;
+            if(!metodo) return alert("Debes seleccionar obligatoriamente un método de pago.");
+
+            let dataExtra = {};
+            if(metodo === 'Efectivo') {
+                const recibido = parseFloat(document.getElementById('cobroRecibido').value);
+                if(isNaN(recibido) || recibido < ped.total) return alert("Para cobros en efectivo, el monto recibido debe ser válido y mayor o igual al total a cobrar.");
+                dataExtra = { montoRecibido: recibido, cambioEntregado: recibido - ped.total };
+            } else if (metodo === 'Tarjeta') {
+                const voucher = document.getElementById('cobroVoucher').value.trim();
+                if(!voucher) return alert("Para cobros con tarjeta, es obligatorio ingresar el folio de aprobación del voucher.");
+                dataExtra = { folioVoucher: voucher };
+            }
+
+            try {
+                const btn = document.querySelector('#modalCobro .btn-add[style*="background:#27ae60"]');
+                btn.innerText = "Procesando..."; btn.disabled = true;
+
+                // Actualizamos estadoPago a 'Pagado' y guardamos datos contables de caja
+                await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", id), {
+                    estadoPago: 'Pagado',
+                    metodoPagoCobro: metodo,
+                    cajeroAtendio: cajeroActual,
+                    datosPagoExtra: dataExtra,
+                    fechaCobro: new Date()
+                });
+
+                alert("✅ ¡Comanda cobrada exitosamente!");
+                document.getElementById('modalCobro').style.display = 'none';
+                window.cargarCaja(); // Refrescar lista
+
+            } catch (e) {
+                console.error(e); alert("Hubo un error de conexión al cobrar.");
+            } finally {
+                const btn = document.querySelector('#modalCobro .btn-add[style*="background:#27ae60"]');
+                btn.innerText = "💰 Procesar Cobro"; btn.disabled = false;
+            }
+        }
+
+        // CORTE A CIEGAS
+        window.ejecutarCorte = function() {
+            // Lo declarado por el cajero (a ciegas)
+            let declEfe = parseFloat(document.getElementById('corteEfectivo').value) || 0;
+            let declTar = parseFloat(document.getElementById('corteTarjeta').value) || 0;
+            let declTra = parseFloat(document.getElementById('corteTransferencia').value) || 0;
+
+            let sysEfe = 0, sysTar = 0, sysTra = 0;
+            
+            // Sumar lo que realmente tiene el sistema como "Pagado" hoy
+            window.pedidosGlobales.forEach(p => {
+                if(p.estadoPago === 'Pagado') {
+                    if(p.metodoPagoCobro === 'Efectivo') sysEfe += p.total;
+                    else if(p.metodoPagoCobro === 'Tarjeta') sysTar += p.total;
+                    else if(p.metodoPagoCobro === 'Transferencia') sysTra += p.total;
+                }
+            });
+
+            // Diferencias (Lo declarado menos Lo del sistema) (Negativo es Faltante, Positivo es Sobrante)
+            let diffEfe = declEfe - sysEfe;
+            let diffTar = declTar - sysTar;
+            let diffTra = declTra - sysTra;
+
+            let totalDecl = declEfe + declTar + declTra;
+            let totalSys = sysEfe + sysTar + sysTra;
+            let totalDiff = totalDecl - totalSys;
+
+            let renderDif = (dif) => {
+                if(dif === 0) return `<span style="color:#27ae60; font-weight:bold;">Cuadre Exacto</span>`;
+                if(dif < 0) return `<span style="color:#c0392b; font-weight:bold;">Faltan $${Math.abs(dif).toFixed(2)}</span>`;
+                return `<span style="color:#f39c12; font-weight:bold;">Sobran $${Math.abs(dif).toFixed(2)}</span>`;
+            };
+
+            let resHtml = `
+                <h4 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:5px;">Resultados de Caja:</h4>
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <div><strong>Venta del Sistema:</strong><br>$${totalSys.toFixed(2)}</div>
+                    <div style="text-align:right;"><strong>Tu Declaración:</strong><br>$${totalDecl.toFixed(2)}</div>
+                </div>
+                <hr style="border:0; border-top:1px dashed #ccc;">
+                <p><strong>💵 Efectivo:</strong> Sist. $${sysEfe.toFixed(2)} -> <strong>${renderDif(diffEfe)}</strong></p>
+                <p><strong>💳 Tarjeta:</strong> Sist. $${sysTar.toFixed(2)} -> <strong>${renderDif(diffTar)}</strong></p>
+                <p><strong>🏦 Transf.:</strong> Sist. $${sysTra.toFixed(2)} -> <strong>${renderDif(diffTra)}</strong></p>
+                <h2 style="color:${totalDiff === 0 ? '#27ae60' : '#c0392b'}; text-align:center; background:${totalDiff === 0 ? '#eafaf1' : '#fdedec'}; padding: 10px; border-radius: 5px;">
+                    ${totalDiff === 0 ? '✅ CUADRE PERFECTO' : '❌ DIFERENCIA TOTAL: ' + renderDif(totalDiff)}
+                </h2>
+            `;
+            
+            document.getElementById('resultadoCorte').innerHTML = resHtml;
+            document.getElementById('resultadoCorte').style.display = 'block';
+        }
+
+        // --------------------------------------------------------
+        // FUNCIONES DE GUARDADO, HORARIOS Y DEMÁS INTACTAS
+        // --------------------------------------------------------
+
         window.guardarConfiguracion = async function() {
             const btn = document.getElementById('btnGuardarConfig');
             btn.innerText = "Guardando..."; btn.disabled = true;
@@ -489,14 +810,9 @@
 
             let dataActualizada = { slug: slug };
 
-            // Recolectar horarios
             let horariosNuevos = {};
             diasSemana.forEach(dia => {
-                horariosNuevos[dia] = {
-                    activo: document.getElementById(`chk_${dia}`).checked,
-                    abre: document.getElementById(`abre_${dia}`).value,
-                    cierra: document.getElementById(`cierra_${dia}`).value
-                };
+                horariosNuevos[dia] = { activo: document.getElementById(`chk_${dia}`).checked, abre: document.getElementById(`abre_${dia}`).value, cierra: document.getElementById(`cierra_${dia}`).value };
             });
             dataActualizada.horarios = horariosNuevos;
 
@@ -519,25 +835,20 @@
                 await updateDoc(doc(db, "restaurantes", idRestaurante), dataActualizada);
                 window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada }; 
                 
-                actualizarEnlaceUI(slug); // Actualizar QR si cambió
+                actualizarEnlaceUI(slug); 
                 alert("✅ Configuración y horarios guardados.");
             } catch (error) { console.error(error); alert("Error al guardar."); } 
             finally { btn.innerText = "💾 Guardar Configuración"; btn.disabled = false; }
         }
 
-        // --------------------------------------------------------
-        // SISTEMA DE PEDIDOS E HISTORIAL (Intacto con ajuste de fecha)
-        // --------------------------------------------------------
         function obtenerHoraCierreHoy() {
-            // Busca en el nuevo formato de horarios, fallback a '22:00'
             const hoy = new Date();
             const nombreDia = hoy.toLocaleDateString('es-ES', { weekday: 'long' });
             const diaCapitalizado = nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1);
-            
             if (window.restauranteInfo.horarios && window.restauranteInfo.horarios[diaCapitalizado]) {
                 return window.restauranteInfo.horarios[diaCapitalizado].cierra;
             }
-            return '23:59'; // Default si no hay nada configurado
+            return '23:59';
         }
 
         function esPedidoDeHoy(fechaPedidoFirebase) {
@@ -545,7 +856,6 @@
             const now = new Date();
             let cierreStr = obtenerHoraCierreHoy();
             let [horaCierre, minCierre] = cierreStr.split(':').map(Number);
-            
             let limiteCierreHora = horaCierre + 1;
             if (limiteCierreHora >= 24) limiteCierreHora -= 24;
 
@@ -610,14 +920,9 @@
         }
         window.completarComanda = async function(docId) { if(confirm("¿Orden preparada?")) { try { await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", docId), { estado: 'completado' }); } catch (error) { console.error(error); } } }
 
-        // --------------------------------------------------------
-        // SISTEMA PUNTO DE VENTA (POS) INTERNO
-        // --------------------------------------------------------
         window.abrirPOS = async function() {
             document.getElementById('modalPOS').style.display = 'block';
-            carritoPOS = {}; // Reset cart
-            renderCarritoPOS();
-
+            carritoPOS = {}; renderCarritoPOS();
             const contenedor = document.getElementById('posMenuContainer');
             if (productosCache.length === 0) {
                 contenedor.innerHTML = '<p>Cargando productos...</p>';
@@ -625,7 +930,6 @@
                 productosCache = [];
                 snapshot.forEach(doc => { if(doc.data().disponible !== false) productosCache.push({ id: doc.id, ...doc.data() }); });
             }
-            
             contenedor.innerHTML = '';
             productosCache.forEach(p => {
                 const imgHTML = p.imagen ? `<img src="${p.imagen}" class="pos-prod-img">` : `<div class="pos-prod-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;color:#ccc;">🍽️</div>`;
@@ -651,112 +955,45 @@
             if (!carritoPOS[nombre]) carritoPOS[nombre] = { precio: precio, cantidad: 0 };
             carritoPOS[nombre].cantidad += cambio;
             if (carritoPOS[nombre].cantidad <= 0) delete carritoPOS[nombre];
-            
             const itemQty = carritoPOS[nombre] ? carritoPOS[nombre].cantidad : 0;
-            const uiEl = document.getElementById(`posQty-${safeName}`);
-            if(uiEl) uiEl.innerText = itemQty;
-            
+            const uiEl = document.getElementById(`posQty-${safeName}`); if(uiEl) uiEl.innerText = itemQty;
             renderCarritoPOS();
         }
 
         function renderCarritoPOS() {
-            const list = document.getElementById('posCartList');
-            let total = 0;
-            list.innerHTML = '';
-            
-            if (Object.keys(carritoPOS).length === 0) {
-                list.innerHTML = '<p style="color:#7f8c8d; font-size:0.9rem; text-align:center;">El carrito está vacío</p>';
-                document.getElementById('posTotal').innerText = '0.00';
-                return;
-            }
-
+            const list = document.getElementById('posCartList'); let total = 0; list.innerHTML = '';
+            if (Object.keys(carritoPOS).length === 0) { list.innerHTML = '<p style="color:#7f8c8d; font-size:0.9rem; text-align:center;">El carrito está vacío</p>'; document.getElementById('posTotal').innerText = '0.00'; return; }
             for (let prod in carritoPOS) {
-                const item = carritoPOS[prod];
-                const sub = item.precio * item.cantidad;
-                total += sub;
-                list.innerHTML += `
-                    <div class="cart-item">
-                        <span><b>${item.cantidad}x</b> ${prod}</span>
-                        <span style="color:#2c3e50; font-weight:bold;">$${sub.toFixed(2)}</span>
-                    </div>
-                `;
+                const item = carritoPOS[prod]; const sub = item.precio * item.cantidad; total += sub;
+                list.innerHTML += `<div class="cart-item"><span><b>${item.cantidad}x</b> ${prod}</span><span style="color:#2c3e50; font-weight:bold;">$${sub.toFixed(2)}</span></div>`;
             }
             document.getElementById('posTotal').innerText = total.toFixed(2);
         }
 
         window.procesarPedidoPOS = async function() {
-            const arrayItems = Object.keys(carritoPOS).map(nombre => ({
-                nombre: nombre, precio: carritoPOS[nombre].precio, cantidad: carritoPOS[nombre].cantidad
-            }));
-            
+            const arrayItems = Object.keys(carritoPOS).map(nombre => ({ nombre: nombre, precio: carritoPOS[nombre].precio, cantidad: carritoPOS[nombre].cantidad }));
             if (arrayItems.length === 0) return alert("Agrega productos al pedido.");
-
-            const btn = document.getElementById('btnProcesarPOS');
-            const tipo = document.getElementById('posTipoPedido').value;
-            let total = parseFloat(document.getElementById('posTotal').innerText);
-            
-            let datosEnvio = { nombre: "Cliente Mostrador", telefono: "N/A", direccion: "En Local", metodoPago: document.getElementById('posPago').value };
-            let mesa = null;
-
-            if (tipo === 'mesa') {
-                mesa = document.getElementById('posNumMesa').value;
-                if(!mesa) return alert("Ingresa el número de mesa.");
-            } else {
-                datosEnvio.nombre = document.getElementById('posNombre').value || "Cliente Mostrador";
-                datosEnvio.telefono = document.getElementById('posTelefono').value || "N/A";
-                if(tipo === 'domicilio') {
-                    datosEnvio.direccion = document.getElementById('posDireccion').value;
-                    if(!datosEnvio.direccion) return alert("Ingresa la dirección para el domicilio.");
-                } else {
-                    datosEnvio.direccion = "Pick Up";
-                }
+            const btn = document.getElementById('btnProcesarPOS'); const tipo = document.getElementById('posTipoPedido').value; let total = parseFloat(document.getElementById('posTotal').innerText);
+            let datosEnvio = { nombre: "Cliente Mostrador", telefono: "N/A", direccion: "En Local", metodoPago: "Pendiente" }; let mesa = null;
+            if (tipo === 'mesa') { mesa = document.getElementById('posNumMesa').value; if(!mesa) return alert("Ingresa el número de mesa."); } else {
+                datosEnvio.nombre = document.getElementById('posNombre').value || "Cliente Mostrador"; datosEnvio.telefono = document.getElementById('posTelefono').value || "N/A";
+                if(tipo === 'domicilio') { datosEnvio.direccion = document.getElementById('posDireccion').value; if(!datosEnvio.direccion) return alert("Ingresa la dirección para el domicilio."); } else { datosEnvio.direccion = "Pick Up"; }
             }
-
             btn.disabled = true; btn.innerText = "Generando...";
-
             try {
-                // Cálculo de consecutivo
-                const hoyInicio = new Date(); hoyInicio.setHours(0,0,0,0);
-                const qCount = query(collection(db, "restaurantes", idRestaurante, "pedidos"), where("fecha", ">=", hoyInicio));
-                const snapPedidos = await getDocs(qCount);
-                let maxConsecutivo = 0;
+                const hoyInicio = new Date(); hoyInicio.setHours(0,0,0,0); const qCount = query(collection(db, "restaurantes", idRestaurante, "pedidos"), where("fecha", ">=", hoyInicio));
+                const snapPedidos = await getDocs(qCount); let maxConsecutivo = 0;
                 snapPedidos.forEach(d => { let num = d.data().consecutivoDiario || 0; if (num > maxConsecutivo) maxConsecutivo = num; });
                 const nuevoConsecutivo = maxConsecutivo + 1;
-                
-                let letraPrefix = 'M'; if (tipo === 'pickup') letraPrefix = 'P'; else if (tipo === 'domicilio') letraPrefix = 'D';
-                const comandaId = `${letraPrefix}-${nuevoConsecutivo}`;
-
+                let letraPrefix = 'M'; if (tipo === 'pickup') letraPrefix = 'P'; else if (tipo === 'domicilio') letraPrefix = 'D'; const comandaId = `${letraPrefix}-${nuevoConsecutivo}`;
                 await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
-                    numeroComanda: comandaId,
-                    consecutivoDiario: nuevoConsecutivo,
-                    items: arrayItems,
-                    total: total,
-                    tipoOrigen: tipo,
-                    numeroMesa: mesa,
-                    clienteEnvio: (tipo === 'pickup' || tipo === 'domicilio') ? datosEnvio : null,
-                    fecha: new Date(),
-                    estado: 'pendiente',
-                    estadoPago: 'Pendiente'
+                    numeroComanda: comandaId, consecutivoDiario: nuevoConsecutivo, items: arrayItems, total: total, tipoOrigen: tipo, numeroMesa: mesa, clienteEnvio: (tipo === 'pickup' || tipo === 'domicilio') ? datosEnvio : null, fecha: new Date(), estado: 'pendiente', estadoPago: 'Pendiente'
                 });
-
-                // Cambiar estado de mesa si aplica
-                if(tipo === 'mesa') {
-                    const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(mesa)));
-                    const qSnap = await getDocs(qM);
-                    qSnap.forEach(async (dM) => { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'espera' }); });
-                }
-
-                alert(`¡Pedido ${comandaId} enviado a cocina exitosamente!`);
-                document.getElementById('modalPOS').style.display = 'none';
-                
-            } catch (e) {
-                console.error(e); alert("Error al procesar el pedido.");
-            } finally {
-                btn.disabled = false; btn.innerText = "✔️ Confirmar y Generar Orden";
-            }
+                if(tipo === 'mesa') { const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(mesa))); const qSnap = await getDocs(qM); qSnap.forEach(async (dM) => { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'espera' }); }); }
+                alert(`¡Pedido ${comandaId} enviado a cocina exitosamente!`); document.getElementById('modalPOS').style.display = 'none';
+            } catch (e) { console.error(e); alert("Error al procesar el pedido."); } finally { btn.disabled = false; btn.innerText = "✔️ Confirmar y Generar Orden"; }
         }
 
-        // --- FUNCIONES RESTANTES INTACTAS ---
         window.cargarDisponibilidad = async function() {
             const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos")); const contenedor = document.getElementById('lista-disponibilidad'); contenedor.innerHTML = '';
             if(snapshot.empty) return contenedor.innerHTML = '<p style="padding:15px; color:#7f8c8d;">No hay productos.</p>';
