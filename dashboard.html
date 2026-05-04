@@ -1,9 +1,8 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Control - Mi Menú</title>
+    <title>Panel de Control - MenusGo</title>
     <!-- Librería para el Código QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -26,6 +25,8 @@
         .btn-print { background: #3498db; margin-top: 10px; }
         .variante-item { background: #f9f9f9; padding: 10px; border-left: 3px solid #e67e22; margin-top: 10px; position: relative; }
         .btn-eliminar { color: red; cursor: pointer; border: none; background: none; font-size: 0.8rem; }
+        .nav-item { padding: 10px; cursor: pointer; border-radius: 5px; }
+        .nav-item:hover { background: #34495e; }
     </style>
 </head>
 <body>
@@ -35,9 +36,9 @@
         <p id="saludoDuenio">Cargando...</p>
         <hr>
         <nav>
-            <p>🏠 Inicio</p>
-            <p>🍔 Mi Menú</p>
-            <p>⚙️ Configuración</p>
+            <div class="nav-item">🏠 Inicio</div>
+            <div class="nav-item">🍔 Mi Menú</div>
+            <div class="nav-item" onclick="window.location.href='index.html'">🚪 Cerrar Sesión</div>
         </nav>
     </div>
 
@@ -52,7 +53,7 @@
             <button class="btn-add btn-print" onclick="imprimirQR()">🖨️ Imprimir Código QR</button>
         </div>
 
-        <!-- FORMULARIO DE PRODUCTOS CON CATEGORÍAS -->
+        <!-- AGREGAR PRODUCTO -->
         <div class="card">
             <h2>Agregar Producto al Menú</h2>
             
@@ -70,12 +71,10 @@
                 <label>Nombre del Producto:</label>
                 <input type="text" id="prodNombre" placeholder="Ej: Pizza de Pepperoni">
             </div>
-            
             <div class="form-group">
                 <label>Descripción:</label>
-                <textarea id="prodDesc" placeholder="Ej: Con queso mozzarella y salsa artesanal..."></textarea>
+                <textarea id="prodDesc" placeholder="Ej: Con queso mozzarella..."></textarea>
             </div>
-            
             <div class="form-group">
                 <label>Precio Base ($):</label>
                 <input type="number" id="prodPrecio" placeholder="0.00">
@@ -112,11 +111,10 @@
         const idRestaurante = urlParams.get('id');
 
         if (!idRestaurante) {
-            alert("No se encontró el ID del restaurante.");
-            window.location.href = "registro.html";
+            alert("Acceso denegado.");
+            window.location.href = "index.html";
         }
 
-        // --- CARGAR DATOS Y GENERAR QR ---
         async function cargarDatos() {
             const docRef = doc(db, "restaurantes", idRestaurante);
             const documento = await getDoc(docRef);
@@ -124,11 +122,10 @@
                 const info = documento.data();
                 document.getElementById('saludoDuenio').innerText = "Bienvenido, " + info.nombre;
                 
-                // URL que usará el cliente (Asegúrate de cambiar 'tu-usuario' por el tuyo en GitHub)
-                const urlMenu = `https://tu-usuario.github.io/menus-go/menu.html?id=${idRestaurante}`;
+                // CAMBIA ESTO por tu URL de GitHub real
+                const urlMenu = `https://emilioesgo.github.io/pedipro1/menu.html?id=${idRestaurante}`;
                 document.getElementById('displayLink').innerText = urlMenu;
 
-                // Generar QR automáticamente
                 new QRCode(document.getElementById("qrcode"), {
                     text: urlMenu,
                     width: 150,
@@ -140,246 +137,52 @@
         }
         cargarDatos();
 
-        // --- LÓGICA DE VARIANTES ---
-        const btnNuevaVariante = document.getElementById('btnNuevaVariante');
         const contenedorVariantes = document.getElementById('contenedorVariantes');
-
-        btnNuevaVariante.addEventListener('click', () => {
+        document.getElementById('btnNuevaVariante').addEventListener('click', () => {
             const div = document.createElement('div');
             div.className = 'variante-item';
             div.innerHTML = `
-                <input type="text" class="v-titulo" placeholder="Título: (Ej: Tamaño)" style="margin-bottom:5px">
-                <input type="text" class="v-opciones" placeholder="Opciones separadas por coma: (Chica, Grande)">
+                <input type="text" class="v-titulo" placeholder="Título (Ej: Salsa)" style="margin-bottom:5px">
+                <input type="text" class="v-opciones" placeholder="Opciones (Roja, Verde)">
                 <button type="button" class="btn-eliminar" onclick="this.parentElement.remove()">✕ Eliminar</button>
             `;
             contenedorVariantes.appendChild(div);
         });
 
-        // --- GUARDAR PRODUCTO ---
         window.guardarProducto = async function() {
             const categoria = document.getElementById('prodCategoria').value;
             const nombre = document.getElementById('prodNombre').value;
             const desc = document.getElementById('prodDesc').value;
             const precio = document.getElementById('prodPrecio').value;
 
-            if (!nombre || !precio) return alert("Nombre y Precio son obligatorios");
+            if (!nombre || !precio) return alert("Llena los campos obligatorios");
 
             const variantes = [];
             document.querySelectorAll('.variante-item').forEach(item => {
                 const titulo = item.querySelector('.v-titulo').value;
                 const opciones = item.querySelector('.v-opciones').value;
-                if(titulo && opciones) {
-                    variantes.push({ titulo, opciones: opciones.split(',').map(o => o.trim()) });
-                }
+                if(titulo && opciones) variantes.push({ titulo, opciones: opciones.split(',') });
             });
 
             try {
                 await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), {
-                    categoria,
-                    nombre,
-                    descripcion: desc,
-                    precio: parseFloat(precio),
-                    variantes,
-                    fecha: new Date()
+                    categoria, nombre, descripcion: desc, precio: parseFloat(precio), variantes, fecha: new Date()
                 });
-
-                alert("¡Producto guardado!");
-                location.reload(); // Recargar para limpiar todo
-
-            } catch (e) {
-                alert("Error al guardar.");
-            }
+                alert("Producto añadido.");
+                location.reload();
+            } catch (e) { alert("Error al guardar."); }
         }
-
         document.getElementById('btnGuardarProd').addEventListener('click', window.guardarProducto);
     </script>
 
     <script>
-        // Función de impresión (Global)
         function imprimirQR() {
             const qrImg = document.querySelector('#qrcode img').src;
             const ventana = window.open('', '_blank');
-            ventana.document.write(`
-                <html>
-                <head><title>Imprimir QR - MenusGo</title></head>
-                <body style="text-align:center; font-family:sans-serif; padding-top:50px;">
-                    <h1>Escanea nuestro Menú</h1>
-                    <img src="${qrImg}" style="width:300px;">
-                    <p style="font-size:20px;">¡Pide directamente por WhatsApp!</p>
-                </body>
-                </html>
-            `);
+            ventana.document.write(`<html><body style="text-align:center;padding:50px;"><h1>Menú Digital</h1><img src="${qrImg}" style="width:300px;"><p>Escanea para pedir</p></body></html>`);
             ventana.document.close();
             ventana.print();
         }
     </script>
 </body>
-=======
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Panel de Control - Mi Menú</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; }
-        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; }
-        .main-content { margin-left: 290px; padding: 40px; width: calc(100% - 330px); }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #2c3e50; margin-top: 0; }
-        .link-box { background: #e8f4fd; padding: 15px; border-radius: 5px; border: 1px dashed #3498db; color: #2980b9; font-weight: bold; margin: 10px 0; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        .btn-add { background: #e67e22; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-add:hover { background: #d35400; }
-        .variante-item { background: #f9f9f9; padding: 10px; border-left: 3px solid #e67e22; margin-top: 10px; position: relative; }
-        .btn-eliminar { color: red; cursor: pointer; border: none; background: none; font-size: 0.8rem; }
-    </style>
-</head>
-<body>
-
-    <div class="sidebar">
-        <h1>MenusGo</h1>
-        <p id="saludoDuenio">Cargando...</p>
-        <hr>
-        <nav>
-            <p>🏠 Inicio</p>
-            <p>🍔 Mi Menú</p>
-            <p>⚙️ Configuración</p>
-        </nav>
-    </div>
-
-    <div class="main-content">
-        <div class="card">
-            <h2>Tu Menú Digital</h2>
-            <p>Link para tus clientes:</p>
-            <div class="link-box" id="displayLink">Cargando enlace...</div>
-        </div>
-
-        <div class="card">
-            <h2>Agregar Producto al Menú</h2>
-            <div class="form-group">
-                <label>Nombre del Producto:</label>
-                <input type="text" id="prodNombre" placeholder="Ej: Pizza de Pepperoni">
-            </div>
-            <div class="form-group">
-                <label>Descripción:</label>
-                <textarea id="prodDesc" placeholder="Ej: Con queso mozzarella y salsa artesanal..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>Precio Base ($):</label>
-                <input type="number" id="prodPrecio" placeholder="0.00">
-            </div>
-
-            <div id="seccionVariantes">
-                <label>Variantes / Extras:</label>
-                <div id="contenedorVariantes"></div>
-                <button type="button" class="btn-add" style="background:#95a5a6; margin-top:10px;" id="btnNuevaVariante">+ Agregar Variante</button>
-            </div>
-
-            <hr>
-            <button class="btn-add" id="btnGuardarProd">Guardar Producto</button>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
-            authDomain: "pedipro-1853f.firebaseapp.com",
-            projectId: "pedipro-1853f",
-            storageBucket: "pedipro-1853f.firebasestorage.app",
-            messagingSenderId: "346303291186",
-            appId: "1:346303291186:web:7b5e06aead830c54e4812b"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // --- 1. OBTENER EL ID DEL DUEÑO DESDE LA URL ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const idRestaurante = urlParams.get('id');
-
-        if (!idRestaurante) {
-            alert("No se encontró el ID del restaurante. Regresa al registro.");
-            window.location.href = "registro.html";
-        }
-
-        // --- 2. CARGAR DATOS DEL DUEÑO ---
-        async function cargarDatos() {
-            const docRef = doc(db, "restaurantes", idRestaurante);
-            const documento = await getDoc(docRef);
-            if (documento.exists()) {
-                const info = documento.data();
-                document.getElementById('saludoDuenio').innerText = "Bienvenido, " + info.nombre;
-                document.getElementById('displayLink').innerText = "menusgo.com/" + info.slug;
-            }
-        }
-        cargarDatos();
-
-        // --- 3. LÓGICA DE VARIANTES (INTERFAZ) ---
-        const btnNuevaVariante = document.getElementById('btnNuevaVariante');
-        const contenedorVariantes = document.getElementById('contenedorVariantes');
-
-        btnNuevaVariante.addEventListener('click', () => {
-            const div = document.createElement('div');
-            div.className = 'variante-item';
-            div.innerHTML = `
-                <input type="text" class="v-titulo" placeholder="Título: (Ej: Elige tu salsa)" style="margin-bottom:5px">
-                <input type="text" class="v-opciones" placeholder="Opciones separadas por coma: (Roja, Verde)">
-                <button type="button" class="btn-eliminar" onclick="this.parentElement.remove()">✕ Eliminar variante</button>
-            `;
-            contenedorVariantes.appendChild(div);
-        });
-
-        // --- 4. GUARDAR PRODUCTO EN FIREBASE ---
-        window.guardarProducto = async function() {
-            const nombre = document.getElementById('prodNombre').value;
-            const desc = document.getElementById('prodDesc').value;
-            const precio = document.getElementById('prodPrecio').value;
-
-            if (!nombre || !precio) return alert("Nombre y Precio son obligatorios");
-
-            // Recolectar variantes de los inputs
-            const variantes = [];
-            document.querySelectorAll('.variante-item').forEach(item => {
-                const titulo = item.querySelector('.v-titulo').value;
-                const opciones = item.querySelector('.v-opciones').value;
-                if(titulo && opciones) {
-                    variantes.push({ titulo, opciones: opciones.split(',') });
-                }
-            });
-
-            try {
-                // Guardamos el producto en una sub-colección del restaurante
-                await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), {
-                    nombre,
-                    descripcion: desc,
-                    precio: parseFloat(precio),
-                    variantes: variantes,
-                    fecha: new Date()
-                });
-
-                alert("¡Producto guardado con éxito!");
-                
-                // Limpiar el formulario
-                document.getElementById('prodNombre').value = "";
-                document.getElementById('prodDesc').value = "";
-                document.getElementById('prodPrecio').value = "";
-                contenedorVariantes.innerHTML = "";
-
-            } catch (e) {
-                console.error("Error: ", e);
-                alert("No se pudo guardar el producto.");
-            }
-        }
-
-        // Conectar el botón de guardar
-        document.getElementById('btnGuardarProd').addEventListener('click', window.guardarProducto);
-
-    </script>
-</body>
->>>>>>> 1ae933f9805ecb974ea9809b6308cf81961826e6
 </html>
