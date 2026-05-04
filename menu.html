@@ -23,13 +23,13 @@
 
         /* NAVEGACIÓN FLOTANTE (STICKY) DE CATEGORÍAS */
         .nav-categorias { position: sticky; top: 0; background: white; padding: 12px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 50; }
-        .nav-categorias::-webkit-scrollbar { display: none; } /* Oculta barra de scroll */
+        .nav-categorias::-webkit-scrollbar { display: none; }
         .cat-chip { background: #f1f2f6; color: #2c3e50; padding: 6px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid #ddd; }
         .cat-chip:active { background: #e67e22; color: white; border-color: #e67e22; }
 
         .container { max-width: 600px; margin: auto; padding: 15px; }
         
-        .categoria-titulo { margin-top: 25px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; font-size: 1.4rem; padding-top: 60px; margin-top: -40px; } /* Offset para que el sticky no tape el título */
+        .categoria-titulo { margin-top: 25px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; font-size: 1.4rem; padding-top: 60px; margin-top: -40px; }
         
         /* TARJETAS DE PRODUCTOS */
         .producto-card { background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 15px; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.2s; }
@@ -86,7 +86,7 @@
         </div>
     </header>
 
-    <!-- NAVEGACIÓN STICKY DE CATEGORÍAS (Se llena con JS) -->
+    <!-- NAVEGACIÓN STICKY DE CATEGORÍAS -->
     <nav id="navCategorias" class="nav-categorias"></nav>
 
     <div class="container">
@@ -194,7 +194,7 @@
         let carrito = {}; 
         let numWhatsApp = ""; 
         let totalGeneral = 0;
-        let infoNegocioGlobal = null; // Guardará info general
+        let infoNegocioGlobal = null;
         let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "", metodoPago: "" };
         let fechaInicioTurno = new Date(); fechaInicioTurno.setHours(0, 0, 0, 0); 
 
@@ -430,6 +430,7 @@
                 mensaje += `*DATOS DEL CLIENTE:*%0A👤 Nombre: ${datosEnvio.nombre}%0A📞 Tel: ${datosEnvio.telefono}%0A💳 Método: ${datosEnvio.metodoPago}%0A`;
                 if(tipo === 'domicilio') { mensaje += `🏠 Dir: ${datosEnvio.direccion}%0A`; if(datosEnvio.mapsLink !== "") mensaje += `🗺️ GPS: ${datosEnvio.mapsLink}%0A`; }
 
+                // -- ENVÍO A WHATSAPP --
                 const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`; 
                 window.open(url, '_blank'); 
                 setTimeout(() => location.reload(), 1500);
@@ -448,16 +449,14 @@
 
             let horaApertura, horaCierre;
 
-            // Revisar si tiene el nuevo sistema de horarios por día
             if(data.horarios && data.horarios[diaHoy]) {
-                if(!data.horarios[diaHoy].activo) return activarCerrado(); // Está cerrado ese día
+                if(!data.horarios[diaHoy].activo) return activarCerrado();
                 horaApertura = data.horarios[diaHoy].abre;
                 horaCierre = data.horarios[diaHoy].cierra;
             } else if (data.horarioApertura && data.horarioCierre) {
-                // Sistema viejo
                 horaApertura = data.horarioApertura;
                 horaCierre = data.horarioCierre;
-            } else { return; } // Si no hay horarios configurados, asume abierto
+            } else { return; }
 
             const [hA, mA] = horaApertura.split(':').map(Number);
             const [hC, mC] = horaCierre.split(':').map(Number);
