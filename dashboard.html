@@ -1,97 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Panel de Control - MenusGo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; }
-        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; overflow-y: auto; }
-        .main-content { margin-left: 290px; padding: 40px; width: calc(100% - 330px); }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #2c3e50; margin-top: 0; }
-        
-        .vista { display: none; animation: fadeIn 0.3s ease; }
-        .vista.activa { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    <link rel="stylesheet" href="assets/dashboard.css">
 
-        .nav-item { padding: 12px 15px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; font-weight: 500; transition: 0.2s; }
-        .nav-item:hover, .nav-item.activo { background: #34495e; color: #3498db; }
-        
-        .qr-container { text-align: center; padding: 20px; background: #fff; border-radius: 10px; border: 1px solid #ddd; display: inline-block; margin-bottom: 10px; }
-        #qrcode img { margin: 0 auto; }
-        .link-box { background: #e8f4fd; padding: 15px; border-radius: 5px; border: 1px dashed #3498db; color: #2980b9; font-weight: bold; margin: 10px 0; word-break: break-all; text-align: center; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }
-        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        .btn-add { background: #e67e22; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
-        .btn-add:hover { background: #d35400; }
-        .btn-print { background: #3498db; margin-top: 10px; }
-        .variante-item { background: #f9f9f9; padding: 10px; border-left: 3px solid #e67e22; margin-top: 10px; position: relative; }
-        .btn-eliminar { color: red; cursor: pointer; border: none; background: none; font-size: 0.8rem; margin-top: 5px; }
-        
-        /* ESTILOS TABLA Y COMANDAS */
-        .tabla-profesional { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95rem; }
-        .tabla-profesional th, .tabla-profesional td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        .tabla-profesional th { background-color: #2c3e50; color: white; }
-        .tabla-profesional tr:hover { background-color: #e8f4fd; } 
-        .badge-tipo { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; color: white; }
-        .badge-mesa { background-color: #27ae60; }
-        .badge-online { background-color: #2980b9; }
-        .badge-pago { background-color: #f39c12; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; color: white; }
-        .comanda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }
-        .pedido-card { background: #fdfdfd; border-left: 5px solid #e67e22; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; }
-        .pedido-card h4 { margin: 0 0 10px 0; color: #2c3e50; font-size: 1.1rem; }
-        .pedido-card ul { margin: 0 0 15px 0; padding-left: 20px; font-size: 0.95rem; color: #333; }
-        .btn-completar { background: #27ae60; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.2s; }
-        .btn-completar:hover { background: #219653; }
-
-        /* ESTILOS SWITCH DISPONIBILIDAD */
-        .disp-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: white; transition: 0.2s; }
-        .disp-item:hover { background: #f9f9f9; }
-        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e74c3c; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #27ae60; }
-        input:checked + .slider:before { transform: translateX(20px); }
-
-        /* ESTILOS MAPA DE MESAS */
-        .mapa-mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 20px; }
-        .mesa-cuadro { height: 120px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; user-select: none; }
-        .mesa-cuadro:active { transform: scale(0.95); }
-        .mesa-libre { background-color: #27ae60; } 
-        .mesa-espera { background-color: #f1c40f; color: #2c3e50; } 
-        .mesa-ocupada { background-color: #e74c3c; } 
-
-        /* MODALES (General y POS) */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); overflow-y: auto; }
-        .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); }
-        .modal-sm { width: 90%; max-width: 450px; }
-        .modal-lg { width: 95%; max-width: 1200px; display: flex; flex-wrap: wrap; gap: 20px; }
-        
-        .img-preview { max-width: 100px; max-height: 100px; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd; object-fit: cover; }
-
-        /* ESTILOS ESPECÍFICOS DEL MINI-POS */
-        .pos-layout { display: flex; width: 100%; gap: 20px; }
-        .pos-menu-grid { flex: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; max-height: 70vh; overflow-y: auto; padding-right: 10px; }
-        .pos-cart-panel { flex: 1; background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd; display: flex; flex-direction: column; max-height: 70vh; overflow-y: auto; }
-        
-        .pos-prod-card { background: white; border: 1px solid #eee; border-radius: 8px; display: flex; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .pos-prod-img { width: 80px; height: 80px; object-fit: cover; background: #eee; }
-        .pos-prod-info { padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .pos-prod-info h4 { margin: 0; font-size: 0.95rem; color: #2c3e50; }
-        .pos-prod-info span { color: #e67e22; font-weight: bold; font-size: 0.9rem; }
-        
-        .qty-btn { background: #3498db; color: white; border: none; width: 28px; height: 28px; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        .qty-val { margin: 0 8px; font-weight: bold; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding: 8px 0; font-size: 0.9rem; }
-
-        /* TABLA DE HORARIOS (Configuración) */
-        .table-horarios { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
-        .table-horarios th { background: #34495e; color: white; padding: 10px; text-align: left; }
-        .table-horarios td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
-    </style>
 </head>
 <body>
 
@@ -112,175 +26,11 @@
         </nav>
     </div>
 
-    <div class="main-content">
-        
-        <div id="vista-inicio" class="vista activa">
-            <div class="card">
-                <h2>Resumen de tu Negocio</h2>
-                <p>Bienvenido al Panel de MenusGo. Usa el menú lateral para gestionar tus productos y pedidos.</p>
-            </div>
+    <main class="main-content" id="dashboardMain">
+        <div id="views-root" class="views-root" aria-live="polite">
+            <div class="card loading-card">Cargando panel...</div>
         </div>
-
-        <div id="vista-pedidos" class="vista">
-            <div class="card">
-                <h2>Control de Pedidos y Mesas</h2>
-                <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn-add" style="background: #2c3e50; width: auto;" onclick="filtrarPestana('tabla')">📊 Pedidos Activos</button>
-                    <button class="btn-add" style="background: #e67e22; width: auto;" onclick="filtrarPestana('comandas')">👨‍🍳 Comandas</button>
-                    <button class="btn-add" style="background: #8e44ad; width: auto;" onclick="filtrarPestana('mesas')">🗺️ Mapa de Mesas</button>
-                    <button class="btn-add" style="background: #7f8c8d; width: auto;" onclick="window.cargarHistorial30Dias()">📅 Historial 30 Días</button>
-                    
-                    <!-- NUEVO BOTÓN: PEDIDO MANUAL (POS) -->
-                    <button class="btn-add" style="background: #c0392b; width: auto; margin-left: auto;" onclick="abrirPOS()">📝 Tomar Pedido Manual</button>
-                </div>
-
-                <div id="lista-pedidos-tabla" style="display: block; overflow-x: auto;">
-                    <p id="titulo-tabla-info" style="font-size: 0.85rem; color: #27ae60; margin-top: 0; font-weight: bold;">
-                        ✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).
-                    </p>
-                    <table class="tabla-profesional">
-                        <thead>
-                            <tr>
-                                <th># Pedido</th><th>Cliente / Mesa</th><th>Tipo</th><th>Fecha y Hora</th><th>Estado Pago</th><th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-pedidos"><tr><td colspan="6" style="text-align: center;">Cargando...</td></tr></tbody>
-                    </table>
-                </div>
-                
-                <div id="lista-pedidos-comandas" class="comanda-grid" style="display: none;"></div>
-
-                <div id="lista-pedidos-mesas" style="display: none;">
-                    <button class="btn-add" style="width: auto; background: #34495e;" onclick="window.agregarMesa()">➕ Agregar Nueva Mesa</button>
-                    <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 10px;">
-                        Toca una mesa para cambiar su estado: 🟩 Libre ➔ 🟨 Espera ➔ 🟥 Ocupada.
-                    </p>
-                    <div id="mapaMesasContenedor" class="mapa-mesas"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="vista-menu" class="vista">
-            <div class="card">
-                <h2>Agregar Producto al Menú</h2>
-                <div class="form-group">
-                    <label>Foto del Producto (Opcional):</label>
-                    <input type="file" id="prodImagen" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
-                </div>
-                <div class="form-group">
-                    <label>Categoría:</label>
-                    <select id="prodCategoria">
-                        <option value="Comida">🍕 Comida</option><option value="Bebida">🥤 Bebida</option><option value="Postre">🍰 Postre</option><option value="Entrada">🥗 Entrada</option>
-                    </select>
-                </div>
-                <div class="form-group"><label>Nombre del Producto:</label><input type="text" id="prodNombre"></div>
-                <div class="form-group"><label>Descripción:</label><textarea id="prodDesc"></textarea></div>
-                <div class="form-group"><label>Precio Base ($):</label><input type="number" id="prodPrecio"></div>
-                <div id="seccionVariantes">
-                    <label>Variantes / Extras:</label>
-                    <div id="contenedorVariantes"></div>
-                    <button type="button" class="btn-add" style="background:#95a5a6; margin-top:10px;" id="btnNuevaVariante">+ Agregar Variante</button>
-                </div>
-                <hr>
-                <button class="btn-add" id="btnGuardarProd">Guardar Producto</button>
-            </div>
-        </div>
-
-        <div id="vista-configuracion" class="vista">
-            <div class="card">
-                <h2>⚙️ Configuración del Restaurante</h2>
-                
-                <div class="form-group">
-                    <label>🔗 Identificador de la URL (Nombre de tu negocio):</label>
-                    <input type="text" id="confSlug" placeholder="ejemplo: mi-restaurante" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9-]/g, '')">
-                    <small style="color:#7f8c8d;">Los clientes verán: emilioesgo.github.io/pedipro1/menu.html?id=<b>tu-alias</b></small>
-                </div>
-
-                <div class="form-group">
-                    <label>🖼️ Logo del Restaurante:</label>
-                    <input type="file" id="confLogo" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
-                    <img id="imgPrevLogo" class="img-preview" style="display: none;">
-                </div>
-
-                <div class="form-group">
-                    <label>🎆 Imagen de Portada (Banner Menú):</label>
-                    <input type="file" id="confPortada" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
-                    <img id="imgPrevPortada" class="img-preview" style="display: none; max-width: 250px;">
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                
-                <h3 style="color: #2c3e50; margin-bottom: 5px;">🕒 Horarios por Día de la Semana</h3>
-                <p style="color: #7f8c8d; font-size: 0.9rem; margin-top: 0;">Activa los días que laboras y define la hora de apertura y cierre. El menú digital se apagará automáticamente fuera de este horario.</p>
-                
-                <table class="table-horarios">
-                    <thead><tr><th>Día</th><th>¿Abierto?</th><th>Apertura</th><th>Cierre</th></tr></thead>
-                    <tbody id="tbodyHorarios">
-                        <!-- Se llena con JS -->
-                    </tbody>
-                </table>
-
-                <button class="btn-add" id="btnGuardarConfig" onclick="window.guardarConfiguracion()" style="background: #2c3e50; margin-top: 20px;">💾 Guardar Configuración</button>
-            </div>
-        </div>
-
-        <!-- MÓDULO ACTUALIZADO: VISTA CAJA -->
-        <div id="vista-caja" class="vista">
-            <div class="card">
-                <h2>Caja y Sistema de Cobro</h2>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <button class="btn-add" id="btnIniciarTurno" style="background:#2ecc71; width:auto;" onclick="iniciarTurnoCaja()">🟢 Iniciar Turno</button>
-                    <button class="btn-add" id="btnFinalizarTurno" style="background:#e74c3c; width:auto; display:none;" onclick="finalizarTurnoCaja()">🔴 Finalizar Turno</button>
-                    <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="document.getElementById('modalCorteCaja').style.display='block'">📊 Corte a Ciegas</button>
-                </div>
-                
-                <p style="background: #e8f4fd; padding: 10px; border-radius: 5px; color: #2980b9; font-weight: bold;">
-                    👤 Cajero Actual: <span id="txtCajeroActual">Ninguno (Inicia turno para poder cobrar)</span>
-                </p>
-
-                <h3 style="margin-top: 30px; border-bottom: 2px solid #e67e22; padding-bottom: 5px; color:#2c3e50;">Comandas Pendientes de Pago</h3>
-                <div style="overflow-x: auto;">
-                    <table class="tabla-profesional">
-                        <thead>
-                            <tr>
-                                <th># Comanda</th>
-                                <th>Cliente / Origen</th>
-                                <th>Total</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-caja-pendientes">
-                            <tr><td colspan="4" style="text-align: center;">Cargando comandas pendientes...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="vista-disponibilidad" class="vista">
-            <div class="card">
-                <h2>Disponibilidad del Menú</h2>
-                <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 20px;">Apaga el interruptor para ocultar temporalmente un producto.</p>
-                <div id="lista-disponibilidad" style="border: 1px solid #eee; border-radius: 8px; overflow: hidden;"></div>
-            </div>
-        </div>
-
-        <div id="vista-qr" class="vista">
-            <div class="card" style="text-align: center;">
-                <h2>Tu Menú Digital</h2>
-                <div class="qr-container"><div id="qrcode"></div></div>
-                <div class="link-box" id="displayLink">Cargando enlace...</div>
-                
-                <!-- NUEVOS BOTONES DE ACCIÓN PARA EL ENLACE -->
-                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn-add" style="background:#27ae60; width:auto;" onclick="copiarEnlace()">📋 Copiar Link</button>
-                    <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="compartirEnlace()">📤 Compartir</button>
-                    <button class="btn-add" style="background:#3498db; width:auto;" onclick="imprimirQR()">🖨️ Imprimir QR</button>
-                </div>
-            </div>
-        </div>
-
-    </div>
+    </main>
 
     <!-- MODAL DETALLES DEL PEDIDO -->
     <div id="modalDetallePedido" class="modal">
@@ -419,10 +169,45 @@
     </div>
 
     <script>
+        const dashboardSections = [
+            { id: 'vista-inicio', file: 'sections/inicio.html' },
+            { id: 'vista-pedidos', file: 'sections/pedidos.html' },
+            { id: 'vista-menu', file: 'sections/menu.html' },
+            { id: 'vista-caja', file: 'sections/caja.html' },
+            { id: 'vista-disponibilidad', file: 'sections/disponibilidad.html' },
+            { id: 'vista-qr', file: 'sections/qr.html' },
+            { id: 'vista-configuracion', file: 'sections/configuracion.html' }
+        ];
+
+        async function cargarSeccionesDashboard() {
+            const root = document.getElementById('views-root');
+            try {
+                const htmlSecciones = await Promise.all(dashboardSections.map(async (section) => {
+                    const response = await fetch(section.file, { cache: 'no-cache' });
+                    if (!response.ok) throw new Error(`No se pudo cargar ${section.file}`);
+                    return response.text();
+                }));
+
+                root.innerHTML = htmlSecciones.join('\n');
+                if (!document.querySelector('.vista.activa')) {
+                    const inicio = document.getElementById('vista-inicio');
+                    if (inicio) inicio.classList.add('activa');
+                }
+            } catch (error) {
+                console.error(error);
+                root.innerHTML = '<div class="card"><h2>No se pudieron cargar las secciones</h2><p>Abre este proyecto desde un servidor local o desde GitHub Pages para que el dashboard pueda leer los archivos separados.</p></div>';
+                throw error;
+            }
+        }
+
+        window.dashboardSectionsReady = cargarSeccionesDashboard();
+
         // Lógica Global de UI
-        function cambiarVista(idVista, elementoNav) {
+        async function cambiarVista(idVista, elementoNav) {
+            await window.dashboardSectionsReady;
             document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
-            document.getElementById(idVista).classList.add('activa');
+            const vista = document.getElementById(idVista);
+            if (vista) vista.classList.add('activa');
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('activo'));
             if(elementoNav) elementoNav.classList.add('activo');
             
@@ -431,7 +216,7 @@
                 window.cargarPedidos(); 
             }
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
-            if(idVista === 'vista-caja') { window.cargarCaja(); } // Actualizar caja al entrar
+            if(idVista === 'vista-caja') { window.cargarPedidos().then(() => window.cargarCaja()); }
         }
 
         function filtrarPestana(tipo) {
@@ -520,6 +305,8 @@
         if (!idRestaurante) { window.location.href = "index.html"; }
 
         const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+        await window.dashboardSectionsReady;
 
         function renderizarTablaHorarios(horariosGuardados) {
             const tbody = document.getElementById('tbodyHorarios');
@@ -1028,3 +815,4 @@
     </script>
 </body>
 </html>
+

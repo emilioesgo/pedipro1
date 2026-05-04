@@ -1,0 +1,31 @@
+﻿        <div id="vista-caja" class="vista">
+            <div class="card">
+                <h2>Caja y Sistema de Cobro</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <button class="btn-add" id="btnIniciarTurno" style="background:#2ecc71; width:auto;" onclick="iniciarTurnoCaja()">🟢 Iniciar Turno</button>
+                    <button class="btn-add" id="btnFinalizarTurno" style="background:#e74c3c; width:auto; display:none;" onclick="finalizarTurnoCaja()">🔴 Finalizar Turno</button>
+                    <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="document.getElementById('modalCorteCaja').style.display='block'">📊 Corte a Ciegas</button>
+                </div>
+                
+                <p style="background: #e8f4fd; padding: 10px; border-radius: 5px; color: #2980b9; font-weight: bold;">
+                    👤 Cajero Actual: <span id="txtCajeroActual">Ninguno (Inicia turno para poder cobrar)</span>
+                </p>
+
+                <h3 style="margin-top: 30px; border-bottom: 2px solid #e67e22; padding-bottom: 5px; color:#2c3e50;">Comandas Pendientes de Pago</h3>
+                <div style="overflow-x: auto;">
+                    <table class="tabla-profesional">
+                        <thead>
+                            <tr>
+                                <th># Comanda</th>
+                                <th>Cliente / Origen</th>
+                                <th>Total</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-caja-pendientes">
+                            <tr><td colspan="4" style="text-align: center;">Cargando comandas pendientes...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>

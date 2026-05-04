@@ -1,0 +1,38 @@
+﻿        <div id="vista-pedidos" class="vista">
+            <div class="card">
+                <h2>Control de Pedidos y Mesas</h2>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn-add" style="background: #2c3e50; width: auto;" onclick="filtrarPestana('tabla')">📊 Pedidos Activos</button>
+                    <button class="btn-add" style="background: #e67e22; width: auto;" onclick="filtrarPestana('comandas')">👨‍🍳 Comandas</button>
+                    <button class="btn-add" style="background: #8e44ad; width: auto;" onclick="filtrarPestana('mesas')">🗺️ Mapa de Mesas</button>
+                    <button class="btn-add" style="background: #7f8c8d; width: auto;" onclick="window.cargarHistorial30Dias()">📅 Historial 30 Días</button>
+                    
+                    <!-- NUEVO BOTÓN: PEDIDO MANUAL (POS) -->
+                    <button class="btn-add" style="background: #c0392b; width: auto; margin-left: auto;" onclick="abrirPOS()">📝 Tomar Pedido Manual</button>
+                </div>
+
+                <div id="lista-pedidos-tabla" style="display: block; overflow-x: auto;">
+                    <p id="titulo-tabla-info" style="font-size: 0.85rem; color: #27ae60; margin-top: 0; font-weight: bold;">
+                        ✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).
+                    </p>
+                    <table class="tabla-profesional">
+                        <thead>
+                            <tr>
+                                <th># Pedido</th><th>Cliente / Mesa</th><th>Tipo</th><th>Fecha y Hora</th><th>Estado Pago</th><th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-pedidos"><tr><td colspan="6" style="text-align: center;">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+                
+                <div id="lista-pedidos-comandas" class="comanda-grid" style="display: none;"></div>
+
+                <div id="lista-pedidos-mesas" style="display: none;">
+                    <button class="btn-add" style="width: auto; background: #34495e;" onclick="window.agregarMesa()">➕ Agregar Nueva Mesa</button>
+                    <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 10px;">
+                        Toca una mesa para cambiar su estado: 🟩 Libre ➔ 🟨 Espera ➔ 🟥 Ocupada.
+                    </p>
+                    <div id="mapaMesasContenedor" class="mapa-mesas"></div>
+                </div>
+            </div>
+        </div>

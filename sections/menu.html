@@ -1,0 +1,25 @@
+﻿        <div id="vista-menu" class="vista">
+            <div class="card">
+                <h2>Agregar Producto al Menú</h2>
+                <div class="form-group">
+                    <label>Foto del Producto (Opcional):</label>
+                    <input type="file" id="prodImagen" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
+                </div>
+                <div class="form-group">
+                    <label>Categoría:</label>
+                    <select id="prodCategoria">
+                        <option value="Comida">🍕 Comida</option><option value="Bebida">🥤 Bebida</option><option value="Postre">🍰 Postre</option><option value="Entrada">🥗 Entrada</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Nombre del Producto:</label><input type="text" id="prodNombre"></div>
+                <div class="form-group"><label>Descripción:</label><textarea id="prodDesc"></textarea></div>
+                <div class="form-group"><label>Precio Base ($):</label><input type="number" id="prodPrecio"></div>
+                <div id="seccionVariantes">
+                    <label>Variantes / Extras:</label>
+                    <div id="contenedorVariantes"></div>
+                    <button type="button" class="btn-add" style="background:#95a5a6; margin-top:10px;" id="btnNuevaVariante">+ Agregar Variante</button>
+                </div>
+                <hr>
+                <button class="btn-add" id="btnGuardarProd">Guardar Producto</button>
+            </div>
+        </div>
