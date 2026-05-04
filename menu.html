@@ -95,7 +95,13 @@
     </header>
 
     <div class="container">
-        <!-- SELECTOR ACTUALIZADO CON LAS 3 OPCIONES -->
+        
+        <!-- NUEVO: BANNER DE CERRADO (Oculto por defecto) -->
+        <div id="bannerCerrado" style="display: none; background: #e74c3c; color: white; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <h3 style="margin: 0 0 5px 0;">🛑 Restaurante Cerrado</h3>
+            <p style="margin: 0; font-size: 1rem;">Horario de atención: <strong id="txtHorario"></strong></p>
+        </div>
+
         <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center;">
             <h3 style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.2rem;">¿Cómo pedirás hoy?</h3>
             <select id="tipoPedidoTop" class="selector-origen" onchange="verificarTipoPedido()" style="width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 8px;">
@@ -129,13 +135,11 @@
             <input type="text" id="domNombre" class="form-input" placeholder="Tu Nombre Completo" required>
             <input type="tel" id="domTelefono" class="form-input" placeholder="Tu Teléfono (Para contactarte)" required>
             
-            <!-- CONTENEDOR DIRECCIÓN (Se oculta en Pick Up) -->
             <div id="seccionDireccion">
                 <textarea id="domDireccion" class="form-input" rows="3" placeholder="Calle, cruzamientos, colonia y referencias..."></textarea>
                 <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Compartir mi ubicación (Google Maps)</button>
             </div>
 
-            <!-- NUEVO: SELECTOR DE MÉTODO DE PAGO -->
             <select id="domPago" class="form-input" style="margin-top: 10px; font-weight: bold; color: #2c3e50;" required>
                 <option value="" disabled selected>💳 ¿Cómo vas a pagar?</option>
                 <option value="Efectivo">💵 Efectivo</option>
@@ -152,7 +156,8 @@
         <div class="controles-pedido">
             <span style="font-weight: bold;">Total del Pedido: <span id="totalVenta" style="color: #e67e22; font-size: 1.3rem;">$0.00</span></span>
         </div>
-        <button class="btn-pedir" onclick="procesarPedido()">Continuar Pedido</button>
+        <!-- Se agregó ID btnProcesar para poder deshabilitarlo si está cerrado -->
+        <button id="btnProcesar" class="btn-pedir" onclick="procesarPedido()">Continuar Pedido</button>
     </div>
 
     <script type="module">
@@ -180,6 +185,10 @@
         
         let mesaCliente = "";
         let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "", metodoPago: "" };
+        
+        // Variable Global para saber cuándo inició el turno (Sirve para reiniciar los tickets a 1)
+        let fechaInicioTurno = new Date();
+        fechaInicioTurno.setHours(0, 0, 0, 0); 
 
         async function cargarMenu() {
             if (!idRestaurante) return;
@@ -193,7 +202,6 @@
                 document.title = "Menú - " + data.nombre;
                 numWhatsApp = data.whatsapp;
 
-                // NUEVO: CARGAR LOGO Y PORTADA
                 if(data.portada) {
                     document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
                 }
@@ -201,6 +209,41 @@
                     const logoEl = document.getElementById('logoRestaurante');
                     logoEl.src = data.logo;
                     logoEl.style.display = 'inline-block';
+                }
+
+                // NUEVO: LÓGICA DE HORARIOS Y BANNER DE CERRADO
+                if (data.horarioApertura && data.horarioCierre) {
+                    document.getElementById('txtHorario').innerText = `${data.horarioApertura} a ${data.horarioCierre}`;
+                    
+                    const now = new Date();
+                    const [hA, mA] = data.horarioApertura.split(':').map(Number);
+                    const [hC, mC] = data.horarioCierre.split(':').map(Number);
+                    
+                    const timeA = hA * 60 + mA;
+                    const timeC = hC * 60 + mC;
+                    const timeNow = now.getHours() * 60 + now.getMinutes();
+                    
+                    let isCerrado = false;
+                    
+                    // Cálculo inteligente (Soporta turnos que pasan de la medianoche)
+                    if (timeA < timeC) {
+                        isCerrado = timeNow < timeA || timeNow > timeC;
+                        fechaInicioTurno.setHours(hA, mA, 0, 0);
+                    } else {
+                        isCerrado = timeNow < timeA && timeNow > timeC;
+                        if (timeNow <= timeC) {
+                            fechaInicioTurno.setDate(fechaInicioTurno.getDate() - 1);
+                        }
+                        fechaInicioTurno.setHours(hA, mA, 0, 0);
+                    }
+                    
+                    if (isCerrado) {
+                        document.getElementById('bannerCerrado').style.display = 'block';
+                        document.getElementById('btnProcesar').disabled = true;
+                        document.getElementById('btnProcesar').style.background = '#95a5a6';
+                        document.getElementById('btnProcesar').innerText = "Cerrado temporalmente";
+                        document.getElementById('tipoPedidoTop').disabled = true;
+                    }
                 }
             }
 
@@ -276,7 +319,6 @@
             document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
         }
 
-        // --- LÓGICA DE SELECTOR SUPERIOR ---
         window.verificarTipoPedido = function() {
             const tipo = document.getElementById('tipoPedidoTop').value;
             const infoText = document.getElementById('infoSeleccion');
@@ -360,20 +402,18 @@
                 return;
             }
             
-            // Lógica para mostrar los campos correctos según si es Pick up o Domicilio
             if (tipo === 'pickup' || tipo === 'domicilio') {
                 if (tipo === 'pickup') {
                     document.getElementById('tituloModalEnvio').innerText = "Datos para Pick Up";
-                    document.getElementById('seccionDireccion').style.display = 'none'; // Oculta mapa y dirección
+                    document.getElementById('seccionDireccion').style.display = 'none'; 
                 } else {
                     document.getElementById('tituloModalEnvio').innerText = "Datos de Envío a Domicilio";
-                    document.getElementById('seccionDireccion').style.display = 'block'; // Muestra mapa y dirección
+                    document.getElementById('seccionDireccion').style.display = 'block'; 
                 }
                 document.getElementById('modalDomicilio').style.display = 'block';
                 return;
             }
 
-            // Si es mesa, manda directo
             ejecutarEnvioPedido();
         }
 
@@ -406,17 +446,36 @@
             const tipo = document.getElementById('tipoPedidoTop').value;
 
             try {
-                const btnPedir = document.querySelector('.footer-carrito .btn-pedir');
+                const btnPedir = document.getElementById('btnProcesar');
                 btnPedir.innerText = "Generando Comanda...";
                 btnPedir.disabled = true;
 
-                const comandaId = "CMD-" + Math.floor(1000 + Math.random() * 9000);
+                // NUEVO: OBTENER EL CONSECUTIVO DEL DÍA ACTUAL
+                const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
+                const qCount = query(pedidosRef, where("fecha", ">=", fechaInicioTurno));
+                const snapPedidos = await getDocs(qCount);
+                
+                let maxConsecutivo = 0;
+                snapPedidos.forEach(d => {
+                    let num = d.data().consecutivoDiario || 0;
+                    if (num > maxConsecutivo) maxConsecutivo = num;
+                });
+                
+                const nuevoConsecutivo = maxConsecutivo + 1;
+                
+                // Asignar Letra M, P, o D
+                let letraPrefix = 'M';
+                if (tipo === 'pickup') letraPrefix = 'P';
+                else if (tipo === 'domicilio') letraPrefix = 'D';
+
+                const comandaId = `${letraPrefix}-${nuevoConsecutivo}`;
 
                 await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
                     numeroComanda: comandaId,
+                    consecutivoDiario: nuevoConsecutivo, // Guarda el número para no perder la cuenta
                     items: arrayItems,
                     total: totalGeneral,
-                    tipoOrigen: tipo, // Guardará 'mesa', 'pickup', o 'domicilio'
+                    tipoOrigen: tipo, 
                     numeroMesa: tipo === 'mesa' ? mesaCliente : null,
                     clienteEnvio: (tipo === 'pickup' || tipo === 'domicilio') ? datosEnvio : null,
                     fecha: new Date(),
@@ -451,8 +510,8 @@
             } catch (error) {
                 console.error(error);
                 alert("Hubo un problema. Intenta de nuevo.");
-                document.querySelector('.footer-carrito .btn-pedir').innerText = "Continuar Pedido";
-                document.querySelector('.footer-carrito .btn-pedir').disabled = false;
+                document.getElementById('btnProcesar').innerText = "Continuar Pedido";
+                document.getElementById('btnProcesar').disabled = false;
             }
         }
 
