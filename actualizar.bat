@@ -1,26 +1,25 @@
 @echo off
 cls
 echo ====================================================
-echo    ACTUALIZADOR AUTOMATICO DE MENUSGO (GITHUB)
+echo    ACTUALIZADOR AUTOMATICO (MODO RAPIDO)
 echo ====================================================
-echo.
 
-:: 1. Agrega todos los cambios (HTML, CSS, JS)
+:: 1. Agregamos todos los cambios
 git add .
 
-:: 2. Pide el nombre de la actualizacion
-set /p msg="¿Que cambios hiciste hoy? (ej. Agregue categorias): "
+:: 2. Creamos un mensaje automatico con la fecha y hora
+set mensaje=Actualizacion automatica: %date% %time%
 
-:: 3. Guarda los cambios localmente
-git commit -m "%msg%"
+:: 3. Hacemos el commit con ese mensaje generado
+git commit -m "%mensaje%"
 
-:: 4. Sube los cambios a la rama principal de GitHub
+:: 4. Subimos a GitHub (de master local a main remoto)
 echo.
-echo Subiendo archivos a internet...
+echo Subiendo cambios a GitHub...
 git push origin master:main
 
 echo.
 echo ====================================================
-echo    ¡LISTO! Tu web se actualizara en un momento.
+echo    ¡LISTO! Todo se actualizo sin preguntas.
 echo ====================================================
-pause
+timeout /t 2
