@@ -12,11 +12,19 @@
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         h2 { color: #2c3e50; margin-top: 0; }
         
-        /* Estilo para el QR */
+        /* SISTEMA DE VISTAS (SPA) */
+        .vista { display: none; animation: fadeIn 0.3s ease; }
+        .vista.activa { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Navegación lateral */
+        .nav-item { padding: 12px 15px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; font-weight: 500; transition: 0.2s; }
+        .nav-item:hover, .nav-item.activo { background: #34495e; color: #3498db; }
+        
+        /* Estilos existentes... */
         .qr-container { text-align: center; padding: 20px; background: #fff; border-radius: 10px; border: 1px solid #ddd; display: inline-block; margin-bottom: 10px; }
         #qrcode img { margin: 0 auto; }
-
-        .link-box { background: #e8f4fd; padding: 15px; border-radius: 5px; border: 1px dashed #3498db; color: #2980b9; font-weight: bold; margin: 10px 0; word-break: break-all; }
+        .link-box { background: #e8f4fd; padding: 15px; border-radius: 5px; border: 1px dashed #3498db; color: #2980b9; font-weight: bold; margin: 10px 0; word-break: break-all; text-align: center; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
@@ -25,75 +33,160 @@
         .btn-print { background: #3498db; margin-top: 10px; }
         .variante-item { background: #f9f9f9; padding: 10px; border-left: 3px solid #e67e22; margin-top: 10px; position: relative; }
         .btn-eliminar { color: red; cursor: pointer; border: none; background: none; font-size: 0.8rem; }
-        .nav-item { padding: 10px; cursor: pointer; border-radius: 5px; }
-        .nav-item:hover { background: #34495e; }
+        
+        /* Estilos de las tarjetas de pedidos */
+        .pedido-card { background: #fdfdfd; border-left: 5px solid #e67e22; padding: 15px; border-radius: 5px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .pedido-card h4 { margin: 0 0 10px 0; color: #2c3e50; }
+        .pedido-card ul { margin: 0; padding-left: 20px; font-size: 0.9rem; color: #555; }
+        .pedido-card .total { font-weight: bold; color: #27ae60; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h1>MenusGo</h1>
-        <p id="saludoDuenio">Cargando...</p>
-        <hr>
+        <h1 style="color: #e67e22; text-align: center; margin-bottom: 5px;">MenusGo</h1>
+        <p id="saludoDuenio" style="text-align: center; margin-top: 0;">Cargando...</p>
+        <hr style="border-color: #34495e; margin-bottom: 20px;">
         <nav>
-            <div class="nav-item">🏠 Inicio</div>
-            <div class="nav-item">🍔 Mi Menú</div>
-            <div class="nav-item" onclick="window.location.href='index.html'">🚪 Cerrar Sesión</div>
+            <div class="nav-item activo" onclick="cambiarVista('vista-inicio', this)">🏠 Inicio</div>
+            <div class="nav-item" onclick="cambiarVista('vista-pedidos', this)">📋 Pedidos</div>
+            <div class="nav-item" onclick="cambiarVista('vista-menu', this)">🍔 Mi Menú</div>
+            <div class="nav-item" onclick="cambiarVista('vista-caja', this)">💰 Caja</div>
+            <div class="nav-item" onclick="cambiarVista('vista-disponibilidad', this)">✅ Disponibilidad</div>
+            <div class="nav-item" onclick="cambiarVista('vista-qr', this)">📲 Menú Digital</div>
+            <hr style="border-color: #34495e; margin: 20px 0;">
+            <div class="nav-item" onclick="window.location.href='index.html'" style="color: #e74c3c;">🚪 Cerrar Sesión</div>
         </nav>
     </div>
 
     <div class="main-content">
-        <!-- SECCIÓN DE QR Y LINK -->
-        <div class="card" style="text-align: center;">
-            <h2>Tu Menú Digital</h2>
-            <div class="qr-container">
-                <div id="qrcode"></div>
+        
+        <!-- 1. VISTA INICIO -->
+        <div id="vista-inicio" class="vista activa">
+            <div class="card">
+                <h2>Resumen de tu Negocio</h2>
+                <p>Bienvenido al Panel de MenusGo. Usa el menú lateral para gestionar tus productos y pedidos.</p>
             </div>
-            <div class="link-box" id="displayLink">Cargando enlace...</div>
-            <button class="btn-add btn-print" onclick="imprimirQR()">🖨️ Imprimir Código QR</button>
         </div>
 
-        <!-- AGREGAR PRODUCTO -->
-        <div class="card">
-            <h2>Agregar Producto al Menú</h2>
-            
-            <div class="form-group">
-                <label>Categoría:</label>
-                <select id="prodCategoria">
-                    <option value="Comida">🍕 Comida</option>
-                    <option value="Bebida">🥤 Bebida</option>
-                    <option value="Postre">🍰 Postre</option>
-                    <option value="Entrada">🥗 Entrada / Botana</option>
-                </select>
-            </div>
+        <!-- 2. VISTA PEDIDOS (LA MEJORA) -->
+        <div id="vista-pedidos" class="vista">
+            <div class="card">
+                <h2>Gestión de Pedidos</h2>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <button class="btn-add" style="background: #2980b9;" onclick="filtrarPestana('online')">🛵 Pedidos en Línea</button>
+                    <button class="btn-add" style="background: #27ae60;" onclick="filtrarPestana('mesa')">🍽️ Pedidos en Mesas</button>
+                    <button class="btn-add" style="background: #95a5a6; width: auto;" onclick="window.cargarPedidos() ">🔄 Actualizar</button>
+                </div>
 
-            <div class="form-group">
-                <label>Nombre del Producto:</label>
-                <input type="text" id="prodNombre" placeholder="Ej: Pizza de Pepperoni">
+                <div id="lista-pedidos-online" style="display: block;">
+                    <p style="color: #7f8c8d;">Cargando pedidos online...</p>
+                </div>
+                
+                <div id="lista-pedidos-mesa" style="display: none;">
+                    <p style="color: #7f8c8d;">Cargando pedidos de mesa...</p>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Descripción:</label>
-                <textarea id="prodDesc" placeholder="Ej: Con queso mozzarella..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>Precio Base ($):</label>
-                <input type="number" id="prodPrecio" placeholder="0.00">
-            </div>
-
-            <div id="seccionVariantes">
-                <label>Variantes / Extras:</label>
-                <div id="contenedorVariantes"></div>
-                <button type="button" class="btn-add" style="background:#95a5a6; margin-top:10px;" id="btnNuevaVariante">+ Agregar Variante</button>
-            </div>
-
-            <hr>
-            <button class="btn-add" id="btnGuardarProd">Guardar Producto</button>
         </div>
+
+        <!-- 3. VISTA MI MENÚ (Formulario original INTACTO) -->
+        <div id="vista-menu" class="vista">
+            <div class="card">
+                <h2>Agregar Producto al Menú</h2>
+                <div class="form-group">
+                    <label>Categoría:</label>
+                    <select id="prodCategoria">
+                        <option value="Comida">🍕 Comida</option>
+                        <option value="Bebida">🥤 Bebida</option>
+                        <option value="Postre">🍰 Postre</option>
+                        <option value="Entrada">🥗 Entrada / Botana</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Producto:</label>
+                    <input type="text" id="prodNombre" placeholder="Ej: Pizza de Pepperoni">
+                </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <textarea id="prodDesc" placeholder="Ej: Con queso mozzarella..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Precio Base ($):</label>
+                    <input type="number" id="prodPrecio" placeholder="0.00">
+                </div>
+
+                <div id="seccionVariantes">
+                    <label>Variantes / Extras:</label>
+                    <div id="contenedorVariantes"></div>
+                    <button type="button" class="btn-add" style="background:#95a5a6; margin-top:10px; width: 100%;" id="btnNuevaVariante">+ Agregar Variante</button>
+                </div>
+                <hr>
+                <button class="btn-add" id="btnGuardarProd" style="width: 100%;">Guardar Producto</button>
+            </div>
+        </div>
+
+        <!-- 4. VISTA CAJA -->
+        <div id="vista-caja" class="vista">
+            <div class="card"><h2>Corte de Caja</h2><p>Módulo en construcción...</p></div>
+        </div>
+
+        <!-- 5. VISTA DISPONIBILIDAD -->
+        <div id="vista-disponibilidad" class="vista">
+            <div class="card"><h2>Disponibilidad</h2><p>Módulo en construcción...</p></div>
+        </div>
+
+        <!-- 6. VISTA MENÚ DIGITAL (QR original INTACTO) -->
+        <div id="vista-qr" class="vista">
+            <div class="card" style="text-align: center;">
+                <h2>Tu Menú Digital</h2>
+                <div class="qr-container">
+                    <div id="qrcode"></div>
+                </div>
+                <div class="link-box" id="displayLink">Cargando enlace...</div>
+                <button class="btn-add btn-print" style="width: 100%;" onclick="imprimirQR()">🖨️ Imprimir Código QR</button>
+            </div>
+        </div>
+
     </div>
 
+    <!-- SCRIPT DE NAVEGACIÓN Y TABS (HTML/JS Visual) -->
+    <script>
+        function cambiarVista(idVista, elementoNav) {
+            document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
+            document.getElementById(idVista).classList.add('activa');
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('activo'));
+            if(elementoNav) elementoNav.classList.add('activo');
+
+            // Si entra a la vista de pedidos, cargarlos automáticamente
+            if(idVista === 'vista-pedidos') {
+                window.cargarPedidos();
+            }
+        }
+
+        function filtrarPestana(tipo) {
+            if (tipo === 'online') {
+                document.getElementById('lista-pedidos-online').style.display = 'block';
+                document.getElementById('lista-pedidos-mesa').style.display = 'none';
+            } else {
+                document.getElementById('lista-pedidos-online').style.display = 'none';
+                document.getElementById('lista-pedidos-mesa').style.display = 'block';
+            }
+        }
+
+        function imprimirQR() {
+            const qrImg = document.querySelector('#qrcode img').src;
+            const ventana = window.open('', '_blank');
+            ventana.document.write(`<html><body style="text-align:center;padding:50px;"><h1>Menú Digital</h1><img src="${qrImg}" style="width:300px;"><p>Escanea para pedir</p></body></html>`);
+            ventana.document.close();
+            ventana.print();
+        }
+    </script>
+
+    <!-- SCRIPT DE FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // AGREGUÉ getDocs PARA PODER LEER LOS PEDIDOS
+        import { getFirestore, doc, getDoc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -115,6 +208,7 @@
             window.location.href = "index.html";
         }
 
+        // CARGAR DATOS DEL RESTAURANTE Y QR
         async function cargarDatos() {
             const docRef = doc(db, "restaurantes", idRestaurante);
             const documento = await getDoc(docRef);
@@ -122,21 +216,62 @@
                 const info = documento.data();
                 document.getElementById('saludoDuenio').innerText = "Bienvenido, " + info.nombre;
                 
-                // CAMBIA ESTO por tu URL de GitHub real
                 const urlMenu = `https://emilioesgo.github.io/pedipro1/menu.html?id=${idRestaurante}`;
                 document.getElementById('displayLink').innerText = urlMenu;
 
                 new QRCode(document.getElementById("qrcode"), {
-                    text: urlMenu,
-                    width: 150,
-                    height: 150,
-                    colorDark : "#2c3e50",
-                    colorLight : "#ffffff"
+                    text: urlMenu, width: 150, height: 150, colorDark : "#2c3e50", colorLight : "#ffffff"
                 });
             }
         }
         cargarDatos();
 
+        // --- NUEVA FUNCIÓN: CARGAR PEDIDOS ---
+        window.cargarPedidos = async function() {
+            const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
+            const snapshot = await getDocs(pedidosRef);
+            
+            const contOnline = document.getElementById('lista-pedidos-online');
+            const contMesa = document.getElementById('lista-pedidos-mesa');
+            
+            contOnline.innerHTML = '';
+            contMesa.innerHTML = '';
+
+            if(snapshot.empty) {
+                contOnline.innerHTML = '<p style="color: #7f8c8d;">Aún no hay pedidos en línea.</p>';
+                contMesa.innerHTML = '<p style="color: #7f8c8d;">Aún no hay pedidos en mesas.</p>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const ped = doc.data();
+                
+                // Construimos la lista de comida
+                let itemsHtml = '';
+                ped.items.forEach(i => itemsHtml += `<li>${i.nombre} ($${i.precio})</li>`);
+                
+                // Construimos la tarjeta HTML del pedido
+                const tituloPedido = ped.tipoOrigen === 'mesa' ? `Mesa #${ped.numeroMesa}` : `Pedido Para Llevar`;
+                const colorBorde = ped.tipoOrigen === 'mesa' ? '#27ae60' : '#2980b9';
+
+                const cardHtml = `
+                    <div class="pedido-card" style="border-left-color: ${colorBorde};">
+                        <h4>${tituloPedido}</h4>
+                        <ul>${itemsHtml}</ul>
+                        <div class="total">Total a cobrar: $${ped.total.toFixed(2)}</div>
+                    </div>
+                `;
+
+                // Lo inyectamos en la pestaña que corresponda
+                if(ped.tipoOrigen === 'mesa') {
+                    contMesa.innerHTML += cardHtml;
+                } else {
+                    contOnline.innerHTML += cardHtml;
+                }
+            });
+        }
+
+        // LÓGICA DE VARIANTES Y PRODUCTOS (INTACTA)
         const contenedorVariantes = document.getElementById('contenedorVariantes');
         document.getElementById('btnNuevaVariante').addEventListener('click', () => {
             const div = document.createElement('div');
@@ -169,20 +304,13 @@
                     categoria, nombre, descripcion: desc, precio: parseFloat(precio), variantes, fecha: new Date()
                 });
                 alert("Producto añadido.");
-                location.reload();
+                document.getElementById('prodNombre').value = '';
+                document.getElementById('prodDesc').value = '';
+                document.getElementById('prodPrecio').value = '';
+                contenedorVariantes.innerHTML = '';
             } catch (e) { alert("Error al guardar."); }
         }
         document.getElementById('btnGuardarProd').addEventListener('click', window.guardarProducto);
-    </script>
-
-    <script>
-        function imprimirQR() {
-            const qrImg = document.querySelector('#qrcode img').src;
-            const ventana = window.open('', '_blank');
-            ventana.document.write(`<html><body style="text-align:center;padding:50px;"><h1>Menú Digital</h1><img src="${qrImg}" style="width:300px;"><p>Escanea para pedir</p></body></html>`);
-            ventana.document.close();
-            ventana.print();
-        }
     </script>
 </body>
 </html>
