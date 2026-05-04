@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cargando Menú...</title>
+    <!-- Favicon Dinámico -->
+    <link id="dynamic-favicon" rel="shortcut icon" type="image/x-icon" href="data:image/x-icon;,">
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f8f9fa; color: #333; padding-bottom: 120px; scroll-behavior: smooth; }
         
@@ -21,8 +23,13 @@
         .btn-accion { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5); padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; text-decoration: none; backdrop-filter: blur(5px); display: flex; align-items: center; gap: 5px; transition: 0.2s; }
         .btn-accion:active { transform: scale(0.95); background: rgba(255,255,255,0.4); }
 
-        /* NAVEGACIÓN FLOTANTE (STICKY) DE CATEGORÍAS */
-        .nav-categorias { position: sticky; top: 0; background: white; padding: 12px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 50; }
+        /* NAVEGACIÓN FLOTANTE OCULTA AL INICIO */
+        .nav-categorias { 
+            position: fixed; top: -100px; left: 0; width: 100%; box-sizing: border-box;
+            background: white; padding: 12px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 50; transition: top 0.3s ease-in-out;
+        }
+        .nav-categorias.visible { top: 0; }
         .nav-categorias::-webkit-scrollbar { display: none; }
         .cat-chip { background: #f1f2f6; color: #2c3e50; padding: 6px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid #ddd; }
         .cat-chip:active { background: #e67e22; color: white; border-color: #e67e22; }
@@ -31,6 +38,14 @@
         
         .categoria-titulo { margin-top: 25px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; font-size: 1.4rem; padding-top: 60px; margin-top: -40px; }
         
+        /* SWITCH ESTILIZADO DE PICK UP / DOMICILIO */
+        .switch-container { display: flex; position: relative; background: #f1f2f6; border-radius: 8px; overflow: hidden; padding: 4px; margin-bottom: 5px; }
+        .switch-container input[type="radio"] { display: none; }
+        .switch-label { flex: 1; text-align: center; padding: 12px; font-weight: bold; color: #7f8c8d; cursor: pointer; z-index: 1; transition: 0.3s; margin: 0; }
+        .switch-container input[type="radio"]:checked + .switch-label { color: white; }
+        .switch-selector { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); background: #2980b9; border-radius: 6px; transition: 0.3s ease; z-index: 0; }
+        #switchDomicilio:checked ~ .switch-selector { left: 50%; }
+
         /* TARJETAS DE PRODUCTOS */
         .producto-card { background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 15px; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.2s; }
         .producto-card:active { transform: scale(0.98); }
@@ -86,14 +101,28 @@
         </div>
     </header>
 
-    <!-- NAVEGACIÓN STICKY DE CATEGORÍAS -->
+    <!-- NAVEGACIÓN STICKY DE CATEGORÍAS (Oculta al inicio, baja al hacer scroll) -->
     <nav id="navCategorias" class="nav-categorias"></nav>
 
     <div class="container">
+        
         <!-- BANNER CERRADO -->
         <div id="bannerCerrado" style="display: none; background: #e74c3c; color: white; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
             <h3 style="margin: 0 0 5px 0;">🛑 Estamos Cerrados</h3>
             <p style="margin: 0; font-size: 0.95rem;">Puedes ver el menú, pero los pedidos están deshabilitados. Revisa el horario arriba.</p>
+        </div>
+
+        <!-- NUEVO SWITCH AL INICIO PARA TIPO DE PEDIDO -->
+        <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center;">
+            <h3 style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.1rem;">¿Cómo pedirás hoy?</h3>
+            <div class="switch-container">
+                <input type="radio" name="tipoInicio" id="switchPickup" value="pickup" onchange="sincronizarTipoPedido(this.value)">
+                <label for="switchPickup" class="switch-label">🥡 Pick Up</label>
+                
+                <input type="radio" name="tipoInicio" id="switchDomicilio" value="domicilio" onchange="sincronizarTipoPedido(this.value)">
+                <label for="switchDomicilio" class="switch-label">🛵 Domicilio</label>
+                <div class="switch-selector"></div>
+            </div>
         </div>
 
         <div id="listaMenu"></div>
@@ -124,8 +153,8 @@
         <div class="modal-content">
             <h3 style="margin-bottom: 5px;">Detalles de Entrega</h3>
             
+            <!-- Este select se mantiene sincronizado por si el cliente cambia de idea al final -->
             <select id="tipoPedidoTop" class="form-input" onchange="verificarTipoFormulario()" style="margin-bottom: 15px; font-weight: bold; color: #2980b9; border: 2px solid #2980b9;">
-                <option value="" disabled selected>👉 Selecciona Pick Up o Domicilio...</option>
                 <option value="pickup">🥡 Pick Up (Pasaré a recoger al local)</option>
                 <option value="domicilio">🛵 Servicio a Domicilio</option>
             </select>
@@ -198,6 +227,16 @@
         let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "", metodoPago: "" };
         let fechaInicioTurno = new Date(); fechaInicioTurno.setHours(0, 0, 0, 0); 
 
+        // DETECTOR DE SCROLL PARA MOSTRAR/OCULTAR BARRA DE CATEGORÍAS
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navCategorias');
+            if (window.scrollY > 280) { // Cuando baje 280px aparece
+                nav.classList.add('visible');
+            } else {
+                nav.classList.remove('visible');
+            }
+        });
+
         async function cargarMenu() {
             if (!idRestaurante) return;
 
@@ -224,7 +263,16 @@
             numWhatsApp = data.whatsapp;
 
             if(data.portada) document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
-            if(data.logo) { const logoEl = document.getElementById('logoRestaurante'); logoEl.src = data.logo; logoEl.style.display = 'inline-block'; }
+            if(data.logo) { 
+                document.getElementById('logoRestaurante').src = data.logo; 
+                document.getElementById('logoRestaurante').style.display = 'inline-block'; 
+                // Colocar el Favicon Dinámico
+                document.getElementById('dynamic-favicon').href = data.logo;
+            }
+
+            // Seleccionar por defecto "Pick Up"
+            document.getElementById('switchPickup').checked = true;
+            sincronizarTipoPedido('pickup');
 
             // 2. LÓGICA DE HORARIOS AVANZADOS O SIMPLES
             verificarSiEstaCerrado(data);
@@ -285,10 +333,9 @@
             document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
             document.getElementById('totalCarritoModal').innerText = `$${totalGeneral.toFixed(2)}`;
 
-            // Si el modal del carrito está abierto, re-renderizarlo para que se actualice visualmente
+            // Si el modal del carrito está abierto, re-renderizarlo
             if(document.getElementById('modalCarrito').style.display === 'block') {
                 renderizarListaCarrito();
-                // Si el carrito quedó vacío, cerramos el modal
                 if(Object.keys(carrito).length === 0) cerrarModales();
             }
         }
@@ -302,16 +349,27 @@
         }
 
         window.compartirMenu = function() {
+            // Utilizamos el alias (slug) si existe, en vez del ID largo
+            const urlAlias = infoNegocioGlobal && infoNegocioGlobal.slug ? infoNegocioGlobal.slug : idRestaurante;
+            const baseUrl = window.location.href.split('?')[0];
+            const linkCompartir = `${baseUrl}?id=${urlAlias}`;
+
             if (navigator.share) {
-                navigator.share({ title: document.title, text: '¡Mira nuestro Menú Digital y pide en línea!', url: window.location.href })
+                navigator.share({ title: document.title, text: '¡Mira nuestro Menú Digital y pide en línea!', url: linkCompartir })
                 .catch(err => console.log('Error al compartir', err));
             } else {
-                navigator.clipboard.writeText(window.location.href);
-                alert("¡Enlace del menú copiado para compartir!");
+                navigator.clipboard.writeText(linkCompartir);
+                alert("¡Enlace del menú copiado para compartir con tus clientes!");
             }
         }
 
         window.mostrarHorarios = function() { document.getElementById('modalHorarios').style.display = 'block'; }
+
+        // SINCRONIZACIÓN DE SWITCH (INICIO) CON SELECT (FINAL)
+        window.sincronizarTipoPedido = function(valor) {
+            document.getElementById('tipoPedidoTop').value = valor;
+            window.verificarTipoFormulario();
+        }
 
         // FUNCIONES DE MODALES Y CARRITO
         window.cerrarModales = function() {
@@ -362,6 +420,10 @@
             const form = document.getElementById('formularioDatosEnvio');
             const secDir = document.getElementById('seccionDireccion');
             
+            // Sincronizar hacia el switch inicial por si cambió de idea al final
+            if(tipo === 'pickup') document.getElementById('switchPickup').checked = true;
+            if(tipo === 'domicilio') document.getElementById('switchDomicilio').checked = true;
+
             if (tipo) form.style.display = 'block';
             else form.style.display = 'none';
 
