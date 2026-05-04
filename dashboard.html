@@ -34,7 +34,7 @@
         .tabla-profesional { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95rem; }
         .tabla-profesional th, .tabla-profesional td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         .tabla-profesional th { background-color: #2c3e50; color: white; }
-        .tabla-profesional tr:hover { background-color: #f1f2f6; }
+        .tabla-profesional tr:hover { background-color: #e8f4fd; } /* Hover más llamativo para indicar que es clickeable */
         .badge-tipo { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; color: white; }
         .badge-mesa { background-color: #27ae60; }
         .badge-online { background-color: #2980b9; }
@@ -46,7 +46,7 @@
         .btn-completar { background: #27ae60; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.2s; }
         .btn-completar:hover { background: #219653; }
 
-        /* --- NUEVOS ESTILOS: SWITCH DISPONIBILIDAD --- */
+        /* ESTILOS SWITCH DISPONIBILIDAD */
         .disp-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: white; transition: 0.2s; }
         .disp-item:hover { background: #f9f9f9; }
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
@@ -56,13 +56,17 @@
         input:checked + .slider { background-color: #27ae60; }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        /* --- NUEVOS ESTILOS: MAPA DE MESAS --- */
+        /* ESTILOS MAPA DE MESAS */
         .mapa-mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 20px; }
         .mesa-cuadro { height: 120px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; user-select: none; }
         .mesa-cuadro:active { transform: scale(0.95); }
-        .mesa-libre { background-color: #27ae60; } /* Verde */
-        .mesa-espera { background-color: #f1c40f; color: #2c3e50; } /* Amarillo */
-        .mesa-ocupada { background-color: #e74c3c; } /* Rojo */
+        .mesa-libre { background-color: #27ae60; } 
+        .mesa-espera { background-color: #f1c40f; color: #2c3e50; } 
+        .mesa-ocupada { background-color: #e74c3c; } 
+
+        /* ESTILOS MODAL DETALLE PEDIDO */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; width: 90%; max-width: 450px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
@@ -98,13 +102,13 @@
                 <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn-add" style="background: #2c3e50; width: auto;" onclick="filtrarPestana('tabla')">📊 Historial (Tabla)</button>
                     <button class="btn-add" style="background: #e67e22; width: auto;" onclick="filtrarPestana('comandas')">👨‍🍳 Comandas</button>
-                    <!-- NUEVO BOTÓN PARA MESAS -->
                     <button class="btn-add" style="background: #8e44ad; width: auto;" onclick="filtrarPestana('mesas')">🗺️ Mapa de Mesas</button>
                     
-                    <button class="btn-add" style="background: #95a5a6; width: auto; margin-left: auto;" onclick="window.cargarPedidos()">🔄 Actualizar</button>
+                    <button class="btn-add" style="background: #95a5a6; width: auto; margin-left: auto;" onclick="window.cargarPedidos()">🔄 Forzar Actualización</button>
                 </div>
 
                 <div id="lista-pedidos-tabla" style="display: block; overflow-x: auto;">
+                    <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 0;">💡 Haz clic sobre cualquier pedido de la tabla para ver los detalles y datos del cliente.</p>
                     <table class="tabla-profesional">
                         <thead>
                             <tr>
@@ -117,15 +121,12 @@
                 
                 <div id="lista-pedidos-comandas" class="comanda-grid" style="display: none;"></div>
 
-                <!-- NUEVA SECCIÓN: MAPA DE MESAS -->
                 <div id="lista-pedidos-mesas" style="display: none;">
                     <button class="btn-add" style="width: auto; background: #34495e;" onclick="window.agregarMesa()">➕ Agregar Nueva Mesa</button>
                     <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 10px;">
                         Toca una mesa para cambiar su estado: 🟩 Libre ➔ 🟨 Espera ➔ 🟥 Ocupada.
                     </p>
-                    <div id="mapaMesasContenedor" class="mapa-mesas">
-                        <!-- Las mesas se cargarán aquí -->
-                    </div>
+                    <div id="mapaMesasContenedor" class="mapa-mesas"></div>
                 </div>
             </div>
         </div>
@@ -160,14 +161,11 @@
             <div class="card"><h2>Corte de Caja</h2><p>Módulo en construcción...</p></div>
         </div>
 
-        <!-- NUEVA SECCIÓN: DISPONIBILIDAD -->
         <div id="vista-disponibilidad" class="vista">
             <div class="card">
                 <h2>Disponibilidad del Menú</h2>
-                <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 20px;">Apaga el interruptor para ocultar temporalmente un producto del menú de tus clientes (Ej. Si se acabó un ingrediente).</p>
-                <div id="lista-disponibilidad" style="border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
-                    <!-- Productos y switches se cargarán aquí -->
-                </div>
+                <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 20px;">Apaga el interruptor para ocultar temporalmente un producto.</p>
+                <div id="lista-disponibilidad" style="border: 1px solid #eee; border-radius: 8px; overflow: hidden;"></div>
             </div>
         </div>
 
@@ -182,7 +180,17 @@
 
     </div>
 
-    <!-- SCRIPT DE INTERFAZ -->
+    <!-- NUEVO: MODAL PARA VER DETALLES DEL PEDIDO -->
+    <div id="modalDetallePedido" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 10px;">Detalles del Pedido</h3>
+            <div id="detalleContenido" style="font-size: 0.95rem; color: #333; line-height: 1.5;">
+                <!-- Los detalles se inyectan aquí -->
+            </div>
+            <button class="btn-add" style="margin-top: 20px; background: #95a5a6;" onclick="document.getElementById('modalDetallePedido').style.display='none'">Cerrar Detalles</button>
+        </div>
+    </div>
+
     <script>
         function cambiarVista(idVista, elementoNav) {
             document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
@@ -190,7 +198,6 @@
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('activo'));
             if(elementoNav) elementoNav.classList.add('activo');
             
-            // Refrescar datos dependiendo de la vista
             if(idVista === 'vista-pedidos') { window.cargarPedidos(); }
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
         }
@@ -206,7 +213,7 @@
                 document.getElementById('lista-pedidos-comandas').style.display = 'grid'; 
             } else if (tipo === 'mesas') {
                 document.getElementById('lista-pedidos-mesas').style.display = 'block';
-                window.cargarMesas(); // Cargar la cuadrícula de mesas
+                window.cargarMesas(); 
             }
         }
 
@@ -222,7 +229,8 @@
     <!-- SCRIPT DE FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // NUEVO: Importamos onSnapshot para lectura en tiempo real
+        import { getFirestore, doc, getDoc, collection, addDoc, getDocs, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -241,6 +249,9 @@
         const urlParams = new URLSearchParams(window.location.search);
         const idRestaurante = urlParams.get('id');
 
+        // NUEVO: Variable global para guardar los pedidos temporalmente y poder mostrarlos en el modal
+        window.pedidosGlobales = [];
+
         if (!idRestaurante) { window.location.href = "index.html"; }
 
         async function cargarDatos() {
@@ -253,11 +264,20 @@
                 document.getElementById('displayLink').innerText = urlMenu;
                 new QRCode(document.getElementById("qrcode"), { text: urlMenu, width: 150, height: 150 });
             }
+
+            // NUEVO: ACTIVAR ESCUCHA EN TIEMPO REAL
+            // Cuando la base de datos cambie (ej. entra un pedido o cambia una mesa), se actualiza solo.
+            onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), () => {
+                window.cargarPedidos();
+            });
+            onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => {
+                window.cargarMesas();
+            });
         }
         cargarDatos();
 
         // --------------------------------------------------------
-        // MÓDULO 1: DISPONIBILIDAD DE PRODUCTOS
+        // DISPONIBILIDAD
         // --------------------------------------------------------
         window.cargarDisponibilidad = async function() {
             const prodRef = collection(db, "restaurantes", idRestaurante, "productos");
@@ -272,9 +292,7 @@
 
             snapshot.forEach(docSnap => {
                 const p = docSnap.data();
-                // Si el campo 'disponible' no existe, asumimos que sí está disponible (true)
                 const isChecked = p.disponible !== false ? 'checked' : ''; 
-                
                 contenedor.innerHTML += `
                     <div class="disp-item">
                         <div>
@@ -294,15 +312,11 @@
             try {
                 const docRef = doc(db, "restaurantes", idRestaurante, "productos", docId);
                 await updateDoc(docRef, { disponible: estaDisponible });
-            } catch (error) {
-                console.error("Error al actualizar disponibilidad:", error);
-                alert("Hubo un error de conexión.");
-            }
+            } catch (error) { console.error(error); }
         }
 
-
         // --------------------------------------------------------
-        // MÓDULO 2: MAPA DE MESAS (KDS / SALA)
+        // MAPA DE MESAS
         // --------------------------------------------------------
         window.cargarMesas = async function() {
             const mesasRef = collection(db, "restaurantes", idRestaurante, "mesas");
@@ -312,8 +326,6 @@
 
             let mesas = [];
             snapshot.forEach(docSnap => mesas.push({ id: docSnap.id, ...docSnap.data() }));
-            
-            // Ordenar mesas por número (1, 2, 3...)
             mesas.sort((a,b) => a.numero - b.numero);
 
             mesas.forEach(mesa => {
@@ -336,18 +348,12 @@
             try {
                 const mesasRef = collection(db, "restaurantes", idRestaurante, "mesas");
                 const snapshot = await getDocs(mesasRef);
-                // Calcula el número de la siguiente mesa basado en cuántas hay
                 const numNuevaMesa = snapshot.size + 1; 
-
                 await addDoc(mesasRef, { numero: numNuevaMesa, estado: 'libre' });
-                window.cargarMesas(); // Recarga la cuadrícula
-            } catch (error) {
-                console.error(error);
-            }
+            } catch (error) { console.error(error); }
         }
 
         window.cambiarEstadoMesa = async function(mesaId, estadoActual) {
-            // Ciclo de estados: libre -> espera -> ocupada -> libre
             let nuevoEstado = 'libre';
             if(estadoActual === 'libre') nuevoEstado = 'espera';
             else if(estadoActual === 'espera') nuevoEstado = 'ocupada';
@@ -355,13 +361,12 @@
             try {
                 const mesaRef = doc(db, "restaurantes", idRestaurante, "mesas", mesaId);
                 await updateDoc(mesaRef, { estado: nuevoEstado });
-                window.cargarMesas(); // Recarga la cuadrícula al instante
-            } catch (error) {
-                console.error("Error al cambiar estado:", error);
-            }
+            } catch (error) { console.error(error); }
         }
 
-        // --- SISTEMA DE PEDIDOS (INTACTO) ---
+        // --------------------------------------------------------
+        // SISTEMA DE PEDIDOS Y DETALLES
+        // --------------------------------------------------------
         window.cargarPedidos = async function() {
             const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
             const snapshot = await getDocs(pedidosRef);
@@ -379,6 +384,9 @@
             let ordenes = [];
             snapshot.forEach(doc => ordenes.push({ id: doc.id, ...doc.data() }));
             ordenes.sort((a, b) => b.fecha.toDate() - a.fecha.toDate());
+            
+            // Guardamos las órdenes globalmente para que el modal pueda leerlas
+            window.pedidosGlobales = ordenes;
 
             ordenes.forEach(ped => {
                 const numComanda = ped.numeroComanda || "S/N";
@@ -390,8 +398,9 @@
                 let clienteInfo = esMesa ? `Mesa #${ped.numeroMesa}` : (ped.clienteEnvio ? ped.clienteEnvio.nombre : "Cliente Web");
                 let estadoPago = ped.estadoPago || "Pendiente"; 
 
+                // NUEVO: Agregamos onclick="window.verDetallePedido('${ped.id}')" y cursor pointer
                 tbody.innerHTML += `
-                    <tr>
+                    <tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;" title="Haz clic para ver la orden completa">
                         <td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td>
                         <td>${fechaFormat}</td><td><span class="badge-pago">${estadoPago}</span></td><td><strong>$${ped.total.toFixed(2)}</strong></td>
                     </tr>
@@ -416,17 +425,65 @@
             if (contComandas.innerHTML === '') contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">Cocina limpia. No hay comandas pendientes. ✨</p>';
         }
 
+        // NUEVO: Función para mostrar el modal con toda la información del pedido
+        window.verDetallePedido = function(idPedido) {
+            const ped = window.pedidosGlobales.find(p => p.id === idPedido);
+            if(!ped) return;
+
+            let infoHtml = '';
+            if (ped.tipoOrigen === 'mesa') {
+                infoHtml = `
+                    <p style="margin: 5px 0;"><strong>📍 Tipo de Orden:</strong> Consumo en Restaurante</p>
+                    <p style="margin: 5px 0; font-size: 1.1rem; color: #27ae60;"><strong>🍽️ Mesa Asignada:</strong> #${ped.numeroMesa}</p>
+                `;
+            } else {
+                infoHtml = `
+                    <p style="margin: 5px 0;"><strong>🛵 Tipo de Orden:</strong> Envío a Domicilio / Pick Up</p>
+                    <p style="margin: 5px 0;"><strong>👤 Cliente:</strong> ${ped.clienteEnvio?.nombre || 'No registrado'}</p>
+                    <p style="margin: 5px 0;"><strong>📞 Teléfono:</strong> <a href="tel:${ped.clienteEnvio?.telefono}" style="color: #2980b9;">${ped.clienteEnvio?.telefono || 'No registrado'}</a></p>
+                    <p style="margin: 5px 0;"><strong>🏠 Dirección:</strong> ${ped.clienteEnvio?.direccion || 'No registrada'}</p>
+                    ${ped.clienteEnvio?.mapsLink ? `<p style="margin: 5px 0;"><strong>🗺️ Mapa:</strong> <a href="${ped.clienteEnvio.mapsLink}" target="_blank" style="color: #e67e22;">Abrir ubicación en Google Maps</a></p>` : ''}
+                `;
+            }
+
+            let itemsHtml = '';
+            ped.items.forEach(i => {
+                itemsHtml += `
+                    <li style="display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 5px;">
+                        <span><strong>${i.cantidad}x</strong> ${i.nombre}</span>
+                        <span style="color: #7f8c8d;">$${(i.precio * i.cantidad).toFixed(2)}</span>
+                    </li>
+                `;
+            });
+
+            document.getElementById('detalleContenido').innerHTML = `
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #3498db;">
+                    ${infoHtml}
+                </div>
+                <h4 style="margin-bottom: 10px; color: #2c3e50;">Productos:</h4>
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    ${itemsHtml}
+                </ul>
+                <div style="text-align: right; margin-top: 15px; font-size: 1.3rem; color: #27ae60; font-weight: bold;">
+                    Total: $${ped.total.toFixed(2)}
+                </div>
+            `;
+            
+            document.getElementById('modalDetallePedido').style.display = 'block';
+        }
+
         window.completarComanda = async function(docId) {
             if(confirm("¿Estás seguro de que esta orden ya está preparada?")) {
                 try {
                     const pedRef = doc(db, "restaurantes", idRestaurante, "pedidos", docId);
                     await updateDoc(pedRef, { estado: 'completado' });
-                    window.cargarPedidos();
                 } catch (error) { console.error(error); }
             }
         }
 
-        // --- SISTEMA DE GUARDAR PRODUCTOS (INTACTO) ---
+        // --------------------------------------------------------
+        // SISTEMA DE GUARDAR PRODUCTOS
+        // --------------------------------------------------------
         const contenedorVariantes = document.getElementById('contenedorVariantes');
         document.getElementById('btnNuevaVariante').addEventListener('click', () => {
             const div = document.createElement('div'); div.className = 'variante-item';
@@ -482,7 +539,6 @@
                     imagenUrl = await getDownloadURL(imgRef);
                 }
 
-                // NUEVO: Agregamos el campo 'disponible: true' por defecto al guardar un producto nuevo
                 await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), {
                     categoria, nombre, descripcion: desc, precio: parseFloat(precio), variantes, imagen: imagenUrl, fecha: new Date(), disponible: true
                 });
