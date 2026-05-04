@@ -7,55 +7,52 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f8f9fa; color: #333; padding-bottom: 120px; }
         
-        header { background: #2c3e50; color: white; padding: 30px 20px; text-align: center; }
+        /* --- ESTILOS MEJORADOS PARA HEADER CON PORTADA Y LOGO --- */
+        .header-portada { 
+            background-color: #2c3e50; /* Color de respaldo */
+            background-size: cover; 
+            background-position: center; 
+            color: white; 
+            padding: 40px 20px; 
+            text-align: center; 
+            position: relative;
+        }
+        .header-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); /* Oscurece la foto para leer bien el texto */
+        }
+        .header-content { position: relative; z-index: 1; }
+        
+        .logo-restaurante {
+            width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
+            border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            margin-bottom: 10px; display: none; /* Se oculta hasta que cargue de Firebase */
+        }
+
         .container { max-width: 600px; margin: auto; padding: 15px; }
         
         .categoria-titulo { margin-top: 20px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; font-size: 1.3rem; }
         
-        /* --- ESTILOS DE TARJETA MÁS COMPACTOS --- */
         .producto-card { 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
-            margin-bottom: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-            transition: transform 0.2s;
+            background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
+            margin-bottom: 15px; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.2s;
         }
         .producto-card:active { transform: scale(0.98); }
 
-        /* --- FOTO MEJORADA (Se ve completa sin recortar) --- */
         .producto-img {
-            width: 100%;
-            height: 180px; /* Un poco más alto para apreciar detalles */
-            background-color: #ffffff; /* Fondo blanco puro */
-            background-size: contain; /* Muestra la foto COMPLETA */
-            background-repeat: no-repeat; /* Evita que se duplique */
-            background-position: center;
+            width: 100%; height: 180px; background-color: #ffffff; 
+            background-size: contain; background-repeat: no-repeat; background-position: center;
         }
 
-        /* Contenido de la tarjeta */
-        .producto-contenido {
-            padding: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
+        .producto-contenido { padding: 12px; display: flex; justify-content: space-between; align-items: center; }
         .info { flex: 1; padding-right: 10px; }
         .info h3 { margin: 0; font-size: 1.1rem; color: #2c3e50; }
         .info p { margin: 4px 0; color: #7f8c8d; font-size: 0.85rem; line-height: 1.3; }
         .precio { font-weight: bold; color: #e67e22; font-size: 1rem; display: block; margin-top: 4px; }
         
-        /* --- CONTROLES DE CANTIDAD (+ / -) --- */
         .controles-cantidad {
-            display: flex;
-            align-items: center;
-            background: #f1f2f6;
-            border-radius: 50px;
-            padding: 5px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            display: flex; align-items: center; background: #f1f2f6; border-radius: 50px;
+            padding: 5px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
         }
         .btn-qty {
             background: white; color: #2c3e50; border: none; width: 30px; height: 30px;
@@ -68,16 +65,13 @@
         .btn-pedir { background: #25d366; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
         .footer-carrito {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: white; padding: 15px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column; gap: 10px;
+            position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; 
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px;
             box-sizing: border-box; z-index: 100;
         }
-        
         .controles-pedido { display: flex; justify-content: center; align-items: center; }
         .selector-origen { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; color: #2c3e50; }
         
-        /* --- MODALES --- */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
         .modal-content { background: white; margin: 15% auto; padding: 25px; width: 85%; max-width: 350px; border-radius: 12px; }
         .modal-content h3 { margin-top: 0; text-align: center; color: #2c3e50; }
@@ -91,18 +85,24 @@
 </head>
 <body>
 
-    <header>
-        <h1 id="nombreRestaurante" style="margin:0; font-size: 1.5rem;">Cargando...</h1>
+    <!-- CABECERA ACTUALIZADA PARA LOGO Y PORTADA -->
+    <header id="headerRestaurante" class="header-portada">
+        <div class="header-overlay"></div>
+        <div class="header-content">
+            <img id="logoRestaurante" src="" alt="Logo del Restaurante" class="logo-restaurante">
+            <h1 id="nombreRestaurante" style="margin:0; font-size: 1.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Cargando...</h1>
+        </div>
     </header>
 
     <div class="container">
-        <!-- NUEVO: SELECTOR AL PRINCIPIO ANTES DE ORDENAR -->
+        <!-- SELECTOR ACTUALIZADO CON LAS 3 OPCIONES -->
         <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center;">
             <h3 style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.2rem;">¿Cómo pedirás hoy?</h3>
             <select id="tipoPedidoTop" class="selector-origen" onchange="verificarTipoPedido()" style="width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 8px;">
                 <option value="" disabled selected>Elige una opción...</option>
                 <option value="mesa">🍽️ Consumo en Mesa</option>
-                <option value="online">🛵 A Domicilio / Pick Up</option>
+                <option value="pickup">🥡 Pick Up (Pasar a recoger)</option>
+                <option value="domicilio">🛵 Domicilio (Repartidor independiente)</option>
             </select>
             <div id="infoSeleccion" style="margin-top: 15px; font-weight: bold; color: #27ae60; font-size: 1.1rem; display: none;"></div>
         </div>
@@ -120,23 +120,34 @@
         </div>
     </div>
 
-    <!-- Modal para Domicilio -->
+    <!-- Modal COMBINADO para Domicilio / Pick Up -->
     <div id="modalDomicilio" class="modal">
         <div class="modal-content">
-            <h3>Datos de Envío</h3>
+            <h3 id="tituloModalEnvio">Datos de Envío</h3>
             <p style="text-align: center; font-size: 0.9rem; color: #7f8c8d; margin-top: 0;">Llena tus datos para completar tu pedido.</p>
+            
             <input type="text" id="domNombre" class="form-input" placeholder="Tu Nombre Completo" required>
             <input type="tel" id="domTelefono" class="form-input" placeholder="Tu Teléfono (Para contactarte)" required>
-            <textarea id="domDireccion" class="form-input" rows="3" placeholder="Calle, cruzamientos, colonia y referencias..." required></textarea>
             
-            <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Compartir mi ubicación (Google Maps)</button>
+            <!-- CONTENEDOR DIRECCIÓN (Se oculta en Pick Up) -->
+            <div id="seccionDireccion">
+                <textarea id="domDireccion" class="form-input" rows="3" placeholder="Calle, cruzamientos, colonia y referencias..."></textarea>
+                <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Compartir mi ubicación (Google Maps)</button>
+            </div>
+
+            <!-- NUEVO: SELECTOR DE MÉTODO DE PAGO -->
+            <select id="domPago" class="form-input" style="margin-top: 10px; font-weight: bold; color: #2c3e50;" required>
+                <option value="" disabled selected>💳 ¿Cómo vas a pagar?</option>
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Tarjeta">💳 Tarjeta de Crédito/Débito</option>
+                <option value="Transferencia">🏦 Transferencia Electrónica</option>
+            </select>
             
-            <button class="btn-pedir" onclick="confirmarDomicilio()" style="width: 100%; margin-top:10px;">Enviar Pedido por WhatsApp</button>
+            <button class="btn-pedir" onclick="confirmarDomicilio()" style="width: 100%; margin-top:15px;">Enviar Pedido por WhatsApp</button>
             <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%;">Volver al Menú</button>
         </div>
     </div>
 
-    <!-- Carrito Flotante -->
     <div class="footer-carrito">
         <div class="controles-pedido">
             <span style="font-weight: bold;">Total del Pedido: <span id="totalVenta" style="color: #e67e22; font-size: 1.3rem;">$0.00</span></span>
@@ -146,7 +157,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        // AGREGAMOS query, where y updateDoc a la importación
         import { getFirestore, doc, getDoc, collection, getDocs, addDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -169,7 +179,7 @@
         let totalGeneral = 0;
         
         let mesaCliente = "";
-        let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "" };
+        let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "", metodoPago: "" };
 
         async function cargarMenu() {
             if (!idRestaurante) return;
@@ -182,6 +192,16 @@
                 document.getElementById('nombreRestaurante').innerText = data.nombre;
                 document.title = "Menú - " + data.nombre;
                 numWhatsApp = data.whatsapp;
+
+                // NUEVO: CARGAR LOGO Y PORTADA
+                if(data.portada) {
+                    document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
+                }
+                if(data.logo) {
+                    const logoEl = document.getElementById('logoRestaurante');
+                    logoEl.src = data.logo;
+                    logoEl.style.display = 'inline-block';
+                }
             }
 
             const productosRef = collection(db, "restaurantes", idRestaurante, "productos");
@@ -193,8 +213,6 @@
 
             querySnapshot.forEach((doc) => {
                 const p = doc.data();
-                
-                // NUEVO: FILTRO DE DISPONIBILIDAD. Si está apagado, lo ignoramos.
                 if (p.disponible === false) return; 
 
                 const cat = p.categoria || "Otros";
@@ -236,18 +254,14 @@
         }
 
         window.modificarItem = function(nombre, precio, cambio, idHTML) {
-            // NUEVO: Validar que hayan escogido cómo pedir ANTES de agregar cosas
             const tipo = document.getElementById('tipoPedidoTop').value;
             if (!tipo) {
-                alert("Por favor, selecciona si tu pedido es en Mesa o a Domicilio en la parte de arriba.");
+                alert("Por favor, selecciona cómo quieres tu pedido en la parte de arriba (Mesa, Pick Up o Domicilio).");
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
-            if (!carrito[nombre]) {
-                carrito[nombre] = { precio: precio, cantidad: 0 };
-            }
-
+            if (!carrito[nombre]) carrito[nombre] = { precio: precio, cantidad: 0 };
             carrito[nombre].cantidad += cambio;
 
             if (carrito[nombre].cantidad <= 0) {
@@ -258,9 +272,7 @@
             document.getElementById(`qty-${idHTML}`).innerText = carrito[nombre] ? carrito[nombre].cantidad : 0;
 
             totalGeneral = 0;
-            for (let prod in carrito) {
-                totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
-            }
+            for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
             document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
         }
 
@@ -272,9 +284,13 @@
             if (tipo === 'mesa') {
                 document.getElementById('modalMesa').style.display = 'block';
                 infoText.style.display = 'none';
-            } else if (tipo === 'online') {
+            } else if (tipo === 'pickup') {
                 mesaCliente = "";
-                infoText.innerText = "🛵 Pedido configurado para Domicilio/Pick Up";
+                infoText.innerText = "🥡 Pedido configurado para Pick Up";
+                infoText.style.display = 'block';
+            } else if (tipo === 'domicilio') {
+                mesaCliente = "";
+                infoText.innerText = "🛵 Pedido configurado para Domicilio";
                 infoText.style.display = 'block';
             }
         }
@@ -284,7 +300,6 @@
             document.getElementById('modalDomicilio').style.display = 'none';
         }
 
-        // NUEVO: AL CONFIRMAR MESA, SE PONE "EN ESPERA" EN EL DASHBOARD
         window.confirmarMesa = async function() {
             const numero = parseInt(document.getElementById('numMesaInput').value);
             if (numero) {
@@ -295,36 +310,16 @@
                 infoText.innerText = `🍽️ Mesa #${numero} seleccionada`;
                 infoText.style.display = 'block';
 
-                // Buscar la mesa en Firebase y cambiar su color a "Espera" (Amarillo)
                 try {
                     const mesasRef = collection(db, "restaurantes", idRestaurante, "mesas");
                     const q = query(mesasRef, where("numero", "==", numero));
                     const querySnapshot = await getDocs(q);
                     
                     querySnapshot.forEach(async (docSnap) => {
-                        await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", docSnap.id), {
-                            estado: 'espera' 
-                        });
+                        await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", docSnap.id), { estado: 'espera' });
                     });
-                } catch (e) {
-                    console.error("Error actualizando mesa:", e);
-                }
-
+                } catch (e) { console.error("Error actualizando mesa:", e); }
             } else alert("Por favor, ingresa tu número de mesa.");
-        }
-
-        // Se llama hasta que el cliente finaliza el pedido
-        window.confirmarDomicilio = function() {
-            datosEnvio.nombre = document.getElementById('domNombre').value;
-            datosEnvio.telefono = document.getElementById('domTelefono').value;
-            datosEnvio.direccion = document.getElementById('domDireccion').value;
-
-            if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.direccion) {
-                return alert("Falta llenar Nombre, Teléfono o Dirección.");
-            }
-            
-            cerrarModales();
-            ejecutarEnvioPedido(); // Continúa el flujo
         }
 
         window.obtenerUbicacion = function() {
@@ -340,30 +335,22 @@
                         btnUbi.style.color = "white";
                     },
                     (error) => {
-                        alert("No se pudo obtener la ubicación. Por favor asegúrate de tener el GPS activado y dar permisos al navegador.");
+                        alert("No se pudo obtener la ubicación. Activa tu GPS y recarga.");
                         btnUbi.innerText = "📍 Reintentar compartir ubicación";
                     },
                     { enableHighAccuracy: true }
                 );
-            } else {
-                alert("Tu navegador no soporta esta función.");
-            }
+            } else alert("Tu navegador no soporta esta función.");
         }
 
-        // --- PROCESAMIENTO FINAL ---
         window.procesarPedido = function() {
-            const arrayItems = Object.keys(carrito).map(nombre => ({
-                nombre: nombre,
-                precio: carrito[nombre].precio,
-                cantidad: carrito[nombre].cantidad
-            }));
-
+            const arrayItems = Object.keys(carrito);
             if (arrayItems.length === 0) return alert("Agrega al menos un producto con el botón (+).");
             
             const tipo = document.getElementById('tipoPedidoTop').value;
             
             if (!tipo) {
-                alert("Selecciona arriba si estás en mesa o es a domicilio.");
+                alert("Selecciona arriba si estás en mesa, pick up o domicilio.");
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
@@ -373,14 +360,43 @@
                 return;
             }
             
-            // Si es domicilio, aquí sí le pedimos sus datos antes de terminar
-            if (tipo === 'online') {
+            // Lógica para mostrar los campos correctos según si es Pick up o Domicilio
+            if (tipo === 'pickup' || tipo === 'domicilio') {
+                if (tipo === 'pickup') {
+                    document.getElementById('tituloModalEnvio').innerText = "Datos para Pick Up";
+                    document.getElementById('seccionDireccion').style.display = 'none'; // Oculta mapa y dirección
+                } else {
+                    document.getElementById('tituloModalEnvio').innerText = "Datos de Envío a Domicilio";
+                    document.getElementById('seccionDireccion').style.display = 'block'; // Muestra mapa y dirección
+                }
                 document.getElementById('modalDomicilio').style.display = 'block';
                 return;
             }
 
-            // Si es mesa, envía de inmediato
+            // Si es mesa, manda directo
             ejecutarEnvioPedido();
+        }
+
+        window.confirmarDomicilio = function() {
+            const tipo = document.getElementById('tipoPedidoTop').value;
+            datosEnvio.nombre = document.getElementById('domNombre').value;
+            datosEnvio.telefono = document.getElementById('domTelefono').value;
+            datosEnvio.metodoPago = document.getElementById('domPago').value;
+
+            if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.metodoPago) {
+                return alert("Por favor llena Nombre, Teléfono y Método de Pago.");
+            }
+
+            if(tipo === 'domicilio') {
+                datosEnvio.direccion = document.getElementById('domDireccion').value;
+                if(!datosEnvio.direccion) return alert("Falta escribir tu dirección de envío.");
+            } else {
+                datosEnvio.direccion = "Pick Up (Pasa a recoger)";
+                datosEnvio.mapsLink = "";
+            }
+            
+            cerrarModales();
+            ejecutarEnvioPedido(); 
         }
 
         async function ejecutarEnvioPedido() {
@@ -400,15 +416,19 @@
                     numeroComanda: comandaId,
                     items: arrayItems,
                     total: totalGeneral,
-                    tipoOrigen: tipo,
+                    tipoOrigen: tipo, // Guardará 'mesa', 'pickup', o 'domicilio'
                     numeroMesa: tipo === 'mesa' ? mesaCliente : null,
-                    clienteEnvio: tipo === 'online' ? datosEnvio : null,
+                    clienteEnvio: (tipo === 'pickup' || tipo === 'domicilio') ? datosEnvio : null,
                     fecha: new Date(),
                     estado: 'pendiente'
                 });
 
                 let mensaje = `*NUEVO PEDIDO: ${comandaId}*%0A`;
-                mensaje += tipo === 'mesa' ? `📍 *MESA:* ${mesaCliente}%0A` : `🛵 *SERVICIO A DOMICILIO*%0A`;
+                
+                if(tipo === 'mesa') mensaje += `📍 *MESA:* ${mesaCliente}%0A`;
+                else if(tipo === 'pickup') mensaje += `🥡 *PICK UP (PASAR A RECOGER)*%0A`;
+                else if(tipo === 'domicilio') mensaje += `🛵 *SERVICIO A DOMICILIO (Repartidor Externo)*%0A`;
+                
                 mensaje += `--------------------------%0A`;
                 
                 arrayItems.forEach(item => {
@@ -416,9 +436,12 @@
                 });
                 mensaje += `--------------------------%0A*TOTAL A PAGAR: $${totalGeneral.toFixed(2)}*%0A%0A`;
 
-                if (tipo === 'online') {
-                    mensaje += `*DATOS DEL CLIENTE:*%0A👤 Nombre: ${datosEnvio.nombre}%0A📞 Tel: ${datosEnvio.telefono}%0A🏠 Dir: ${datosEnvio.direccion}%0A`;
-                    if(datosEnvio.mapsLink !== "") mensaje += `🗺️ Ubicación GPS: ${datosEnvio.mapsLink}%0A`;
+                if (tipo === 'pickup' || tipo === 'domicilio') {
+                    mensaje += `*DATOS DEL CLIENTE:*%0A👤 Nombre: ${datosEnvio.nombre}%0A📞 Tel: ${datosEnvio.telefono}%0A💳 Método de pago: ${datosEnvio.metodoPago}%0A`;
+                    if(tipo === 'domicilio') {
+                        mensaje += `🏠 Dir: ${datosEnvio.direccion}%0A`;
+                        if(datosEnvio.mapsLink !== "") mensaje += `🗺️ Ubicación GPS: ${datosEnvio.mapsLink}%0A`;
+                    }
                 }
 
                 const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`;
