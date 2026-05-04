@@ -12,13 +12,50 @@
         
         .categoria-titulo { margin-top: 30px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; }
         
-        .producto-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .info h3 { margin: 0; font-size: 1.2rem; color: #2c3e50; }
-        .info p { margin: 5px 0; color: #7f8c8d; font-size: 0.9rem; }
-        .precio { font-weight: bold; color: #e67e22; font-size: 1.1rem; }
-        .btn-pedir { background: #25d366; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        /* --- ESTILOS DE TARJETA MEJORADOS (PROFESIONAL) --- */
+        .producto-card { 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08); 
+            margin-bottom: 20px; 
+            display: flex; 
+            flex-direction: column; /* Apila imagen arriba, contenido abajo */
+            overflow: hidden; /* Evita que la foto se salga de las esquinas redondas */
+            transition: transform 0.2s;
+        }
+        .producto-card:active { transform: scale(0.98); }
 
-        /* Estilos del carrito mejorado */
+        /* Contenedor de la foto */
+        .producto-img {
+            width: 100%;
+            height: 180px; /* Altura fija para uniformidad */
+            background-color: #eee; /* Fondo gris si la imagen tarda en cargar */
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Contenedor de la información abajo de la foto */
+        .producto-contenido {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .info { flex: 1; padding-right: 15px; }
+        .info h3 { margin: 0; font-size: 1.2rem; color: #2c3e50; }
+        .info p { margin: 5px 0; color: #7f8c8d; font-size: 0.9rem; line-height: 1.4; }
+        .precio { font-weight: bold; color: #e67e22; font-size: 1.1rem; display: block; margin-top: 5px; }
+        
+        .btn-pedir { 
+            background: #25d366; color: white; border: none; 
+            padding: 10px 20px; border-radius: 50px; font-weight: bold; 
+            cursor: pointer; box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);
+            align-self: center; /* Centra el botón verticalmente */
+        }
+        .btn-pedir:active { background: #128c7e; }
+
+        /* Estilos del carrito mejorado (INTACTOS) */
         .footer-carrito {
             position: fixed; bottom: 0; left: 0; width: 100%;
             background: white; padding: 15px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
@@ -29,7 +66,7 @@
         .controles-pedido { display: flex; justify-content: space-between; align-items: center; }
         .selector-origen { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; color: #2c3e50; }
         
-        /* Modal para número de mesa */
+        /* Modal para número de mesa (INTACTO) */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 40% auto; padding: 20px; width: 250px; border-radius: 10px; text-align: center; }
         .modal-content input { width: 80%; padding: 10px; margin: 10px 0; text-align: center; font-size: 1.2rem; }
@@ -57,14 +94,13 @@
         <div class="controles-pedido">
             <span style="font-weight: bold;">Total: <span id="totalVenta" style="color: #e67e22; font-size: 1.2rem;">$0.00</span></span>
             
-            <!-- El cliente elige cómo quiere su pedido -->
             <select id="tipoPedido" class="selector-origen" onchange="verificarTipoPedido()">
                 <option value="online">🛵 Para Llevar</option>
                 <option value="mesa">🍽️ Consumo en Mesa</option>
             </select>
         </div>
         
-        <button class="btn-pedir" onclick="procesarPedido()">Enviar Pedido</button>
+        <button class="btn-pedir" onclick="procesarPedido()" style="border-radius: 8px;">Enviar Pedido</button>
     </div>
 
     <script type="module">
@@ -121,34 +157,44 @@
             for (const nombreCat in categorias) {
                 contenedor.innerHTML += `<h2 class="categoria-titulo">${nombreCat}</h2>`;
                 categorias[nombreCat].forEach(p => {
+                    
+                    // LÓGICA DE IMAGEN: Si el producto tiene el campo 'imagen' y no está vacío, preparamos el div de la foto.
+                    let htmlImagen = "";
+                    if (p.imagen && p.imagen !== "") {
+                        htmlImagen = `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>`;
+                    }
+
+                    // Inyectamos la tarjeta completa
                     contenedor.innerHTML += `
                         <div class="producto-card">
-                            <div class="info">
-                                <h3>${p.nombre}</h3>
-                                <p>${p.descripcion}</p>
-                                <span class="precio">$${p.precio}</span>
+                            ${htmlImagen}
+                            <div class="producto-contenido">
+                                <div class="info">
+                                    <h3>${p.nombre}</h3>
+                                    <p>${p.descripcion}</p>
+                                    <span class="precio">$${p.precio}</span>
+                                </div>
+                                <button class="btn-pedir" onclick="agregarAlCarrito('${p.nombre}', ${p.precio})">Agregar</button>
                             </div>
-                            <button class="btn-pedir" onclick="agregarAlCarrito('${p.nombre}', ${p.precio})">+</button>
                         </div>
                     `;
                 });
             }
         }
 
-        // Funciones Globales para el Carrito
+        // --- LÓGICA DEL CARRITO Y PEDIDOS INTACTA ---
         window.agregarAlCarrito = function(nombre, precio) {
             carrito.push({ nombre, precio });
             total += precio;
             document.getElementById('totalVenta').innerText = `$${total.toFixed(2)}`;
         }
 
-        // Lógica para pedir el número de mesa si seleccionan esa opción
         window.verificarTipoPedido = function() {
             const tipo = document.getElementById('tipoPedido').value;
             if (tipo === 'mesa') {
                 document.getElementById('modalMesa').style.display = 'block';
             } else {
-                mesaCliente = ""; // Se limpia si cambian a "Para llevar"
+                mesaCliente = "";
             }
         }
 
@@ -162,7 +208,6 @@
             }
         }
 
-        // FUNCIÓN PRINCIPAL: Guarda en base de datos y manda el WhatsApp
         window.procesarPedido = async function() {
             if (carrito.length === 0) return alert("Agrega algo al carrito primero");
             
@@ -171,23 +216,19 @@
                 return alert("Necesitamos saber tu número de mesa");
             }
 
-            // 1. Guardar en Firebase
             try {
-                // El botón cambia de texto para que el cliente sepa que algo está pasando
                 const btnOriginal = document.querySelector('.footer-carrito .btn-pedir').innerText;
                 document.querySelector('.footer-carrito .btn-pedir').innerText = "Procesando...";
 
-                // Creamos el documento del pedido dentro del restaurante
                 await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
                     items: carrito,
                     total: total,
-                    tipoOrigen: tipo, // Guardamos 'online' o 'mesa'
-                    numeroMesa: mesaCliente, // Si es online, estará vacío
+                    tipoOrigen: tipo,
+                    numeroMesa: mesaCliente,
                     fecha: new Date(),
-                    estado: 'pendiente' // Para que en el dashboard sepas que es nuevo
+                    estado: 'pendiente'
                 });
 
-                // 2. Preparar mensaje de WhatsApp
                 let tituloMensaje = tipo === 'mesa' ? `*Pedido - MESA ${mesaCliente}*` : `*Pedido PARA LLEVAR/ONLINE*`;
                 let mensaje = `${tituloMensaje}%0A--------------------------%0A`;
                 
@@ -196,10 +237,8 @@
                 });
                 mensaje += `--------------------------%0A*Total: $${total.toFixed(2)}*`;
 
-                // 3. Abrir WhatsApp
                 const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`;
                 
-                // Limpiamos el carrito por si el cliente vuelve a la pestaña
                 carrito = [];
                 total = 0;
                 document.getElementById('totalVenta').innerText = `$0.00`;
