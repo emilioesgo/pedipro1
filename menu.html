@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargando Menú...</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f8f9fa; color: #333; }
+        
+        /* Encabezado del Restaurante */
+        header { background: #2c3e50; color: white; padding: 40px 20px; text-align: center; }
+        
+        .container { max-width: 600px; margin: auto; padding: 20px; }
+        
+        /* Estilo de los platos/productos */
+        .producto-card { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info h3 { margin: 0; font-size: 1.2rem; color: #2c3e50; }
+        .info p { margin: 5px 0; color: #7f8c8d; font-size: 0.9rem; }
+        .precio { font-weight: bold; color: #e67e22; font-size: 1.1rem; }
+
+        .btn-pedir { 
+            background: #25d366; color: white; border: none; padding: 10px 15px; 
+            border-radius: 8px; font-weight: bold; cursor: pointer; 
+        }
+
+        /* Carrito flotante */
+        .footer-carrito {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: white; padding: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+            box-sizing: border-box; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="nombreRestaurante">Cargando...</h1>
+    </header>
+
+    <div class="container" id="listaMenu">
+        <!-- Aquí se cargarán los productos automáticamente -->
+    </div>
+
+    <div class="footer-carrito">
+        <span>Total: <span id="totalVenta">$0.00</span></span>
+        <button class="btn-pedir" onclick="enviarWhatsApp()">Pedir por WhatsApp</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
+            authDomain: "pedipro-1853f.firebaseapp.com",
+            projectId: "pedipro-1853f",
+            storageBucket: "pedipro-1853f.firebasestorage.app",
+            messagingSenderId: "346303291186",
+            appId: "1:346303291186:web:7b5e06aead830c54e4812b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const idRestaurante = urlParams.get('id');
+
+        let carrito = [];
+        let numWhatsApp = "";
+
+        async function cargarMenu() {
+            if (!idRestaurante) return;
+
+            // 1. Traer datos del restaurante (Nombre y Teléfono)
+            const restRef = doc(db, "restaurantes", idRestaurante);
+            const restSnap = await getDoc(restRef);
+            
+            if (restSnap.exists()) {
+                const data = restSnap.data();
+                document.getElementById('nombreRestaurante').innerText = data.nombre;
+                document.title = "Menú - " + data.nombre;
+                numWhatsApp = data.whatsapp;
+            }
+
+            // 2. Traer los productos
+            const productosRef = collection(db, "restaurantes", idRestaurante, "productos");
+            const querySnapshot = await getDocs(productosRef);
+            const contenedor = document.getElementById('listaMenu');
+            contenedor.innerHTML = ""; // Limpiar el "Cargando..."
+
+            querySnapshot.forEach((doc) => {
+                const p = doc.data();
+                contenedor.innerHTML += `
+                    <div class="producto-card">
+                        <div class="info">
+                            <h3>${p.nombre}</h3>
+                            <p>${p.descripcion}</p>
+                            <span class="precio">$${p.precio}</span>
+                        </div>
+                        <button class="btn-pedir" onclick="agregarAlCarrito('${p.nombre}', ${p.precio})">+</button>
+                    </div>
+                `;
+            });
+        }
+
+        let total = 0;
+        window.agregarAlCarrito = function(nombre, precio) {
+            carrito.push({ nombre, precio });
+            total += precio;
+            document.getElementById('totalVenta').innerText = `$${total.toFixed(2)}`;
+        }
+
+        window.enviarWhatsApp = function() {
+            if (carrito.length === 0) return alert("Agrega algo al carrito primero");
+
+            let mensaje = `*Pedido de: Cliente*%0A--------------------------%0A`;
+            carrito.forEach(item => {
+                mensaje += `- ${item.nombre} ($${item.precio})%0A`;
+            });
+            mensaje += `--------------------------%0A*Total: $${total.toFixed(2)}*`;
+
+            const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`;
+            window.open(url, '_blank');
+        }
+
+        cargarMenu();
+    </script>
+</body>
+</html>
