@@ -40,15 +40,15 @@
 
     <nav>
         <div class="logo">MenusGo</div>
-        <!-- Botón que abre el modal de Login -->
         <button onclick="abrirModal()" style="background: none; border: none; color: #2c3e50; font-weight: bold; cursor: pointer; font-size: 1rem;">Iniciar Sesión</button>
     </nav>
 
-    <!-- Modal de Login -->
+    <!-- Modal de Login Actualizado con Contraseña -->
     <div id="modalLogin" class="modal">
         <div class="modal-content">
             <h3>Entrar a mi Panel</h3>
             <input type="email" id="loginCorreo" placeholder="Tu correo registrado">
+            <input type="password" id="loginClave" placeholder="Tu contraseña">
             <button class="btn-cta" id="btnEntrar" style="width: 100%; padding: 10px;">Acceder</button>
             <button onclick="cerrarModal()" style="margin-top: 15px; background: none; border: none; color: #666; cursor: pointer;">Cancelar</button>
         </div>
@@ -95,31 +95,48 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Funciones del Modal (Globales para que el HTML las vea)
+        // --- FUNCIÓN PARA ENCRIPTAR (Debe ser idéntica a la del registro) ---
+        async function encriptarContrasena(mensaje) {
+            const msgBuffer = new TextEncoder().encode(mensaje);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
         window.abrirModal = () => document.getElementById('modalLogin').style.display = 'block';
         window.cerrarModal = () => document.getElementById('modalLogin').style.display = 'none';
 
-        // Lógica de Inicio de Sesión
+        // Lógica de Inicio de Sesión de Alta Seguridad
         document.getElementById('btnEntrar').addEventListener('click', async () => {
             const correo = document.getElementById('loginCorreo').value;
+            const claveViva = document.getElementById('loginClave').value;
             const btn = document.getElementById('btnEntrar');
 
-            if (!correo) return alert("Ingresa tu correo");
+            if (!correo || !claveViva) return alert("Ingresa tu correo y contraseña");
 
-            btn.innerText = "Buscando...";
+            btn.innerText = "Verificando...";
             btn.disabled = true;
 
             try {
-                // Buscamos en la colección 'restaurantes' el documento que tenga ese correo
-                const q = query(collection(db, "restaurantes"), where("correo", "==", correo));
+                // 1. Encriptamos la clave que el usuario escribió para poder compararla con la base de datos
+                const claveIngresadaHash = await encriptarContrasena(claveViva);
+
+                // 2. Buscamos en Firebase: Queremos el negocio que tenga ESE correo Y ESA clave encriptada
+                const q = query(
+                    collection(db, "restaurantes"), 
+                    where("correo", "==", correo),
+                    where("clave", "==", claveIngresadaHash)
+                );
+                
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    alert("No se encontró ningún negocio con ese correo.");
+                    alert("Correo o contraseña incorrectos.");
                     btn.innerText = "Acceder";
                     btn.disabled = false;
                 } else {
-                    // Si existe, tomamos el ID y redirigimos al Dashboard
+                    // Acceso concedido
                     querySnapshot.forEach((doc) => {
                         window.location.href = `dashboard.html?id=${doc.id}`;
                     });
