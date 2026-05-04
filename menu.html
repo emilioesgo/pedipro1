@@ -25,12 +25,13 @@
         }
         .producto-card:active { transform: scale(0.98); }
 
-        /* Contenedor de la foto (más completa y ajustada) */
+        /* --- FOTO MEJORADA (Se ve completa sin recortar) --- */
         .producto-img {
             width: 100%;
-            height: 140px; /* Altura más pequeña para tarjetas compactas */
-            background-color: #fafafa;
-            background-size: cover; 
+            height: 180px; /* Un poco más alto para apreciar detalles */
+            background-color: #ffffff; /* Fondo blanco puro */
+            background-size: contain; /* Muestra la foto COMPLETA */
+            background-repeat: no-repeat; /* Evita que se duplique */
             background-position: center;
         }
 
@@ -57,17 +58,9 @@
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
         }
         .btn-qty {
-            background: white;
-            color: #2c3e50;
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            font-weight: bold;
-            font-size: 1.2rem;
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            display: flex; justify-content: center; align-items: center;
+            background: white; color: #2c3e50; border: none; width: 30px; height: 30px;
+            border-radius: 50%; font-weight: bold; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center;
         }
         .btn-qty:active { background: #e0e0e0; }
         .cantidad-num { width: 30px; text-align: center; font-weight: bold; color: #2c3e50; font-size: 1rem; }
@@ -81,7 +74,7 @@
             box-sizing: border-box; z-index: 100;
         }
         
-        .controles-pedido { display: flex; justify-content: space-between; align-items: center; }
+        .controles-pedido { display: flex; justify-content: center; align-items: center; }
         .selector-origen { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; color: #2c3e50; }
         
         /* --- MODALES --- */
@@ -102,14 +95,27 @@
         <h1 id="nombreRestaurante" style="margin:0; font-size: 1.5rem;">Cargando...</h1>
     </header>
 
-    <div class="container" id="listaMenu"></div>
+    <div class="container">
+        <!-- NUEVO: SELECTOR AL PRINCIPIO ANTES DE ORDENAR -->
+        <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center;">
+            <h3 style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.2rem;">¿Cómo pedirás hoy?</h3>
+            <select id="tipoPedidoTop" class="selector-origen" onchange="verificarTipoPedido()" style="width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 8px;">
+                <option value="" disabled selected>Elige una opción...</option>
+                <option value="mesa">🍽️ Consumo en Mesa</option>
+                <option value="online">🛵 A Domicilio / Pick Up</option>
+            </select>
+            <div id="infoSeleccion" style="margin-top: 15px; font-weight: bold; color: #27ae60; font-size: 1.1rem; display: none;"></div>
+        </div>
+
+        <div id="listaMenu"></div>
+    </div>
 
     <!-- Modal para Mesa -->
     <div id="modalMesa" class="modal">
         <div class="modal-content" style="text-align: center; margin-top: 40%;">
             <h3>¿En qué mesa estás?</h3>
             <input type="number" id="numMesaInput" class="form-input" style="text-align: center; font-size: 1.2rem;" placeholder="Ej: 5">
-            <button class="btn-pedir" onclick="confirmarMesa()" style="width: 100%; margin-top:10px;">Confirmar</button>
+            <button class="btn-pedir" onclick="confirmarMesa()" style="width: 100%; margin-top:10px;">Confirmar Mesa</button>
             <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d;">Cancelar</button>
         </div>
     </div>
@@ -118,33 +124,30 @@
     <div id="modalDomicilio" class="modal">
         <div class="modal-content">
             <h3>Datos de Envío</h3>
+            <p style="text-align: center; font-size: 0.9rem; color: #7f8c8d; margin-top: 0;">Llena tus datos para completar tu pedido.</p>
             <input type="text" id="domNombre" class="form-input" placeholder="Tu Nombre Completo" required>
             <input type="tel" id="domTelefono" class="form-input" placeholder="Tu Teléfono (Para contactarte)" required>
             <textarea id="domDireccion" class="form-input" rows="3" placeholder="Calle, cruzamientos, colonia y referencias..." required></textarea>
             
             <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Compartir mi ubicación (Google Maps)</button>
             
-            <button class="btn-pedir" onclick="confirmarDomicilio()" style="width: 100%; margin-top:10px;">Guardar y Continuar</button>
-            <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%;">Cancelar</button>
+            <button class="btn-pedir" onclick="confirmarDomicilio()" style="width: 100%; margin-top:10px;">Enviar Pedido por WhatsApp</button>
+            <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%;">Volver al Menú</button>
         </div>
     </div>
 
     <!-- Carrito Flotante -->
     <div class="footer-carrito">
         <div class="controles-pedido">
-            <span style="font-weight: bold;">Total: <span id="totalVenta" style="color: #e67e22; font-size: 1.2rem;">$0.00</span></span>
-            
-            <select id="tipoPedido" class="selector-origen" onchange="verificarTipoPedido()">
-                <option value="mesa">🍽️ En Mesa</option>
-                <option value="online">🛵 A Domicilio</option>
-            </select>
+            <span style="font-weight: bold;">Total del Pedido: <span id="totalVenta" style="color: #e67e22; font-size: 1.3rem;">$0.00</span></span>
         </div>
-        <button class="btn-pedir" onclick="procesarPedido()">Enviar Pedido al Restaurante</button>
+        <button class="btn-pedir" onclick="procesarPedido()">Continuar Pedido</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // AGREGAMOS query, where y updateDoc a la importación
+        import { getFirestore, doc, getDoc, collection, getDocs, addDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -161,12 +164,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const idRestaurante = urlParams.get('id');
 
-        // --- NUEVA LÓGICA DE CARRITO POR CANTIDADES ---
-        let carrito = {}; // Ahora es un objeto para agrupar productos
+        let carrito = {}; 
         let numWhatsApp = "";
         let totalGeneral = 0;
         
-        // Variables para los formularios
         let mesaCliente = "";
         let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "" };
 
@@ -192,6 +193,10 @@
 
             querySnapshot.forEach((doc) => {
                 const p = doc.data();
+                
+                // NUEVO: FILTRO DE DISPONIBILIDAD. Si está apagado, lo ignoramos.
+                if (p.disponible === false) return; 
+
                 const cat = p.categoria || "Otros";
                 if (!categorias[cat]) categorias[cat] = [];
                 categorias[cat].push(p);
@@ -206,7 +211,6 @@
                         htmlImagen = `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>`;
                     }
 
-                    // Creamos un ID seguro para el HTML (sin espacios)
                     const idHTML = p.nombre.replace(/[^a-zA-Z0-9]/g, '');
 
                     contenedor.innerHTML += `
@@ -231,26 +235,28 @@
             }
         }
 
-        // --- FUNCIÓN UNIFICADA DE CANTIDADES ---
         window.modificarItem = function(nombre, precio, cambio, idHTML) {
-            // Si el producto no existe en el carrito, lo creamos
+            // NUEVO: Validar que hayan escogido cómo pedir ANTES de agregar cosas
+            const tipo = document.getElementById('tipoPedidoTop').value;
+            if (!tipo) {
+                alert("Por favor, selecciona si tu pedido es en Mesa o a Domicilio en la parte de arriba.");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+
             if (!carrito[nombre]) {
                 carrito[nombre] = { precio: precio, cantidad: 0 };
             }
 
-            // Sumamos o restamos
             carrito[nombre].cantidad += cambio;
 
-            // Si baja de 0, lo dejamos en 0 y borramos el registro
             if (carrito[nombre].cantidad <= 0) {
                 carrito[nombre].cantidad = 0;
                 delete carrito[nombre];
             }
 
-            // Actualizamos el numerito visual de ese producto
             document.getElementById(`qty-${idHTML}`).innerText = carrito[nombre] ? carrito[nombre].cantidad : 0;
 
-            // Recalculamos el total general
             totalGeneral = 0;
             for (let prod in carrito) {
                 totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
@@ -258,15 +264,18 @@
             document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
         }
 
-        // --- LÓGICA DE FORMULARIOS ---
+        // --- LÓGICA DE SELECTOR SUPERIOR ---
         window.verificarTipoPedido = function() {
-            const tipo = document.getElementById('tipoPedido').value;
+            const tipo = document.getElementById('tipoPedidoTop').value;
+            const infoText = document.getElementById('infoSeleccion');
+            
             if (tipo === 'mesa') {
                 document.getElementById('modalMesa').style.display = 'block';
-                document.getElementById('modalDomicilio').style.display = 'none';
+                infoText.style.display = 'none';
             } else if (tipo === 'online') {
-                document.getElementById('modalDomicilio').style.display = 'block';
-                document.getElementById('modalMesa').style.display = 'none';
+                mesaCliente = "";
+                infoText.innerText = "🛵 Pedido configurado para Domicilio/Pick Up";
+                infoText.style.display = 'block';
             }
         }
 
@@ -275,14 +284,36 @@
             document.getElementById('modalDomicilio').style.display = 'none';
         }
 
-        window.confirmarMesa = function() {
-            const numero = document.getElementById('numMesaInput').value;
+        // NUEVO: AL CONFIRMAR MESA, SE PONE "EN ESPERA" EN EL DASHBOARD
+        window.confirmarMesa = async function() {
+            const numero = parseInt(document.getElementById('numMesaInput').value);
             if (numero) {
                 mesaCliente = numero;
                 cerrarModales();
-            } else alert("Ingresa tu número de mesa");
+                
+                const infoText = document.getElementById('infoSeleccion');
+                infoText.innerText = `🍽️ Mesa #${numero} seleccionada`;
+                infoText.style.display = 'block';
+
+                // Buscar la mesa en Firebase y cambiar su color a "Espera" (Amarillo)
+                try {
+                    const mesasRef = collection(db, "restaurantes", idRestaurante, "mesas");
+                    const q = query(mesasRef, where("numero", "==", numero));
+                    const querySnapshot = await getDocs(q);
+                    
+                    querySnapshot.forEach(async (docSnap) => {
+                        await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", docSnap.id), {
+                            estado: 'espera' 
+                        });
+                    });
+                } catch (e) {
+                    console.error("Error actualizando mesa:", e);
+                }
+
+            } else alert("Por favor, ingresa tu número de mesa.");
         }
 
+        // Se llama hasta que el cliente finaliza el pedido
         window.confirmarDomicilio = function() {
             datosEnvio.nombre = document.getElementById('domNombre').value;
             datosEnvio.telefono = document.getElementById('domTelefono').value;
@@ -291,7 +322,9 @@
             if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.direccion) {
                 return alert("Falta llenar Nombre, Teléfono o Dirección.");
             }
+            
             cerrarModales();
+            ejecutarEnvioPedido(); // Continúa el flujo
         }
 
         window.obtenerUbicacion = function() {
@@ -318,7 +351,7 @@
         }
 
         // --- PROCESAMIENTO FINAL ---
-        window.procesarPedido = async function() {
+        window.procesarPedido = function() {
             const arrayItems = Object.keys(carrito).map(nombre => ({
                 nombre: nombre,
                 precio: carrito[nombre].precio,
@@ -327,26 +360,42 @@
 
             if (arrayItems.length === 0) return alert("Agrega al menos un producto con el botón (+).");
             
-            const tipo = document.getElementById('tipoPedido').value;
+            const tipo = document.getElementById('tipoPedidoTop').value;
             
-            // Validaciones antes de enviar
+            if (!tipo) {
+                alert("Selecciona arriba si estás en mesa o es a domicilio.");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+
             if (tipo === 'mesa' && mesaCliente === "") {
                 document.getElementById('modalMesa').style.display = 'block';
                 return;
             }
-            if (tipo === 'online' && datosEnvio.nombre === "") {
+            
+            // Si es domicilio, aquí sí le pedimos sus datos antes de terminar
+            if (tipo === 'online') {
                 document.getElementById('modalDomicilio').style.display = 'block';
                 return;
             }
 
-            try {
-                const btnOriginal = document.querySelector('.footer-carrito .btn-pedir').innerText;
-                document.querySelector('.footer-carrito .btn-pedir').innerText = "Generando Comanda...";
+            // Si es mesa, envía de inmediato
+            ejecutarEnvioPedido();
+        }
 
-                // GENERAR NÚMERO DE COMANDA ALEATORIO (Ej: CMD-8492)
+        async function ejecutarEnvioPedido() {
+            const arrayItems = Object.keys(carrito).map(nombre => ({
+                nombre: nombre, precio: carrito[nombre].precio, cantidad: carrito[nombre].cantidad
+            }));
+            const tipo = document.getElementById('tipoPedidoTop').value;
+
+            try {
+                const btnPedir = document.querySelector('.footer-carrito .btn-pedir');
+                btnPedir.innerText = "Generando Comanda...";
+                btnPedir.disabled = true;
+
                 const comandaId = "CMD-" + Math.floor(1000 + Math.random() * 9000);
 
-                // Guardar en Firebase
                 await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
                     numeroComanda: comandaId,
                     items: arrayItems,
@@ -358,7 +407,6 @@
                     estado: 'pendiente'
                 });
 
-                // PREPARAR MENSAJE DE WHATSAPP
                 let mensaje = `*NUEVO PEDIDO: ${comandaId}*%0A`;
                 mensaje += tipo === 'mesa' ? `📍 *MESA:* ${mesaCliente}%0A` : `🛵 *SERVICIO A DOMICILIO*%0A`;
                 mensaje += `--------------------------%0A`;
@@ -368,18 +416,11 @@
                 });
                 mensaje += `--------------------------%0A*TOTAL A PAGAR: $${totalGeneral.toFixed(2)}*%0A%0A`;
 
-                // Agregar datos de cliente si es a domicilio
                 if (tipo === 'online') {
-                    mensaje += `*DATOS DEL CLIENTE:*%0A`;
-                    mensaje += `👤 Nombre: ${datosEnvio.nombre}%0A`;
-                    mensaje += `📞 Tel: ${datosEnvio.telefono}%0A`;
-                    mensaje += `🏠 Dir: ${datosEnvio.direccion}%0A`;
-                    if(datosEnvio.mapsLink !== "") {
-                        mensaje += `🗺️ Ubicación GPS: ${datosEnvio.mapsLink}%0A`;
-                    }
+                    mensaje += `*DATOS DEL CLIENTE:*%0A👤 Nombre: ${datosEnvio.nombre}%0A📞 Tel: ${datosEnvio.telefono}%0A🏠 Dir: ${datosEnvio.direccion}%0A`;
+                    if(datosEnvio.mapsLink !== "") mensaje += `🗺️ Ubicación GPS: ${datosEnvio.mapsLink}%0A`;
                 }
 
-                // Abrir WhatsApp y recargar la página para limpiar todo
                 const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`;
                 window.open(url, '_blank');
                 setTimeout(() => location.reload(), 1000);
@@ -387,7 +428,8 @@
             } catch (error) {
                 console.error(error);
                 alert("Hubo un problema. Intenta de nuevo.");
-                document.querySelector('.footer-carrito .btn-pedir').innerText = "Enviar Pedido al Restaurante";
+                document.querySelector('.footer-carrito .btn-pedir').innerText = "Continuar Pedido";
+                document.querySelector('.footer-carrito .btn-pedir').disabled = false;
             }
         }
 
