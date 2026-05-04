@@ -6,7 +6,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; }
-        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; }
+        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; overflow-y: auto; }
         .main-content { margin-left: 290px; padding: 40px; width: calc(100% - 330px); }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         h2 { color: #2c3e50; margin-top: 0; }
@@ -64,11 +64,33 @@
         .mesa-espera { background-color: #f1c40f; color: #2c3e50; } 
         .mesa-ocupada { background-color: #e74c3c; } 
 
-        /* ESTILOS MODAL DETALLE PEDIDO */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
-        .modal-content { background: white; margin: 10% auto; padding: 25px; width: 90%; max-width: 450px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        /* MODALES (General y POS) */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); overflow-y: auto; }
+        .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); }
+        .modal-sm { width: 90%; max-width: 450px; }
+        .modal-lg { width: 95%; max-width: 1200px; display: flex; flex-wrap: wrap; gap: 20px; }
         
         .img-preview { max-width: 100px; max-height: 100px; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd; object-fit: cover; }
+
+        /* ESTILOS ESPECÍFICOS DEL MINI-POS */
+        .pos-layout { display: flex; width: 100%; gap: 20px; }
+        .pos-menu-grid { flex: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; max-height: 70vh; overflow-y: auto; padding-right: 10px; }
+        .pos-cart-panel { flex: 1; background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd; display: flex; flex-direction: column; max-height: 70vh; overflow-y: auto; }
+        
+        .pos-prod-card { background: white; border: 1px solid #eee; border-radius: 8px; display: flex; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .pos-prod-img { width: 80px; height: 80px; object-fit: cover; background: #eee; }
+        .pos-prod-info { padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .pos-prod-info h4 { margin: 0; font-size: 0.95rem; color: #2c3e50; }
+        .pos-prod-info span { color: #e67e22; font-weight: bold; font-size: 0.9rem; }
+        
+        .qty-btn { background: #3498db; color: white; border: none; width: 28px; height: 28px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .qty-val { margin: 0 8px; font-weight: bold; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding: 8px 0; font-size: 0.9rem; }
+
+        /* TABLA DE HORARIOS (Configuración) */
+        .table-horarios { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
+        .table-horarios th { background: #34495e; color: white; padding: 10px; text-align: left; }
+        .table-horarios td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -84,7 +106,6 @@
             <div class="nav-item" onclick="cambiarVista('vista-caja', this)">💰 Caja</div>
             <div class="nav-item" onclick="cambiarVista('vista-disponibilidad', this)">✅ Disponibilidad</div>
             <div class="nav-item" onclick="cambiarVista('vista-qr', this)">📲 Menú Digital</div>
-            <!-- NUEVO BOTÓN DE CONFIGURACIÓN -->
             <div class="nav-item" onclick="cambiarVista('vista-configuracion', this)">⚙️ Configuración</div>
             <hr style="border-color: #34495e; margin: 20px 0;">
             <div class="nav-item" onclick="window.location.href='index.html'" style="color: #e74c3c;">🚪 Cerrar Sesión</div>
@@ -107,8 +128,10 @@
                     <button class="btn-add" style="background: #2c3e50; width: auto;" onclick="filtrarPestana('tabla')">📊 Pedidos Activos</button>
                     <button class="btn-add" style="background: #e67e22; width: auto;" onclick="filtrarPestana('comandas')">👨‍🍳 Comandas</button>
                     <button class="btn-add" style="background: #8e44ad; width: auto;" onclick="filtrarPestana('mesas')">🗺️ Mapa de Mesas</button>
-                    <!-- NUEVO BOTÓN: HISTORIAL 30 DÍAS -->
                     <button class="btn-add" style="background: #7f8c8d; width: auto;" onclick="window.cargarHistorial30Dias()">📅 Historial 30 Días</button>
+                    
+                    <!-- NUEVO BOTÓN: PEDIDO MANUAL (POS) -->
+                    <button class="btn-add" style="background: #c0392b; width: auto; margin-left: auto;" onclick="abrirPOS()">📝 Tomar Pedido Manual</button>
                 </div>
 
                 <div id="lista-pedidos-tabla" style="display: block; overflow-x: auto;">
@@ -163,23 +186,14 @@
             </div>
         </div>
 
-        <!-- NUEVA VISTA: CONFIGURACIÓN -->
         <div id="vista-configuracion" class="vista">
             <div class="card">
                 <h2>⚙️ Configuración del Restaurante</h2>
-                <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 20px;">
-                    Define tus horarios (el menú digital se activará y desactivará según este horario). Sube tus imágenes optimizadas para tu menú web.
-                </p>
                 
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label>🕒 Hora de Apertura:</label>
-                        <input type="time" id="confApertura" required>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>🕛 Hora de Cierre:</label>
-                        <input type="time" id="confCierre" required>
-                    </div>
+                <div class="form-group">
+                    <label>🔗 Identificador de la URL (Nombre de tu negocio):</label>
+                    <input type="text" id="confSlug" placeholder="ejemplo: mi-restaurante" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9-]/g, '')">
+                    <small style="color:#7f8c8d;">Los clientes verán: emilioesgo.github.io/pedipro1/menu.html?id=<b>tu-alias</b></small>
                 </div>
 
                 <div class="form-group">
@@ -195,7 +209,18 @@
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                <button class="btn-add" id="btnGuardarConfig" onclick="window.guardarConfiguracion()" style="background: #2c3e50;">💾 Guardar Configuración</button>
+                
+                <h3 style="color: #2c3e50; margin-bottom: 5px;">🕒 Horarios por Día de la Semana</h3>
+                <p style="color: #7f8c8d; font-size: 0.9rem; margin-top: 0;">Activa los días que laboras y define la hora de apertura y cierre. El menú digital se apagará automáticamente fuera de este horario.</p>
+                
+                <table class="table-horarios">
+                    <thead><tr><th>Día</th><th>¿Abierto?</th><th>Apertura</th><th>Cierre</th></tr></thead>
+                    <tbody id="tbodyHorarios">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+
+                <button class="btn-add" id="btnGuardarConfig" onclick="window.guardarConfiguracion()" style="background: #2c3e50; margin-top: 20px;">💾 Guardar Configuración</button>
             </div>
         </div>
 
@@ -216,7 +241,13 @@
                 <h2>Tu Menú Digital</h2>
                 <div class="qr-container"><div id="qrcode"></div></div>
                 <div class="link-box" id="displayLink">Cargando enlace...</div>
-                <button class="btn-add btn-print" onclick="imprimirQR()">🖨️ Imprimir Código QR</button>
+                
+                <!-- NUEVOS BOTONES DE ACCIÓN PARA EL ENLACE -->
+                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn-add" style="background:#27ae60; width:auto;" onclick="copiarEnlace()">📋 Copiar Link</button>
+                    <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="compartirEnlace()">📤 Compartir</button>
+                    <button class="btn-add" style="background:#3498db; width:auto;" onclick="imprimirQR()">🖨️ Imprimir QR</button>
+                </div>
             </div>
         </div>
 
@@ -224,10 +255,66 @@
 
     <!-- MODAL DETALLES DEL PEDIDO -->
     <div id="modalDetallePedido" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-sm">
             <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 10px;">Detalles del Pedido</h3>
             <div id="detalleContenido" style="font-size: 0.95rem; color: #333; line-height: 1.5;"></div>
             <button class="btn-add" style="margin-top: 20px; background: #95a5a6;" onclick="document.getElementById('modalDetallePedido').style.display='none'">Cerrar Detalles</button>
+        </div>
+    </div>
+
+    <!-- NUEVO: MODAL PUNTO DE VENTA (POS) -->
+    <div id="modalPOS" class="modal">
+        <div class="modal-content modal-lg">
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 15px;">
+                <h2 style="margin: 0;">📝 Tomar Pedido Manual</h2>
+                <button onclick="cerrarPOS()" style="background:none; border:none; font-size: 1.5rem; cursor:pointer; color:#e74c3c;">✖</button>
+            </div>
+            
+            <div class="pos-layout">
+                <!-- Izquierda: Menú con fotos -->
+                <div class="pos-menu-grid" id="posMenuContainer">
+                    <p>Cargando menú...</p>
+                </div>
+
+                <!-- Derecha: Carrito y Formulario -->
+                <div class="pos-cart-panel">
+                    <h3 style="margin-top: 0; color: #e67e22; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Carrito</h3>
+                    <div id="posCartList" style="flex: 1; overflow-y: auto; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+                        <p style="color:#7f8c8d; font-size:0.9rem; text-align:center;">Agrega productos de la izquierda</p>
+                    </div>
+                    
+                    <div style="font-size: 1.2rem; font-weight: bold; text-align: right; color: #27ae60; margin-bottom: 15px;">
+                        Total: $<span id="posTotal">0.00</span>
+                    </div>
+
+                    <label>Tipo de Pedido:</label>
+                    <select id="posTipoPedido" onchange="cambiarVistaFormPOS()" style="margin-bottom: 10px; padding: 8px;">
+                        <option value="mesa">🍽️ Consumo en Mesa</option>
+                        <option value="pickup">🥡 Pick Up (Pasar a recoger)</option>
+                        <option value="domicilio">🛵 Domicilio</option>
+                    </select>
+
+                    <div id="posFormMesa">
+                        <label>Número de Mesa:</label>
+                        <input type="number" id="posNumMesa" placeholder="Ej: 5" style="margin-bottom: 10px;">
+                    </div>
+
+                    <div id="posFormCliente" style="display: none;">
+                        <input type="text" id="posNombre" placeholder="Nombre del Cliente" style="margin-bottom: 10px;">
+                        <input type="tel" id="posTelefono" placeholder="Teléfono" style="margin-bottom: 10px;">
+                        <textarea id="posDireccion" placeholder="Dirección de envío (Solo Domicilio)" rows="2" style="margin-bottom: 10px;"></textarea>
+                    </div>
+
+                    <label>Método de Pago:</label>
+                    <select id="posPago" style="margin-bottom: 15px; padding: 8px;">
+                        <option value="Efectivo">💵 Efectivo</option>
+                        <option value="Tarjeta">💳 Tarjeta</option>
+                        <option value="Transferencia">🏦 Transferencia</option>
+                    </select>
+
+                    <button class="btn-add" id="btnProcesarPOS" onclick="procesarPedidoPOS()" style="background: #27ae60;">✔️ Confirmar y Generar Orden</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -238,7 +325,6 @@
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('activo'));
             if(elementoNav) elementoNav.classList.add('activo');
             
-            // Volver a cargar la tabla activa si salimos del historial 30 días
             if(idVista === 'vista-pedidos') { 
                 document.getElementById('titulo-tabla-info').innerHTML = '✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).';
                 window.cargarPedidos(); 
@@ -253,7 +339,6 @@
 
             if (tipo === 'tabla') {
                 document.getElementById('lista-pedidos-tabla').style.display = 'block';
-                // Al tocar "Pedidos Activos", recargamos la vista de hoy por si estábamos en historial
                 document.getElementById('titulo-tabla-info').innerHTML = '✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).';
                 window.cargarPedidos();
             } else if (tipo === 'comandas') {
@@ -264,6 +349,7 @@
             }
         }
 
+        // FUNCIONES DE ENLACE Y COMPARTIR
         function imprimirQR() {
             const qrImg = document.querySelector('#qrcode img').src;
             const ventana = window.open('', '_blank');
@@ -271,13 +357,42 @@
             ventana.document.close();
             ventana.print();
         }
+
+        function copiarEnlace() {
+            const enlace = document.getElementById('displayLink').innerText;
+            navigator.clipboard.writeText(enlace).then(() => {
+                alert("¡Enlace copiado al portapapeles!");
+            }).catch(err => alert("Error al copiar: " + err));
+        }
+
+        function compartirEnlace() {
+            const enlace = document.getElementById('displayLink').innerText;
+            if (navigator.share) {
+                navigator.share({
+                    title: '¡Mira nuestro Menú Digital!',
+                    text: 'Haz tu pedido en línea rápido y fácil aquí:',
+                    url: enlace,
+                }).catch(err => console.log('Compartir cancelado', err));
+            } else {
+                alert("La función de compartir nativa no está soportada en tu dispositivo (Prueba en celular). Puedes usar el botón de 'Copiar Link'.");
+            }
+        }
+
+        // LÓGICA DE UI PARA EL POS MANUAL
+        function cambiarVistaFormPOS() {
+            const tipo = document.getElementById('posTipoPedido').value;
+            document.getElementById('posFormMesa').style.display = tipo === 'mesa' ? 'block' : 'none';
+            document.getElementById('posFormCliente').style.display = (tipo === 'pickup' || tipo === 'domicilio') ? 'block' : 'none';
+            document.getElementById('posDireccion').style.display = tipo === 'domicilio' ? 'block' : 'none';
+        }
+
+        function cerrarPOS() { document.getElementById('modalPOS').style.display = 'none'; }
     </script>
 
     <!-- SCRIPT DE FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        // NUEVO: Importamos deleteDoc para la depuración de 30 días
-        import { getFirestore, doc, getDoc, collection, addDoc, getDocs, updateDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, getDocs, updateDoc, onSnapshot, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -297,9 +412,45 @@
         const idRestaurante = urlParams.get('id');
 
         window.pedidosGlobales = [];
-        window.restauranteInfo = {}; // NUEVO: Guardaremos la info global aquí para leer el horario
+        window.restauranteInfo = {}; 
+        
+        // Variables para el POS
+        let carritoPOS = {};
+        let productosCache = [];
 
         if (!idRestaurante) { window.location.href = "index.html"; }
+
+        const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+        function renderizarTablaHorarios(horariosGuardados) {
+            const tbody = document.getElementById('tbodyHorarios');
+            tbody.innerHTML = '';
+            diasSemana.forEach(dia => {
+                const confDia = horariosGuardados && horariosGuardados[dia] ? horariosGuardados[dia] : { activo: true, abre: '08:00', cierra: '22:00' };
+                const checked = confDia.activo ? 'checked' : '';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${dia}</strong></td>
+                        <td>
+                            <label class="switch" style="transform: scale(0.8);">
+                                <input type="checkbox" id="chk_${dia}" ${checked}>
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                        <td><input type="time" id="abre_${dia}" value="${confDia.abre}" style="padding: 5px;"></td>
+                        <td><input type="time" id="cierra_${dia}" value="${confDia.cierra}" style="padding: 5px;"></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function actualizarEnlaceUI(alias) {
+            const targetUrl = alias ? alias : idRestaurante;
+            const urlMenu = `https://emilioesgo.github.io/pedipro1/menu.html?id=${targetUrl}`;
+            document.getElementById('displayLink').innerText = urlMenu;
+            document.getElementById("qrcode").innerHTML = ""; 
+            new QRCode(document.getElementById("qrcode"), { text: urlMenu, width: 150, height: 150 });
+        }
 
         async function cargarDatos() {
             const docRef = doc(db, "restaurantes", idRestaurante);
@@ -308,51 +459,46 @@
                 window.restauranteInfo = documento.data();
                 document.getElementById('saludoDuenio').innerText = "Bienvenido, " + window.restauranteInfo.nombre;
                 
-                const urlMenu = `https://emilioesgo.github.io/pedipro1/menu.html?id=${idRestaurante}`;
-                document.getElementById('displayLink').innerText = urlMenu;
-                new QRCode(document.getElementById("qrcode"), { text: urlMenu, width: 150, height: 150 });
+                actualizarEnlaceUI(window.restauranteInfo.slug);
+                if(window.restauranteInfo.slug) document.getElementById('confSlug').value = window.restauranteInfo.slug;
 
-                // Llenar campos de configuración si ya existen
-                if(window.restauranteInfo.horarioApertura) document.getElementById('confApertura').value = window.restauranteInfo.horarioApertura;
-                if(window.restauranteInfo.horarioCierre) document.getElementById('confCierre').value = window.restauranteInfo.horarioCierre;
-                if(window.restauranteInfo.logo) {
-                    document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo;
-                    document.getElementById('imgPrevLogo').style.display = 'block';
-                }
-                if(window.restauranteInfo.portada) {
-                    document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada;
-                    document.getElementById('imgPrevPortada').style.display = 'block';
-                }
+                if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('imgPrevLogo').style.display = 'block'; }
+                if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('imgPrevPortada').style.display = 'block'; }
+
+                // Generar tabla de horarios
+                renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
 
             onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), () => {
-                // Solo recargamos si no estamos viendo el historial de 30 días
-                if(document.getElementById('titulo-tabla-info').innerHTML.includes('turno actual')) {
-                    window.cargarPedidos();
-                }
+                if(document.getElementById('titulo-tabla-info').innerHTML.includes('turno actual')) window.cargarPedidos();
             });
             onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => { window.cargarMesas(); });
         }
         cargarDatos();
 
         // --------------------------------------------------------
-        // NUEVO: SISTEMA DE CONFIGURACIÓN Y OPTIMIZACIÓN DE IMÁGENES
+        // GUARDAR CONFIGURACIÓN ACTUALIZADA
         // --------------------------------------------------------
         window.guardarConfiguracion = async function() {
-            const apertura = document.getElementById('confApertura').value;
-            const cierre = document.getElementById('confCierre').value;
+            const btn = document.getElementById('btnGuardarConfig');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
             const logoInput = document.getElementById('confLogo');
             const portadaInput = document.getElementById('confPortada');
+            const slug = document.getElementById('confSlug').value.trim();
 
-            if (!apertura || !cierre) {
-                return alert("Por favor define tu horario de apertura y cierre.");
-            }
+            let dataActualizada = { slug: slug };
 
-            const btn = document.getElementById('btnGuardarConfig');
-            btn.innerText = "Subiendo imágenes y Guardando..."; 
-            btn.disabled = true;
-
-            let dataActualizada = { horarioApertura: apertura, horarioCierre: cierre };
+            // Recolectar horarios
+            let horariosNuevos = {};
+            diasSemana.forEach(dia => {
+                horariosNuevos[dia] = {
+                    activo: document.getElementById(`chk_${dia}`).checked,
+                    abre: document.getElementById(`abre_${dia}`).value,
+                    cierra: document.getElementById(`cierra_${dia}`).value
+                };
+            });
+            dataActualizada.horarios = horariosNuevos;
 
             try {
                 if (logoInput.files.length > 0) {
@@ -360,268 +506,287 @@
                     const logoRef = ref(storage, `restaurantes/${idRestaurante}/config/logo.jpg`);
                     await uploadString(logoRef, logoBase64, 'data_url');
                     dataActualizada.logo = await getDownloadURL(logoRef);
-                    document.getElementById('imgPrevLogo').src = dataActualizada.logo;
-                    document.getElementById('imgPrevLogo').style.display = 'block';
+                    document.getElementById('imgPrevLogo').src = dataActualizada.logo; document.getElementById('imgPrevLogo').style.display = 'block';
                 }
-
                 if (portadaInput.files.length > 0) {
                     const portadaBase64 = await comprimirImagen(portadaInput.files[0]);
                     const portadaRef = ref(storage, `restaurantes/${idRestaurante}/config/portada.jpg`);
                     await uploadString(portadaRef, portadaBase64, 'data_url');
                     dataActualizada.portada = await getDownloadURL(portadaRef);
-                    document.getElementById('imgPrevPortada').src = dataActualizada.portada;
-                    document.getElementById('imgPrevPortada').style.display = 'block';
+                    document.getElementById('imgPrevPortada').src = dataActualizada.portada; document.getElementById('imgPrevPortada').style.display = 'block';
                 }
 
                 await updateDoc(doc(db, "restaurantes", idRestaurante), dataActualizada);
-                window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada }; // Actualizar memoria
-                alert("✅ Configuración guardada correctamente. Tu menú respetará este horario.");
-                window.cargarPedidos(); // Refrescar por si cambió el ciclo de limpieza
-
-            } catch (error) {
-                console.error(error);
-                alert("Hubo un error al guardar la configuración.");
-            } finally {
-                btn.innerText = "💾 Guardar Configuración"; 
-                btn.disabled = false;
-            }
+                window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada }; 
+                
+                actualizarEnlaceUI(slug); // Actualizar QR si cambió
+                alert("✅ Configuración y horarios guardados.");
+            } catch (error) { console.error(error); alert("Error al guardar."); } 
+            finally { btn.innerText = "💾 Guardar Configuración"; btn.disabled = false; }
         }
 
         // --------------------------------------------------------
-        // SISTEMA DE PEDIDOS, LIMPIEZA AUTOMÁTICA E HISTORIAL
+        // SISTEMA DE PEDIDOS E HISTORIAL (Intacto con ajuste de fecha)
         // --------------------------------------------------------
-        
-        // Función Lógica para determinar si un pedido es "Del turno de hoy"
-        function esPedidoDeHoy(fechaPedidoFirebase) {
-            if (!window.restauranteInfo.horarioCierre) return true; // Si no hay horario, muestra todos
+        function obtenerHoraCierreHoy() {
+            // Busca en el nuevo formato de horarios, fallback a '22:00'
+            const hoy = new Date();
+            const nombreDia = hoy.toLocaleDateString('es-ES', { weekday: 'long' });
+            const diaCapitalizado = nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1);
             
+            if (window.restauranteInfo.horarios && window.restauranteInfo.horarios[diaCapitalizado]) {
+                return window.restauranteInfo.horarios[diaCapitalizado].cierra;
+            }
+            return '23:59'; // Default si no hay nada configurado
+        }
+
+        function esPedidoDeHoy(fechaPedidoFirebase) {
             const fechaOrd = fechaPedidoFirebase.toDate();
             const now = new Date();
+            let cierreStr = obtenerHoraCierreHoy();
+            let [horaCierre, minCierre] = cierreStr.split(':').map(Number);
             
-            let [horaCierre, minCierre] = window.restauranteInfo.horarioCierre.split(':').map(Number);
-            
-            // La limpieza se hace 1 HORA después del cierre oficial
             let limiteCierreHora = horaCierre + 1;
             if (limiteCierreHora >= 24) limiteCierreHora -= 24;
 
             let fechaLimiteLimpieza = new Date();
             fechaLimiteLimpieza.setHours(limiteCierreHora, minCierre, 0, 0);
 
-            // Si la hora actual es menor al límite de limpieza, significa que el "límite" fue ayer
-            if (now < fechaLimiteLimpieza) {
-                fechaLimiteLimpieza.setDate(fechaLimiteLimpieza.getDate() - 1);
-            }
-
-            // Si el pedido se creó DESPUÉS del último límite de limpieza, pertenece al turno actual
+            if (now < fechaLimiteLimpieza) { fechaLimiteLimpieza.setDate(fechaLimiteLimpieza.getDate() - 1); }
             return fechaOrd >= fechaLimiteLimpieza;
         }
 
-        // Carga normal del panel (Solo pedidos activos del turno)
         window.cargarPedidos = async function() {
-            const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
-            const snapshot = await getDocs(pedidosRef);
-            
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
             let ordenesActivas = [];
             snapshot.forEach(docSnap => {
                 const ped = docSnap.data();
-                // Filtramos silenciosamente: Si es de hoy, lo mostramos.
-                if (esPedidoDeHoy(ped.fecha)) {
-                    ordenesActivas.push({ id: docSnap.id, ...ped });
-                }
+                if (esPedidoDeHoy(ped.fecha)) ordenesActivas.push({ id: docSnap.id, ...ped });
             });
-            
             ordenesActivas.sort((a, b) => b.fecha.toDate() - a.fecha.toDate());
             window.pedidosGlobales = ordenesActivas;
             renderizarHTMLPedidos(ordenesActivas, false);
         }
 
-        // NUEVO: Consultar 30 días y eliminar los más viejos
         window.cargarHistorial30Dias = async function() {
-            document.getElementById('lista-pedidos-tabla').style.display = 'block';
-            document.getElementById('lista-pedidos-comandas').style.display = 'none';
-            document.getElementById('lista-pedidos-mesas').style.display = 'none';
-            
-            document.getElementById('titulo-tabla-info').innerHTML = '⏳ Cargando y depurando historial...';
-
-            const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
-            const snapshot = await getDocs(pedidosRef);
-            
-            const limite30Dias = new Date();
-            limite30Dias.setDate(limite30Dias.getDate() - 30); // Restamos 30 días
-
+            document.getElementById('lista-pedidos-tabla').style.display = 'block'; document.getElementById('lista-pedidos-comandas').style.display = 'none'; document.getElementById('lista-pedidos-mesas').style.display = 'none';
+            document.getElementById('titulo-tabla-info').innerHTML = '⏳ Cargando...';
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
+            const limite30Dias = new Date(); limite30Dias.setDate(limite30Dias.getDate() - 30);
             let ordenesHistoricas = [];
-
             snapshot.forEach(docSnap => {
-                const ped = docSnap.data();
-                const pedId = docSnap.id;
-                const fechaObj = ped.fecha.toDate();
-
-                if (fechaObj < limite30Dias) {
-                    // DEPURACIÓN AUTOMÁTICA: Si es más viejo de 30 días, se elimina para no gastar espacio
-                    deleteDoc(doc(db, "restaurantes", idRestaurante, "pedidos", pedId));
-                } else {
-                    ordenesHistoricas.push({ id: pedId, ...ped });
-                }
+                const ped = docSnap.data(); const pedId = docSnap.id; const fechaObj = ped.fecha.toDate();
+                if (fechaObj < limite30Dias) { deleteDoc(doc(db, "restaurantes", idRestaurante, "pedidos", pedId)); } 
+                else { ordenesHistoricas.push({ id: pedId, ...ped }); }
             });
-
-            ordenesHistoricas.sort((a, b) => b.fecha.toDate() - a.fecha.toDate());
-            window.pedidosGlobales = ordenesHistoricas;
-            
-            document.getElementById('titulo-tabla-info').innerHTML = '📅 <strong>Historial de los últimos 30 días</strong> (Los pedidos más antiguos fueron eliminados automáticamente).';
-            renderizarHTMLPedidos(ordenesHistoricas, true); // true = No renderizar comandas, solo tabla
+            ordenesHistoricas.sort((a, b) => b.fecha.toDate() - a.fecha.toDate()); window.pedidosGlobales = ordenesHistoricas;
+            document.getElementById('titulo-tabla-info').innerHTML = '📅 <strong>Historial 30 días</strong> (Limpieza automática aplicada).';
+            renderizarHTMLPedidos(ordenesHistoricas, true); 
         }
 
-        // Helper para pintar la tabla (Evita duplicar código)
         function renderizarHTMLPedidos(ordenes, esModoHistorial) {
-            const tbody = document.getElementById('tbody-pedidos');
-            const contComandas = document.getElementById('lista-pedidos-comandas');
-            
-            tbody.innerHTML = ''; 
-            if(!esModoHistorial) contComandas.innerHTML = '';
+            const tbody = document.getElementById('tbody-pedidos'); const contComandas = document.getElementById('lista-pedidos-comandas');
+            tbody.innerHTML = ''; if(!esModoHistorial) contComandas.innerHTML = '';
+            if(ordenes.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay pedidos.</td></tr>'; if(!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>'; return; }
+            ordenes.forEach(ped => {
+                const numComanda = ped.numeroComanda || "S/N"; const fechaObj = ped.fecha.toDate(); const fechaFormat = fechaObj.toLocaleDateString() + " " + fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const esMesa = ped.tipoOrigen === 'mesa'; const tipoStr = esMesa ? "En Mesa" : "Domicilio/Pick"; const badgeClass = esMesa ? "badge-mesa" : "badge-online";
+                let clienteInfo = esMesa ? `Mesa #${ped.numeroMesa}` : (ped.clienteEnvio ? ped.clienteEnvio.nombre : "Cliente Web"); let estadoPago = ped.estadoPago || "Pendiente"; 
+                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td><td>${fechaFormat}</td><td><span class="badge-pago">${estadoPago}</span></td><td><strong>$${ped.total.toFixed(2)}</strong></td></tr>`;
+                if (!esModoHistorial && ped.estado === 'pendiente') {
+                    let itemsHtml = ''; ped.items.forEach(i => itemsHtml += `<li><strong>${i.cantidad}x</strong> ${i.nombre}</li>`);
+                    contComandas.innerHTML += `<div class="pedido-card" style="border-left-color: ${esMesa ? '#27ae60' : '#2980b9'};"><div style="display:flex; justify-content:space-between; align-items:center;"><h4>${numComanda}</h4><span class="badge-tipo ${badgeClass}">${tipoStr}</span></div><p style="margin:5px 0; font-size:0.85rem; color:#7f8c8d;">👤 ${clienteInfo}</p><hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;"><ul>${itemsHtml}</ul><button class="btn-completar" onclick="window.completarComanda('${ped.id}')">✔️ Completar Comanda</button></div>`;
+                }
+            });
+            if (!esModoHistorial && contComandas.innerHTML === '') contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">Cocina limpia. ✨</p>';
+        }
 
-            if(ordenes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay pedidos para mostrar.</td></tr>';
-                if(!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas por preparar.</p>';
+        window.verDetallePedido = function(idPedido) {
+            const ped = window.pedidosGlobales.find(p => p.id === idPedido); if(!ped) return;
+            let infoHtml = ped.tipoOrigen === 'mesa' ? `<p><strong>📍 Tipo:</strong> Mesa #${ped.numeroMesa}</p>` : `<p><strong>🛵 Tipo:</strong> Domicilio/Pick Up</p><p><strong>👤 Cliente:</strong> ${ped.clienteEnvio?.nombre}</p><p><strong>📞 Tel:</strong> ${ped.clienteEnvio?.telefono}</p><p><strong>🏠 Dir:</strong> ${ped.clienteEnvio?.direccion}</p>`;
+            let itemsHtml = ''; ped.items.forEach(i => { itemsHtml += `<li style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ddd; padding-bottom: 5px;"><span><strong>${i.cantidad}x</strong> ${i.nombre}</span><span style="color: #7f8c8d;">$${(i.precio * i.cantidad).toFixed(2)}</span></li>`; });
+            document.getElementById('detalleContenido').innerHTML = `<div style="background: #f8f9fa; padding: 15px; margin-bottom: 15px;">${infoHtml}</div><ul style="list-style: none; padding: 0;">${itemsHtml}</ul><div style="text-align: right; margin-top: 15px; font-size: 1.3rem; color: #27ae60; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>`;
+            document.getElementById('modalDetallePedido').style.display = 'block';
+        }
+        window.completarComanda = async function(docId) { if(confirm("¿Orden preparada?")) { try { await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", docId), { estado: 'completado' }); } catch (error) { console.error(error); } } }
+
+        // --------------------------------------------------------
+        // SISTEMA PUNTO DE VENTA (POS) INTERNO
+        // --------------------------------------------------------
+        window.abrirPOS = async function() {
+            document.getElementById('modalPOS').style.display = 'block';
+            carritoPOS = {}; // Reset cart
+            renderCarritoPOS();
+
+            const contenedor = document.getElementById('posMenuContainer');
+            if (productosCache.length === 0) {
+                contenedor.innerHTML = '<p>Cargando productos...</p>';
+                const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
+                productosCache = [];
+                snapshot.forEach(doc => { if(doc.data().disponible !== false) productosCache.push({ id: doc.id, ...doc.data() }); });
+            }
+            
+            contenedor.innerHTML = '';
+            productosCache.forEach(p => {
+                const imgHTML = p.imagen ? `<img src="${p.imagen}" class="pos-prod-img">` : `<div class="pos-prod-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;color:#ccc;">🍽️</div>`;
+                const safeName = p.nombre.replace(/[^a-zA-Z0-9]/g, '');
+                contenedor.innerHTML += `
+                    <div class="pos-prod-card">
+                        ${imgHTML}
+                        <div class="pos-prod-info">
+                            <h4>${p.nombre}</h4>
+                            <span>$${p.precio}</span>
+                            <div style="margin-top: 5px; display:flex; align-items:center;">
+                                <button class="qty-btn" onclick="modificarPOS('${p.nombre}', ${p.precio}, -1, '${safeName}')">-</button>
+                                <span class="qty-val" id="posQty-${safeName}">0</span>
+                                <button class="qty-btn" onclick="modificarPOS('${p.nombre}', ${p.precio}, 1, '${safeName}')">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        window.modificarPOS = function(nombre, precio, cambio, safeName) {
+            if (!carritoPOS[nombre]) carritoPOS[nombre] = { precio: precio, cantidad: 0 };
+            carritoPOS[nombre].cantidad += cambio;
+            if (carritoPOS[nombre].cantidad <= 0) delete carritoPOS[nombre];
+            
+            const itemQty = carritoPOS[nombre] ? carritoPOS[nombre].cantidad : 0;
+            const uiEl = document.getElementById(`posQty-${safeName}`);
+            if(uiEl) uiEl.innerText = itemQty;
+            
+            renderCarritoPOS();
+        }
+
+        function renderCarritoPOS() {
+            const list = document.getElementById('posCartList');
+            let total = 0;
+            list.innerHTML = '';
+            
+            if (Object.keys(carritoPOS).length === 0) {
+                list.innerHTML = '<p style="color:#7f8c8d; font-size:0.9rem; text-align:center;">El carrito está vacío</p>';
+                document.getElementById('posTotal').innerText = '0.00';
                 return;
             }
 
-            ordenes.forEach(ped => {
-                const numComanda = ped.numeroComanda || "S/N";
-                const fechaObj = ped.fecha.toDate();
-                const fechaFormat = fechaObj.toLocaleDateString() + " " + fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const esMesa = ped.tipoOrigen === 'mesa';
-                const tipoStr = esMesa ? "En Mesa" : "A Domicilio";
-                const badgeClass = esMesa ? "badge-mesa" : "badge-online";
-                let clienteInfo = esMesa ? `Mesa #${ped.numeroMesa}` : (ped.clienteEnvio ? ped.clienteEnvio.nombre : "Cliente Web");
-                let estadoPago = ped.estadoPago || "Pendiente"; 
-
-                tbody.innerHTML += `
-                    <tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;" title="Haz clic para ver la orden completa">
-                        <td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td>
-                        <td>${fechaFormat}</td><td><span class="badge-pago">${estadoPago}</span></td><td><strong>$${ped.total.toFixed(2)}</strong></td>
-                    </tr>
+            for (let prod in carritoPOS) {
+                const item = carritoPOS[prod];
+                const sub = item.precio * item.cantidad;
+                total += sub;
+                list.innerHTML += `
+                    <div class="cart-item">
+                        <span><b>${item.cantidad}x</b> ${prod}</span>
+                        <span style="color:#2c3e50; font-weight:bold;">$${sub.toFixed(2)}</span>
+                    </div>
                 `;
+            }
+            document.getElementById('posTotal').innerText = total.toFixed(2);
+        }
 
-                if (!esModoHistorial && ped.estado === 'pendiente') {
-                    let itemsHtml = '';
-                    ped.items.forEach(i => itemsHtml += `<li><strong>${i.cantidad}x</strong> ${i.nombre}</li>`);
-                    contComandas.innerHTML += `
-                        <div class="pedido-card" style="border-left-color: ${esMesa ? '#27ae60' : '#2980b9'};">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <h4>Comanda: ${numComanda}</h4><span class="badge-tipo ${badgeClass}">${tipoStr}</span>
-                            </div>
-                            <p style="margin:5px 0; font-size:0.85rem; color:#7f8c8d;">👤 Cliente: ${clienteInfo} <br>👨‍💻 Tomado por: Sistema Web</p>
-                            <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-                            <ul>${itemsHtml}</ul>
-                            <button class="btn-completar" onclick="window.completarComanda('${ped.id}')">✔️ Completar Comanda</button>
-                        </div>
-                    `;
+        window.procesarPedidoPOS = async function() {
+            const arrayItems = Object.keys(carritoPOS).map(nombre => ({
+                nombre: nombre, precio: carritoPOS[nombre].precio, cantidad: carritoPOS[nombre].cantidad
+            }));
+            
+            if (arrayItems.length === 0) return alert("Agrega productos al pedido.");
+
+            const btn = document.getElementById('btnProcesarPOS');
+            const tipo = document.getElementById('posTipoPedido').value;
+            let total = parseFloat(document.getElementById('posTotal').innerText);
+            
+            let datosEnvio = { nombre: "Cliente Mostrador", telefono: "N/A", direccion: "En Local", metodoPago: document.getElementById('posPago').value };
+            let mesa = null;
+
+            if (tipo === 'mesa') {
+                mesa = document.getElementById('posNumMesa').value;
+                if(!mesa) return alert("Ingresa el número de mesa.");
+            } else {
+                datosEnvio.nombre = document.getElementById('posNombre').value || "Cliente Mostrador";
+                datosEnvio.telefono = document.getElementById('posTelefono').value || "N/A";
+                if(tipo === 'domicilio') {
+                    datosEnvio.direccion = document.getElementById('posDireccion').value;
+                    if(!datosEnvio.direccion) return alert("Ingresa la dirección para el domicilio.");
+                } else {
+                    datosEnvio.direccion = "Pick Up";
                 }
-            });
-            if (!esModoHistorial && contComandas.innerHTML === '') contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">Cocina limpia. No hay comandas pendientes. ✨</p>';
-        }
+            }
 
-        // Modal Detalle
-        window.verDetallePedido = function(idPedido) {
-            const ped = window.pedidosGlobales.find(p => p.id === idPedido);
-            if(!ped) return;
+            btn.disabled = true; btn.innerText = "Generando...";
 
-            let infoHtml = ped.tipoOrigen === 'mesa' ? `
-                <p style="margin: 5px 0;"><strong>📍 Tipo de Orden:</strong> Consumo en Restaurante</p>
-                <p style="margin: 5px 0; font-size: 1.1rem; color: #27ae60;"><strong>🍽️ Mesa Asignada:</strong> #${ped.numeroMesa}</p>
-            ` : `
-                <p style="margin: 5px 0;"><strong>🛵 Tipo de Orden:</strong> Envío a Domicilio / Pick Up</p>
-                <p style="margin: 5px 0;"><strong>👤 Cliente:</strong> ${ped.clienteEnvio?.nombre || 'No registrado'}</p>
-                <p style="margin: 5px 0;"><strong>📞 Teléfono:</strong> <a href="tel:${ped.clienteEnvio?.telefono}" style="color: #2980b9;">${ped.clienteEnvio?.telefono || 'No registrado'}</a></p>
-                <p style="margin: 5px 0;"><strong>🏠 Dirección:</strong> ${ped.clienteEnvio?.direccion || 'No registrada'}</p>
-                ${ped.clienteEnvio?.mapsLink ? `<p style="margin: 5px 0;"><strong>🗺️ Mapa:</strong> <a href="${ped.clienteEnvio.mapsLink}" target="_blank" style="color: #e67e22;">Abrir ubicación</a></p>` : ''}
-            `;
+            try {
+                // Cálculo de consecutivo
+                const hoyInicio = new Date(); hoyInicio.setHours(0,0,0,0);
+                const qCount = query(collection(db, "restaurantes", idRestaurante, "pedidos"), where("fecha", ">=", hoyInicio));
+                const snapPedidos = await getDocs(qCount);
+                let maxConsecutivo = 0;
+                snapPedidos.forEach(d => { let num = d.data().consecutivoDiario || 0; if (num > maxConsecutivo) maxConsecutivo = num; });
+                const nuevoConsecutivo = maxConsecutivo + 1;
+                
+                let letraPrefix = 'M'; if (tipo === 'pickup') letraPrefix = 'P'; else if (tipo === 'domicilio') letraPrefix = 'D';
+                const comandaId = `${letraPrefix}-${nuevoConsecutivo}`;
 
-            let itemsHtml = '';
-            ped.items.forEach(i => {
-                itemsHtml += `<li style="display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 5px;"><span><strong>${i.cantidad}x</strong> ${i.nombre}</span><span style="color: #7f8c8d;">$${(i.precio * i.cantidad).toFixed(2)}</span></li>`;
-            });
+                await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
+                    numeroComanda: comandaId,
+                    consecutivoDiario: nuevoConsecutivo,
+                    items: arrayItems,
+                    total: total,
+                    tipoOrigen: tipo,
+                    numeroMesa: mesa,
+                    clienteEnvio: (tipo === 'pickup' || tipo === 'domicilio') ? datosEnvio : null,
+                    fecha: new Date(),
+                    estado: 'pendiente',
+                    estadoPago: 'Pendiente'
+                });
 
-            document.getElementById('detalleContenido').innerHTML = `
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #3498db;">${infoHtml}</div>
-                <h4 style="margin-bottom: 10px; color: #2c3e50;">Productos:</h4><ul style="list-style: none; padding: 0; margin: 0;">${itemsHtml}</ul>
-                <div style="text-align: right; margin-top: 15px; font-size: 1.3rem; color: #27ae60; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>
-            `;
-            document.getElementById('modalDetallePedido').style.display = 'block';
-        }
+                // Cambiar estado de mesa si aplica
+                if(tipo === 'mesa') {
+                    const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(mesa)));
+                    const qSnap = await getDocs(qM);
+                    qSnap.forEach(async (dM) => { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'espera' }); });
+                }
 
-        window.completarComanda = async function(docId) {
-            if(confirm("¿Estás seguro de que esta orden ya está preparada?")) {
-                try {
-                    await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", docId), { estado: 'completado' });
-                } catch (error) { console.error(error); }
+                alert(`¡Pedido ${comandaId} enviado a cocina exitosamente!`);
+                document.getElementById('modalPOS').style.display = 'none';
+                
+            } catch (e) {
+                console.error(e); alert("Error al procesar el pedido.");
+            } finally {
+                btn.disabled = false; btn.innerText = "✔️ Confirmar y Generar Orden";
             }
         }
 
-        // --- SISTEMA RESTANTE INTACTO ---
+        // --- FUNCIONES RESTANTES INTACTAS ---
         window.cargarDisponibilidad = async function() {
-            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
-            const contenedor = document.getElementById('lista-disponibilidad'); contenedor.innerHTML = '';
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos")); const contenedor = document.getElementById('lista-disponibilidad'); contenedor.innerHTML = '';
             if(snapshot.empty) return contenedor.innerHTML = '<p style="padding:15px; color:#7f8c8d;">No hay productos.</p>';
-            snapshot.forEach(docSnap => {
-                const p = docSnap.data(); const isChecked = p.disponible !== false ? 'checked' : ''; 
-                contenedor.innerHTML += `<div class="disp-item"><div><strong style="color: #2c3e50;">${p.nombre}</strong><br><small style="color:#7f8c8d; font-weight: bold;">$${p.precio.toFixed(2)}</small></div><label class="switch"><input type="checkbox" ${isChecked} onchange="window.toggleDisponibilidad('${docSnap.id}', this.checked)"><span class="slider"></span></label></div>`;
-            });
+            snapshot.forEach(docSnap => { const p = docSnap.data(); const isChecked = p.disponible !== false ? 'checked' : ''; contenedor.innerHTML += `<div class="disp-item"><div><strong style="color: #2c3e50;">${p.nombre}</strong><br><small style="color:#7f8c8d; font-weight: bold;">$${p.precio.toFixed(2)}</small></div><label class="switch"><input type="checkbox" ${isChecked} onchange="window.toggleDisponibilidad('${docSnap.id}', this.checked)"><span class="slider"></span></label></div>`; });
         }
         window.toggleDisponibilidad = async function(docId, estaDisponible) { await updateDoc(doc(db, "restaurantes", idRestaurante, "productos", docId), { disponible: estaDisponible }); }
         
         window.cargarMesas = async function() {
-            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"));
-            const contenedor = document.getElementById('mapaMesasContenedor'); contenedor.innerHTML = '';
-            let mesas = []; snapshot.forEach(docSnap => mesas.push({ id: docSnap.id, ...docSnap.data() }));
-            mesas.sort((a,b) => a.numero - b.numero);
-            mesas.forEach(mesa => {
-                let claseEstado = 'mesa-libre'; let txtEstado = 'Libre';
-                if(mesa.estado === 'espera') { claseEstado = 'mesa-espera'; txtEstado = 'En Espera'; }
-                if(mesa.estado === 'ocupada') { claseEstado = 'mesa-ocupada'; txtEstado = 'Ocupada'; }
-                contenedor.innerHTML += `<div class="mesa-cuadro ${claseEstado}" onclick="window.cambiarEstadoMesa('${mesa.id}', '${mesa.estado}')"><span style="font-size: 2rem;">#${mesa.numero}</span><span style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">${txtEstado}</span></div>`;
-            });
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "mesas")); const contenedor = document.getElementById('mapaMesasContenedor'); contenedor.innerHTML = '';
+            let mesas = []; snapshot.forEach(docSnap => mesas.push({ id: docSnap.id, ...docSnap.data() })); mesas.sort((a,b) => a.numero - b.numero);
+            mesas.forEach(mesa => { let claseEstado = 'mesa-libre'; let txtEstado = 'Libre'; if(mesa.estado === 'espera') { claseEstado = 'mesa-espera'; txtEstado = 'En Espera'; } if(mesa.estado === 'ocupada') { claseEstado = 'mesa-ocupada'; txtEstado = 'Ocupada'; } contenedor.innerHTML += `<div class="mesa-cuadro ${claseEstado}" onclick="window.cambiarEstadoMesa('${mesa.id}', '${mesa.estado}')"><span style="font-size: 2rem;">#${mesa.numero}</span><span style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">${txtEstado}</span></div>`; });
         }
         window.agregarMesa = async function() { const num = (await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"))).size + 1; await addDoc(collection(db, "restaurantes", idRestaurante, "mesas"), { numero: num, estado: 'libre' }); }
         window.cambiarEstadoMesa = async function(mesaId, est) { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", mesaId), { estado: est === 'libre' ? 'espera' : (est === 'espera' ? 'ocupada' : 'libre') }); }
 
         const contenedorVariantes = document.getElementById('contenedorVariantes');
-        document.getElementById('btnNuevaVariante').addEventListener('click', () => {
-            const div = document.createElement('div'); div.className = 'variante-item';
-            div.innerHTML = `<input type="text" class="v-titulo" placeholder="Título (Ej: Salsa)" style="margin-bottom:5px"><input type="text" class="v-opciones" placeholder="Opciones (Roja, Verde)"><button type="button" class="btn-eliminar" onclick="this.parentElement.remove()">✕ Eliminar</button>`;
-            contenedorVariantes.appendChild(div);
-        });
-
+        document.getElementById('btnNuevaVariante').addEventListener('click', () => { const div = document.createElement('div'); div.className = 'variante-item'; div.innerHTML = `<input type="text" class="v-titulo" placeholder="Título (Ej: Salsa)" style="margin-bottom:5px"><input type="text" class="v-opciones" placeholder="Opciones (Roja, Verde)"><button type="button" class="btn-eliminar" onclick="this.parentElement.remove()">✕ Eliminar</button>`; contenedorVariantes.appendChild(div); });
+        
         function comprimirImagen(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader(); reader.readAsDataURL(file);
-                reader.onload = event => {
-                    const img = new Image(); img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width; let height = img.height;
-                        const MAX_WIDTH = 600; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                        canvas.width = width; canvas.height = height;
-                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
-                    };
-                    img.onerror = error => reject(error);
-                };
-                reader.onerror = error => reject(error);
+                reader.onload = event => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; const MAX_WIDTH = 600; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; img.onerror = error => reject(error); }; reader.onerror = error => reject(error);
             });
         }
-
         window.guardarProducto = async function() {
             const categoria = document.getElementById('prodCategoria').value; const nombre = document.getElementById('prodNombre').value; const desc = document.getElementById('prodDesc').value; const precio = document.getElementById('prodPrecio').value; const imgInput = document.getElementById('prodImagen'); 
             if (!nombre || !precio) return alert("Llena el Nombre y el Precio");
             const btn = document.getElementById('btnGuardarProd'); btn.innerText = "Subiendo..."; btn.disabled = true;
             const variantes = []; document.querySelectorAll('.variante-item').forEach(item => { const titulo = item.querySelector('.v-titulo').value; const opciones = item.querySelector('.v-opciones').value; if(titulo && opciones) variantes.push({ titulo, opciones: opciones.split(',') }); });
-            try {
-                let imagenUrl = ""; 
-                if (imgInput.files.length > 0) { const imgB64 = await comprimirImagen(imgInput.files[0]); const imgRef = ref(storage, `restaurantes/${idRestaurante}/productos/${Date.now()}.jpg`); await uploadString(imgRef, imgB64, 'data_url'); imagenUrl = await getDownloadURL(imgRef); }
-                await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), { categoria, nombre, descripcion: desc, precio: parseFloat(precio), variantes, imagen: imagenUrl, fecha: new Date(), disponible: true });
-                alert("¡Producto añadido!"); document.getElementById('prodNombre').value = ''; document.getElementById('prodDesc').value = ''; document.getElementById('prodPrecio').value = ''; imgInput.value = ''; contenedorVariantes.innerHTML = '';
-            } catch (e) { alert("Error al guardar."); } finally { btn.innerText = "Guardar Producto"; btn.disabled = false; }
+            try { let imagenUrl = ""; if (imgInput.files.length > 0) { const imgB64 = await comprimirImagen(imgInput.files[0]); const imgRef = ref(storage, `restaurantes/${idRestaurante}/productos/${Date.now()}.jpg`); await uploadString(imgRef, imgB64, 'data_url'); imagenUrl = await getDownloadURL(imgRef); } await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), { categoria, nombre, descripcion: desc, precio: parseFloat(precio), variantes, imagen: imagenUrl, fecha: new Date(), disponible: true }); alert("¡Producto añadido!"); document.getElementById('prodNombre').value = ''; document.getElementById('prodDesc').value = ''; document.getElementById('prodPrecio').value = ''; imgInput.value = ''; contenedorVariantes.innerHTML = ''; productosCache = []; } catch (e) { alert("Error al guardar."); } finally { btn.innerText = "Guardar Producto"; btn.disabled = false; }
         }
     </script>
 </body>
