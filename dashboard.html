@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Panel de Control - MenusGo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="assets/dashboard.css">
 
 </head>
@@ -215,6 +216,7 @@
                 document.getElementById('titulo-tabla-info').innerHTML = '✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).';
                 window.cargarPedidos(); 
             }
+            if(idVista === 'vista-inicio' && window.cargarInicioDashboard) { window.cargarInicioDashboard(); }
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
             if(idVista === 'vista-caja') { window.cargarPedidos().then(() => window.cargarCaja()); }
         }
@@ -301,6 +303,9 @@
 
         // VARIABLES DE CAJA
         let cajeroActual = "";
+        let periodoInicioActual = "dia";
+        let fechaInicioReferencia = new Date();
+        let graficasInicio = {};
 
         if (!idRestaurante) { window.location.href = "index.html"; }
 
@@ -338,6 +343,301 @@
             new QRCode(document.getElementById("qrcode"), { text: urlMenu, width: 150, height: 150 });
         }
 
+        function moneda(valor) {
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(valor || 0);
+        }
+
+        function fechaDePedido(pedido) {
+            if (!pedido || !pedido.fecha) return null;
+            if (typeof pedido.fecha.toDate === 'function') return pedido.fecha.toDate();
+            const fecha = new Date(pedido.fecha);
+            return isNaN(fecha.getTime()) ? null : fecha;
+        }
+
+        function inicioDeDia(fecha) {
+            const base = new Date(fecha);
+            base.setHours(0, 0, 0, 0);
+            return base;
+        }
+
+        function sumarDias(fecha, dias) {
+            const nuevaFecha = new Date(fecha);
+            nuevaFecha.setDate(nuevaFecha.getDate() + dias);
+            return nuevaFecha;
+        }
+
+        function obtenerRangoInicio(periodo, fechaBase) {
+            const base = inicioDeDia(fechaBase);
+            let inicio = new Date(base);
+            let fin = new Date(base);
+            let texto = "";
+
+            if (periodo === "semana") {
+                const diaSemana = inicio.getDay() === 0 ? 6 : inicio.getDay() - 1;
+                inicio = sumarDias(inicio, -diaSemana);
+                fin = sumarDias(inicio, 7);
+                texto = `${inicio.toLocaleDateString()} - ${sumarDias(fin, -1).toLocaleDateString()}`;
+            } else if (periodo === "mes") {
+                inicio = new Date(base.getFullYear(), base.getMonth(), 1);
+                fin = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+                texto = inicio.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+            } else if (periodo === "anio") {
+                inicio = new Date(base.getFullYear(), 0, 1);
+                fin = new Date(base.getFullYear() + 1, 0, 1);
+                texto = `${base.getFullYear()}`;
+            } else {
+                fin = sumarDias(inicio, 1);
+                texto = inicio.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+            }
+
+            return { inicio, fin, texto };
+        }
+
+        function crearSeriePeriodo(periodo, rango) {
+            const labels = [];
+            const ventas = [];
+            const pedidos = [];
+            const tickets = [];
+            const buckets = [];
+
+            if (periodo === "dia") {
+                for (let hora = 0; hora < 24; hora++) {
+                    labels.push(`${hora.toString().padStart(2, '0')}:00`);
+                    buckets.push({ total: 0, pedidos: 0 });
+                }
+            } else if (periodo === "semana") {
+                ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].forEach(label => {
+                    labels.push(label);
+                    buckets.push({ total: 0, pedidos: 0 });
+                });
+            } else if (periodo === "mes") {
+                const totalDias = Math.round((rango.fin - rango.inicio) / 86400000);
+                for (let dia = 1; dia <= totalDias; dia++) {
+                    labels.push(`${dia}`);
+                    buckets.push({ total: 0, pedidos: 0 });
+                }
+            } else {
+                ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].forEach(label => {
+                    labels.push(label);
+                    buckets.push({ total: 0, pedidos: 0 });
+                });
+            }
+
+            return { labels, ventas, pedidos, tickets, buckets };
+        }
+
+        function indiceSeriePeriodo(periodo, fecha, rango) {
+            if (periodo === "dia") return fecha.getHours();
+            if (periodo === "semana") return fecha.getDay() === 0 ? 6 : fecha.getDay() - 1;
+            if (periodo === "mes") return fecha.getDate() - 1;
+            return fecha.getMonth();
+        }
+
+        function nombreServicio(tipo) {
+            if (tipo === 'mesa') return 'Local';
+            if (tipo === 'domicilio') return 'Domicilio';
+            if (tipo === 'pickup') return 'Pick Up';
+            return 'Otro';
+        }
+
+        function obtenerMetodoPago(pedido) {
+            return pedido.metodoPagoCobro || pedido.clienteEnvio?.metodoPago || pedido.metodoPago || pedido.estadoPago || 'Pendiente';
+        }
+
+        function actualizarGrafica(idCanvas, config) {
+            const canvas = document.getElementById(idCanvas);
+            if (!canvas || !window.Chart) return;
+            if (graficasInicio[idCanvas]) graficasInicio[idCanvas].destroy();
+            graficasInicio[idCanvas] = new Chart(canvas, config);
+        }
+
+        function opcionesBaseChart(formatoPesos = true) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const valor = typeof ctx.parsed === 'number' ? ctx.parsed : (typeof ctx.parsed.y === 'number' ? ctx.parsed.y : ctx.parsed.x);
+                                return formatoPesos ? moneda(valor) : valor;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => formatoPesos ? moneda(value) : value
+                        }
+                    },
+                    x: { grid: { display: false } }
+                }
+            };
+        }
+
+        function renderizarGraficasInicio(ordenes, periodo, rango) {
+            const serie = crearSeriePeriodo(periodo, rango);
+            const ventasDiaSemana = {};
+            const diasPorSemana = {};
+            const metodosPago = {};
+            const servicios = {};
+            const productos = {};
+            const diasNombres = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+            for (let d = new Date(rango.inicio); d < rango.fin; d = sumarDias(d, 1)) {
+                const nombreDia = diasNombres[d.getDay()];
+                diasPorSemana[nombreDia] = (diasPorSemana[nombreDia] || 0) + 1;
+            }
+
+            ordenes.forEach(pedido => {
+                const fecha = fechaDePedido(pedido);
+                if (!fecha || fecha < rango.inicio || fecha >= rango.fin) return;
+
+                const total = Number(pedido.total) || 0;
+                const indice = indiceSeriePeriodo(periodo, fecha, rango);
+                if (serie.buckets[indice]) {
+                    serie.buckets[indice].total += total;
+                    serie.buckets[indice].pedidos += 1;
+                }
+
+                const diaNombre = diasNombres[fecha.getDay()];
+                ventasDiaSemana[diaNombre] = (ventasDiaSemana[diaNombre] || 0) + total;
+
+                const metodo = obtenerMetodoPago(pedido);
+                metodosPago[metodo] = (metodosPago[metodo] || 0) + total;
+
+                const servicio = nombreServicio(pedido.tipoOrigen);
+                servicios[servicio] = (servicios[servicio] || 0) + total;
+
+                (pedido.items || []).forEach(item => {
+                    const nombre = item.nombre || 'Producto sin nombre';
+                    if (!productos[nombre]) productos[nombre] = { cantidad: 0, total: 0 };
+                    productos[nombre].cantidad += Number(item.cantidad) || 0;
+                    productos[nombre].total += (Number(item.precio) || 0) * (Number(item.cantidad) || 0);
+                });
+            });
+
+            serie.buckets.forEach(bucket => {
+                serie.ventas.push(bucket.total);
+                serie.pedidos.push(bucket.pedidos);
+                serie.tickets.push(bucket.pedidos > 0 ? bucket.total / bucket.pedidos : 0);
+            });
+
+            const totalVentas = serie.ventas.reduce((acc, val) => acc + val, 0);
+            const totalPedidos = serie.pedidos.reduce((acc, val) => acc + val, 0);
+            const ticketPromedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
+
+            document.getElementById('metricTotalVentas').innerText = moneda(totalVentas);
+            document.getElementById('metricTotalPedidos').innerText = totalPedidos;
+            document.getElementById('metricTicketPromedio').innerText = moneda(ticketPromedio);
+            document.getElementById('inicioRangoTexto').innerText = rango.texto;
+
+            const paleta = ['#2563eb', '#16a34a', '#f97316', '#7c3aed', '#dc2626', '#0891b2', '#d97706'];
+            const diasOrden = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const promedioDiaSemana = diasOrden.map(dia => (ventasDiaSemana[dia] || 0) / (diasPorSemana[dia] || 1));
+
+            const productosOrdenados = Object.entries(productos).sort((a, b) => b[1].cantidad - a[1].cantidad);
+            const productosMas = productosOrdenados.slice(0, 7);
+            const productosMenos = productosOrdenados.filter(([, data]) => data.cantidad > 0).slice(-7).reverse();
+
+            actualizarGrafica('chartTotalVentas', {
+                type: 'line',
+                data: { labels: serie.labels, datasets: [{ data: serie.ventas, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.12)', fill: true, tension: 0.32 }] },
+                options: opcionesBaseChart(true)
+            });
+            actualizarGrafica('chartTotalPedidos', {
+                type: 'bar',
+                data: { labels: serie.labels, datasets: [{ data: serie.pedidos, backgroundColor: '#16a34a', borderRadius: 6 }] },
+                options: opcionesBaseChart(false)
+            });
+            actualizarGrafica('chartTicketPromedio', {
+                type: 'line',
+                data: { labels: serie.labels, datasets: [{ data: serie.tickets, borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.14)', fill: true, tension: 0.32 }] },
+                options: opcionesBaseChart(true)
+            });
+            actualizarGrafica('chartVentasDiaSemana', {
+                type: 'bar',
+                data: { labels: diasOrden, datasets: [{ data: promedioDiaSemana, backgroundColor: '#7c3aed', borderRadius: 6 }] },
+                options: opcionesBaseChart(true)
+            });
+
+            const metodosEntries = Object.entries(metodosPago);
+            actualizarGrafica('chartMetodosPago', {
+                type: 'doughnut',
+                data: { labels: metodosEntries.map(([label]) => label), datasets: [{ data: metodosEntries.map(([, total]) => total), backgroundColor: paleta }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${moneda(ctx.parsed)}` } } } }
+            });
+
+            const serviciosEntries = Object.entries(servicios);
+            actualizarGrafica('chartOpcionesServicio', {
+                type: 'doughnut',
+                data: { labels: serviciosEntries.map(([label]) => label), datasets: [{ data: serviciosEntries.map(([, total]) => total), backgroundColor: ['#16a34a', '#2563eb', '#f97316', '#667085'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${moneda(ctx.parsed)}` } } } }
+            });
+
+            actualizarGrafica('chartProductosMas', {
+                type: 'bar',
+                data: { labels: productosMas.map(([nombre]) => nombre), datasets: [{ data: productosMas.map(([, data]) => data.cantidad), backgroundColor: '#2563eb', borderRadius: 6 }] },
+                options: { ...opcionesBaseChart(false), indexAxis: 'y' }
+            });
+            actualizarGrafica('chartProductosMenos', {
+                type: 'bar',
+                data: { labels: productosMenos.map(([nombre]) => nombre), datasets: [{ data: productosMenos.map(([, data]) => data.cantidad), backgroundColor: '#f97316', borderRadius: 6 }] },
+                options: { ...opcionesBaseChart(false), indexAxis: 'y' }
+            });
+
+            const estado = document.getElementById('inicioAnalyticsEstado');
+            estado.innerText = totalPedidos > 0 ? `Mostrando ${totalPedidos} pedidos del periodo seleccionado.` : 'No hay pedidos en el periodo seleccionado.';
+        }
+
+        window.cambiarPeriodoInicio = function(periodo, boton) {
+            periodoInicioActual = periodo;
+            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('activo'));
+            if (boton) boton.classList.add('activo');
+            window.cargarInicioDashboard();
+        }
+
+        window.cambiarFechaInicio = function(valor) {
+            if (valor) {
+                const [anio, mes, dia] = valor.split('-').map(Number);
+                fechaInicioReferencia = new Date(anio, mes - 1, dia);
+            }
+            window.cargarInicioDashboard();
+        }
+
+        window.cargarInicioDashboard = async function() {
+            const estado = document.getElementById('inicioAnalyticsEstado');
+            if (!estado) return;
+
+            const inputFecha = document.getElementById('inicioFechaReferencia');
+            if (inputFecha && !inputFecha.value) {
+                const yyyy = fechaInicioReferencia.getFullYear();
+                const mm = String(fechaInicioReferencia.getMonth() + 1).padStart(2, '0');
+                const dd = String(fechaInicioReferencia.getDate()).padStart(2, '0');
+                inputFecha.value = `${yyyy}-${mm}-${dd}`;
+            }
+
+            if (!window.Chart) {
+                estado.innerText = 'No se pudo cargar la librería de gráficas. Revisa tu conexión a internet y recarga el dashboard.';
+                return;
+            }
+
+            estado.innerText = 'Cargando métricas...';
+            try {
+                const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
+                const ordenes = [];
+                snapshot.forEach(docSnap => ordenes.push({ id: docSnap.id, ...docSnap.data() }));
+                const rango = obtenerRangoInicio(periodoInicioActual, fechaInicioReferencia);
+                renderizarGraficasInicio(ordenes, periodoInicioActual, rango);
+            } catch (error) {
+                console.error(error);
+                estado.innerText = 'No se pudieron cargar las métricas en este momento.';
+            }
+        }
+
         async function cargarDatos() {
             const docRef = doc(db, "restaurantes", idRestaurante);
             const documento = await getDoc(docRef);
@@ -353,11 +653,13 @@
 
                 renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
+            window.cargarInicioDashboard();
 
             onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), () => {
                 if(document.getElementById('titulo-tabla-info').innerHTML.includes('turno actual')) window.cargarPedidos();
                 // Actualizar bandeja de caja en tiempo real si la vista está activa
                 if(document.getElementById('vista-caja').classList.contains('activa')) window.cargarCaja();
+                if(document.getElementById('vista-inicio').classList.contains('activa')) window.cargarInicioDashboard();
             });
             onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => { window.cargarMesas(); });
         }

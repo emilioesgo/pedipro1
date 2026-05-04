@@ -403,6 +403,135 @@ input:checked + .slider:before { transform: translateX(20px); }
     font-weight: 800;
 }
 
+.dashboard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+    padding: 22px 24px;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+.dashboard-header h2 { margin-bottom: 6px; }
+.dashboard-header p {
+    margin: 0;
+    color: var(--muted);
+}
+.analytics-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.analytics-controls input[type="date"] {
+    width: auto;
+    min-width: 154px;
+    background: #f8fafc;
+}
+.period-switch {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: #eef2f7;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+.period-btn {
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #475467;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+.period-btn.activo,
+.period-btn:hover {
+    background: #ffffff;
+    color: var(--primary);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.metric-card {
+    padding: 18px;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+.metric-card span {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+.metric-card strong {
+    display: block;
+    color: var(--text);
+    font-size: clamp(1.45rem, 2.4vw, 2.05rem);
+    line-height: 1.1;
+}
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+.chart-card {
+    min-width: 0;
+    padding: 18px;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+.chart-card-wide { grid-column: 1 / -1; }
+.chart-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.chart-title h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+.chart-title span {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 750;
+    text-align: right;
+}
+.chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 280px;
+}
+.chart-card-wide .chart-wrap { height: 310px; }
+.analytics-state {
+    margin-top: 14px;
+    padding: 12px 14px;
+    color: var(--muted);
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
 @media (max-width: 860px) {
     body { background: var(--bg); }
     .sidebar {
@@ -425,6 +554,19 @@ input:checked + .slider:before { transform: translateX(20px); }
     .card { padding: 18px; }
     .pos-layout { flex-direction: column; }
     .pos-menu-grid, .pos-cart-panel { max-height: none; }
+    .dashboard-header {
+        flex-direction: column;
+        padding: 18px;
+    }
+    .analytics-controls { justify-content: flex-start; }
+    .metric-grid,
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    .chart-wrap,
+    .chart-card-wide .chart-wrap {
+        height: 260px;
+    }
 }
 
 @media (max-width: 560px) {
@@ -433,4 +575,10 @@ input:checked + .slider:before { transform: translateX(20px); }
     .modal-content { padding: 18px; }
     .tabla-profesional, .table-horarios { font-size: 0.86rem; }
     .tabla-profesional th, .tabla-profesional td, .table-horarios th, .table-horarios td { padding: 10px; }
+    .period-switch { width: 100%; }
+    .period-btn { flex: 1; padding-inline: 8px; }
+    .analytics-controls input[type="date"] { width: 100%; }
+    .chart-card { padding: 14px; }
+    .chart-title { flex-direction: column; }
+    .chart-title span { text-align: left; }
 }

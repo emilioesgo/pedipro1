@@ -1,6 +1,93 @@
-﻿        <div id="vista-inicio" class="vista activa">
-            <div class="card">
-                <h2>Resumen de tu Negocio</h2>
-                <p>Bienvenido al Panel de MenusGo. Usa el menú lateral para gestionar tus productos y pedidos.</p>
+        <div id="vista-inicio" class="vista activa">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Resumen de tu Negocio</h2>
+                    <p>Indicadores clave de ventas, pedidos, servicios, productos y métodos de pago.</p>
+                </div>
+                <div class="analytics-controls">
+                    <div class="period-switch" aria-label="Seleccionar periodo">
+                        <button type="button" class="period-btn activo" data-periodo="dia" onclick="window.cambiarPeriodoInicio('dia', this)">Día</button>
+                        <button type="button" class="period-btn" data-periodo="semana" onclick="window.cambiarPeriodoInicio('semana', this)">Semana</button>
+                        <button type="button" class="period-btn" data-periodo="mes" onclick="window.cambiarPeriodoInicio('mes', this)">Mes</button>
+                        <button type="button" class="period-btn" data-periodo="anio" onclick="window.cambiarPeriodoInicio('anio', this)">Año</button>
+                    </div>
+                    <input type="date" id="inicioFechaReferencia" onchange="window.cambiarFechaInicio(this.value)">
+                </div>
             </div>
+
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <span>Total de ventas</span>
+                    <strong id="metricTotalVentas">$0.00</strong>
+                </div>
+                <div class="metric-card">
+                    <span>Total de pedidos</span>
+                    <strong id="metricTotalPedidos">0</strong>
+                </div>
+                <div class="metric-card">
+                    <span>Ticket promedio</span>
+                    <strong id="metricTicketPromedio">$0.00</strong>
+                </div>
+            </div>
+
+            <div class="analytics-grid">
+                <div class="chart-card chart-card-wide">
+                    <div class="chart-title">
+                        <h3>Total de ventas</h3>
+                        <span id="inicioRangoTexto">Cargando...</span>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartTotalVentas"></canvas></div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <h3>Total de pedidos</h3>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartTotalPedidos"></canvas></div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <h3>Ticket promedio</h3>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartTicketPromedio"></canvas></div>
+                </div>
+
+                <div class="chart-card chart-card-wide">
+                    <div class="chart-title">
+                        <h3>Ventas promedio por día de semana</h3>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartVentasDiaSemana"></canvas></div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <h3>Métodos de pago usados en pesos</h3>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartMetodosPago"></canvas></div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <h3>Ventas por opción de servicio</h3>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartOpcionesServicio"></canvas></div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <h3>Productos con más ventas</h3>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartProductosMas"></canvas></div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <h3>Productos menos vendidos</h3>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chartProductosMenos"></canvas></div>
+                </div>
+            </div>
+
+            <div id="inicioAnalyticsEstado" class="analytics-state">Cargando métricas...</div>
         </div>
