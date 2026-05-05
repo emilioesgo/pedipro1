@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --bg: #f6f7fb;
     --surface: #ffffff;
     --surface-soft: #f9fafb;
@@ -293,6 +293,8 @@ input:checked + .slider:before { transform: translateX(20px); }
 .mesa-libre { background: linear-gradient(135deg, #16a34a, #22c55e); }
 .mesa-espera { background: linear-gradient(135deg, #f59e0b, #fde047); color: #172033 !important; }
 .mesa-ocupada { background: linear-gradient(135deg, #dc2626, #f43f5e); }
+.mesa-llamando { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #ffffff !important; }
+.mesa-cuenta { background: linear-gradient(135deg, #9333ea, #a855f7); color: #ffffff !important; }
 
 .qr-container {
     display: inline-block;

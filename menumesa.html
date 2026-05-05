@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú en Mesa</title>
+    <link id="dynamic-favicon" rel="shortcut icon" type="image/x-icon" href="data:image/x-icon;,">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f8f9fa; color: #333; padding-bottom: 120px; scroll-behavior: smooth; }
+        
+        /* CABECERA Y PORTADA */
+        .header-portada { 
+            background-color: #2c3e50; background-size: cover; background-position: center; 
+            color: white; padding: 40px 20px 20px 20px; text-align: center; position: relative;
+        }
+        .header-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.65); }
+        .header-content { position: relative; z-index: 1; }
+        .logo-restaurante { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3); margin-bottom: 10px; display: none; }
+        
+        /* NAVEGACIÓN FLOTANTE OCULTA AL INICIO */
+        .nav-categorias { 
+            position: fixed; top: -100px; left: 0; width: 100%; box-sizing: border-box;
+            background: white; padding: 12px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 50; transition: top 0.3s ease-in-out;
+        }
+        .nav-categorias.visible { top: 0; }
+        .nav-categorias::-webkit-scrollbar { display: none; }
+        .cat-chip { background: #f1f2f6; color: #2c3e50; padding: 6px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid #ddd; }
+        .cat-chip:active { background: #e67e22; color: white; border-color: #e67e22; }
+
+        .container { max-width: 600px; margin: auto; padding: 15px; }
+        .categoria-titulo { margin-top: 25px; color: #e67e22; border-bottom: 2px solid #e67e22; padding-bottom: 5px; text-transform: capitalize; font-size: 1.4rem; padding-top: 60px; margin-top: -40px; }
+        
+        /* TARJETAS DE PRODUCTOS */
+        .producto-card { background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 15px; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.2s; }
+        .producto-card:active { transform: scale(0.98); }
+        .producto-img { width: 100%; height: 180px; background-color: #ffffff; background-size: contain; background-repeat: no-repeat; background-position: center; }
+        .producto-contenido { padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .info { flex: 1; padding-right: 10px; }
+        .info h3 { margin: 0; font-size: 1.1rem; color: #2c3e50; }
+        .info p { margin: 4px 0; color: #7f8c8d; font-size: 0.85rem; line-height: 1.3; }
+        .precio { font-weight: bold; color: #e67e22; font-size: 1rem; display: block; margin-top: 4px; }
+        
+        .controles-cantidad { display: flex; align-items: center; background: #f1f2f6; border-radius: 50px; padding: 5px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .btn-qty { background: white; color: #2c3e50; border: none; width: 30px; height: 30px; border-radius: 50%; font-weight: bold; font-size: 1.2rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; }
+        .btn-qty:active { background: #e0e0e0; }
+        .cantidad-num { width: 30px; text-align: center; font-weight: bold; color: #2c3e50; font-size: 1rem; }
+
+        .btn-pedir { background: #25d366; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; box-sizing: border-box; }
+
+        /* FOOTER Y ACCIONES DE MESA */
+        .footer-carrito { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; z-index: 100; }
+        .controles-pedido { display: flex; justify-content: space-between; align-items: center; }
+        
+        .acciones-mesa { position: fixed; bottom: 100px; right: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 99; }
+        .btn-mesa { background: #2c3e50; color: white; border: none; padding: 12px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        .btn-mesa.llamar { background: #3498db; }
+        .btn-mesa.cuenta { background: #9b59b6; }
+
+        /* MODALES */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); overflow-y: auto; backdrop-filter: blur(5px); }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; width: 90%; max-width: 400px; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; text-align: center; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 1rem; }
+
+        /* LISTA CARRITO EN MODAL */
+        .item-carrito-modal { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ddd; padding: 10px 0; }
+        .item-carrito-nombre { flex: 1; font-weight: bold; color: #2c3e50; font-size: 0.95rem; }
+        .item-carrito-subtotal { color: #e67e22; font-weight: bold; margin-right: 10px; }
+
+    </style>
+</head>
+<body>
+
+    <!-- CABECERA CON PORTADA Y LOGO -->
+    <header id="headerRestaurante" class="header-portada">
+        <div class="header-overlay"></div>
+        <div class="header-content">
+            <img id="logoRestaurante" src="" alt="Logo" class="logo-restaurante">
+            <h1 id="nombreRestaurante" style="margin:0; font-size: 2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Cargando Menú...</h1>
+            <p id="infoMesaHeader" style="margin-top: 5px; font-weight: bold; color: #f1c40f;"></p>
+        </div>
+    </header>
+
+    <nav id="navCategorias" class="nav-categorias"></nav>
+
+    <div class="container">
+        <div id="bannerCerrado" style="display: none; background: #e74c3c; color: white; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <h3 style="margin: 0 0 5px 0;">🛑 Estamos Cerrados</h3>
+            <p style="margin: 0; font-size: 0.95rem;">Puedes ver el menú, pero los pedidos están deshabilitados. Revisa el horario.</p>
+        </div>
+
+        <div id="listaMenu"></div>
+    </div>
+
+    <!-- BOTONES FLOTANTES DE ACCIÓN MESA -->
+    <div class="acciones-mesa">
+        <button class="btn-mesa llamar" onclick="llamarMesero()">🛎️ Llamar al Mesero</button>
+        <button class="btn-mesa cuenta" onclick="abrirCuenta()">🧾 Ver mi Cuenta</button>
+    </div>
+
+    <!-- FOOTER CARRITO -->
+    <div class="footer-carrito">
+        <div class="controles-pedido">
+            <span style="font-weight: bold; font-size: 1.1rem;">Total: <span id="totalVenta" style="color: #e67e22; font-size: 1.4rem;">$0.00</span></span>
+            <button id="btnProcesar" class="btn-pedir" onclick="abrirCarrito()" style="background: #e67e22; width: auto; padding: 12px 30px;">🛒 Ver Pedido</button>
+        </div>
+    </div>
+
+    <!-- MODAL 0: REGISTRO INICIAL OBLIGATORIO -->
+    <div id="modalRegistroMesa" class="modal" style="display: block; background: rgba(0,0,0,0.85);">
+        <div class="modal-content" style="margin-top: 20%;">
+            <h3 style="color: #e67e22;">🍽️ ¡Bienvenido!</h3>
+            <p style="text-align: center; color: #7f8c8d; font-size: 0.95rem;">Por favor, ingresa tus datos para poder atenderte en tu mesa.</p>
+            
+            <label style="font-weight: bold;">Tu Nombre:</label>
+            <input type="text" id="regNombre" class="form-input" placeholder="Ej: Carlos Pérez">
+            
+            <label style="font-weight: bold; margin-top: 10px; display: block;">Número de Mesa:</label>
+            <input type="number" id="regMesa" class="form-input" placeholder="Ej: 5">
+            
+            <button class="btn-pedir" onclick="guardarDatosMesa()" style="margin-top: 20px;">Comenzar a Pedir</button>
+        </div>
+    </div>
+
+    <!-- MODAL 1: VER CARRITO Y ENVIAR -->
+    <div id="modalCarrito" class="modal">
+        <div class="modal-content">
+            <h3>🛒 Tu Pedido (Para Enviar)</h3>
+            <div id="contenidoCarritoLista" style="max-height: 40vh; overflow-y: auto; margin-bottom: 15px;"></div>
+            
+            <div style="font-size: 1.3rem; font-weight: bold; text-align: right; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                Total: <span id="totalCarritoModal" style="color: #27ae60;">$0.00</span>
+            </div>
+
+            <label style="font-weight: bold; color: #2c3e50; font-size: 0.9rem;">📝 Notas o Comentarios para la cocina:</label>
+            <textarea id="comentariosPedido" class="form-input" rows="2" placeholder="Ej: Sin cebolla, extra salsa..."></textarea>
+            
+            <button class="btn-pedir" id="btnEnviarCocina" onclick="enviarPedidoACocina()" style="margin-top: 15px;">👨‍🍳 Enviar a Cocina</button>
+            <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%; font-weight: bold; cursor: pointer;">Volver al Menú</button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: VER CUENTA -->
+    <div id="modalCuenta" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #9b59b6;">🧾 Cuenta de la Mesa #<span id="cuentaNumMesa"></span></h3>
+            <p style="text-align: center; color: #7f8c8d; font-size: 0.9rem; margin-top: 0;">Aquí están todos los pedidos registrados en tu mesa que aún no han sido cobrados.</p>
+            
+            <div id="contenidoCuentaLista" style="max-height: 40vh; overflow-y: auto; margin-bottom: 15px; border-top: 1px solid #eee; padding-top: 10px;">
+                <p style="text-align: center;">Buscando pedidos...</p>
+            </div>
+            
+            <div style="font-size: 1.5rem; font-weight: bold; text-align: right; color: #2c3e50; border-top: 2px solid #eee; padding-top: 10px; margin-bottom: 15px;">
+                Total a Pagar: <span id="totalCuenta" style="color: #c0392b;">$0.00</span>
+            </div>
+
+            <button class="btn-pedir" onclick="pedirLaCuenta()" style="background: #9b59b6;">💳 Solicitar la Cuenta</button>
+            <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%; font-weight: bold; cursor: pointer;">Cerrar Pantalla</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, addDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
+            authDomain: "pedipro-1853f.firebaseapp.com",
+            projectId: "pedipro-1853f",
+            storageBucket: "pedipro-1853f.firebasestorage.app",
+            messagingSenderId: "346303291186",
+            appId: "1:346303291186:web:7b5e06aead830c54e4812b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let idRestaurante = urlParams.get('id');
+
+        let carrito = {}; 
+        let totalGeneral = 0;
+        let infoNegocioGlobal = null;
+        let fechaInicioTurno = new Date(); fechaInicioTurno.setHours(0, 0, 0, 0); 
+        let productosMenuGlobal = [];
+        
+        let clienteNombre = "";
+        let clienteMesa = "";
+
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navCategorias');
+            if (window.scrollY > 280) nav.classList.add('visible');
+            else nav.classList.remove('visible');
+        });
+
+        async function cargarMenu() {
+            if (!idRestaurante) {
+                document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px;'>ID de Restaurante requerido.</h2>";
+                return;
+            }
+
+            let restRef = doc(db, "restaurantes", idRestaurante);
+            let restSnap = await getDoc(restRef);
+            
+            if (!restSnap.exists()) {
+                const qBusquedaAlias = query(collection(db, "restaurantes"), where("slug", "==", idRestaurante));
+                const queryAlias = await getDocs(qBusquedaAlias);
+                if (!queryAlias.empty) {
+                    restSnap = queryAlias.docs[0];
+                    idRestaurante = restSnap.id; 
+                } else {
+                    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px;'>Restaurante no encontrado 😢</h2>";
+                    return;
+                }
+            }
+            
+            const data = restSnap.data();
+            infoNegocioGlobal = data;
+            document.getElementById('nombreRestaurante').innerText = data.nombre;
+            document.title = "Menú Mesa - " + data.nombre;
+
+            if(data.portada) document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
+            if(data.logo) { 
+                document.getElementById('logoRestaurante').src = data.logo; 
+                document.getElementById('logoRestaurante').style.display = 'inline-block'; 
+                document.getElementById('dynamic-favicon').href = data.logo;
+            }
+
+            verificarSiEstaCerrado(data);
+
+            const querySnapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
+            productosMenuGlobal = [];
+            querySnapshot.forEach((doc) => {
+                const p = doc.data(); if (p.disponible === false) return; 
+                productosMenuGlobal.push(p);
+            });
+            renderizarProductosMenu();
+        }
+
+        function renderizarProductosMenu() {
+            const contenedor = document.getElementById('listaMenu'); contenedor.innerHTML = ""; 
+            const navCategorias = document.getElementById('navCategorias'); navCategorias.innerHTML = "";
+            const categorias = {};
+
+            // Solo mostramos productos disponibles para MESA
+            productosMenuGlobal
+                .filter(p => !p.opcionesServicio || p.opcionesServicio.mesa !== false)
+                .forEach(p => {
+                    const cat = p.categoria || "Otros"; if (!categorias[cat]) categorias[cat] = []; categorias[cat].push(p);
+                });
+
+            for (const nombreCat in categorias) {
+                const idCatSafe = "cat-" + nombreCat.replace(/[^a-zA-Z0-9]/g, '');
+                navCategorias.innerHTML += `<a href="#${idCatSafe}" class="cat-chip">${nombreCat}</a>`;
+                contenedor.innerHTML += `<h2 id="${idCatSafe}" class="categoria-titulo">${nombreCat}</h2>`;
+                
+                categorias[nombreCat].forEach(p => {
+                    let htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
+                    const idHTML = p.nombre.replace(/[^a-zA-Z0-9]/g, '');
+                    const variantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0
+                        ? `<div style="display:grid; gap:6px; margin-top:8px;">${p.variantesPrecio.map(v => { const nombreVar = `${p.nombre} - ${v.nombre}`; const idVar = nombreVar.replace(/[^a-zA-Z0-9]/g, ''); return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:#f8f9fa; border-radius:8px; padding:6px 8px;"><small style="color:#2c3e50; font-weight:bold;">${v.nombre}: $${Number(v.precio || 0).toFixed(2)}</small><div class="controles-cantidad" style="transform:scale(0.78); margin:0;"><button class="btn-qty" onclick="modificarItem('${nombreVar}', ${Number(v.precio || 0)}, -1, '${idVar}')">-</button><span class="cantidad-num" id="qty-${idVar}">0</span><button class="btn-qty" onclick="modificarItem('${nombreVar}', ${Number(v.precio || 0)}, 1, '${idVar}')">+</button></div></div>`; }).join('')}</div>`
+                        : "";
+                    
+                    let precioBaseInfo = "";
+                    if (Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0) {
+                        const precios = [p.precio, ...p.variantesPrecio.map(v => v.precio)].map(Number).filter(v => !isNaN(v));
+                        precioBaseInfo = `Desde $${Math.min(...precios).toFixed(2)}`;
+                    } else {
+                        precioBaseInfo = `$${Number(p.precio || 0).toFixed(2)}`;
+                    }
+
+                    contenedor.innerHTML += `
+                        <div class="producto-card">${htmlImagen}
+                            <div class="producto-contenido">
+                                <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">${precioBaseInfo}</span>${variantes}</div>
+                                <div class="controles-cantidad">
+                                    <button class="btn-qty" onclick="modificarItem('${p.nombre}', ${p.precio}, -1, '${idHTML}')">-</button>
+                                    <span class="cantidad-num" id="qty-${idHTML}">0</span>
+                                    <button class="btn-qty" onclick="modificarItem('${p.nombre}', ${p.precio}, 1, '${idHTML}')">+</button>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            }
+        }
+
+        window.guardarDatosMesa = async function() {
+            clienteNombre = document.getElementById('regNombre').value.trim();
+            clienteMesa = document.getElementById('regMesa').value.trim();
+
+            if(!clienteNombre || !clienteMesa) {
+                return alert("Debes ingresar tu nombre y el número de mesa para continuar.");
+            }
+
+            // Cambiar mesa a ocupada en DB
+            try {
+                const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(clienteMesa)));
+                const qSnap = await getDocs(qM);
+                if (qSnap.empty) {
+                    // Si no existe la crea
+                    await addDoc(collection(db, "restaurantes", idRestaurante, "mesas"), { numero: parseInt(clienteMesa), estado: 'ocupada' });
+                } else {
+                    qSnap.forEach(async (dM) => {
+                        await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'ocupada' });
+                    });
+                }
+            } catch (error) {
+                console.error("Error al registrar mesa en Firebase:", error);
+            }
+
+            document.getElementById('infoMesaHeader').innerText = `👤 ${clienteNombre} | 📍 Mesa #${clienteMesa}`;
+            document.getElementById('modalRegistroMesa').style.display = 'none';
+        }
+
+        window.modificarItem = function(nombre, precio, cambio, idHTML) {
+            if (!carrito[nombre]) carrito[nombre] = { precio: precio, cantidad: 0 };
+            carrito[nombre].cantidad += cambio;
+            
+            if (carrito[nombre].cantidad <= 0) { carrito[nombre].cantidad = 0; delete carrito[nombre]; }
+            
+            const numEl = document.getElementById(`qty-${idHTML}`);
+            if(numEl) numEl.innerText = carrito[nombre] ? carrito[nombre].cantidad : 0;
+            
+            totalGeneral = 0; 
+            for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
+            document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
+            document.getElementById('totalCarritoModal').innerText = `$${totalGeneral.toFixed(2)}`;
+
+            if(document.getElementById('modalCarrito').style.display === 'block') {
+                renderizarListaCarrito();
+                if(Object.keys(carrito).length === 0) cerrarModales();
+            }
+        }
+
+        window.cerrarModales = function() {
+            document.getElementById('modalCarrito').style.display = 'none';
+            document.getElementById('modalCuenta').style.display = 'none';
+        }
+
+        window.abrirCarrito = function() {
+            if (Object.keys(carrito).length === 0) return alert("Aún no has agregado productos a tu pedido.");
+            renderizarListaCarrito();
+            document.getElementById('modalCarrito').style.display = 'block';
+        }
+
+        function renderizarListaCarrito() {
+            const contenedor = document.getElementById('contenidoCarritoLista');
+            contenedor.innerHTML = "";
+            for (let nombre in carrito) {
+                const item = carrito[nombre];
+                const subtotal = item.precio * item.cantidad;
+                const idHTML = nombre.replace(/[^a-zA-Z0-9]/g, '');
+                contenedor.innerHTML += `
+                    <div class="item-carrito-modal">
+                        <div class="item-carrito-nombre">${nombre}</div>
+                        <div class="item-carrito-subtotal">$${subtotal.toFixed(2)}</div>
+                        <div class="controles-cantidad" style="transform: scale(0.85); margin: 0;">
+                            <button class="btn-qty" onclick="modificarItem('${nombre}', ${item.precio}, -1, '${idHTML}')">-</button>
+                            <span class="cantidad-num">${item.cantidad}</span>
+                            <button class="btn-qty" onclick="modificarItem('${nombre}', ${item.precio}, 1, '${idHTML}')">+</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.enviarPedidoACocina = async function() {
+            const arrayItems = Object.keys(carrito).map(nombre => ({ nombre: nombre, precio: carrito[nombre].precio, cantidad: carrito[nombre].cantidad }));
+            if (arrayItems.length === 0) return;
+
+            const btnPedir = document.getElementById('btnEnviarCocina'); 
+            btnPedir.innerText = "Procesando..."; btnPedir.disabled = true;
+
+            const comentariosExtra = document.getElementById('comentariosPedido').value.trim();
+
+            try {
+                const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
+                const hoyInicio = new Date(); hoyInicio.setHours(0,0,0,0);
+                const qCount = query(pedidosRef, where("fecha", ">=", hoyInicio));
+                const snapPedidos = await getDocs(qCount);
+                
+                let maxConsecutivo = 0;
+                snapPedidos.forEach(d => { let num = d.data().consecutivoDiario || 0; if (num > maxConsecutivo) maxConsecutivo = num; });
+                const nuevoConsecutivo = maxConsecutivo + 1;
+                
+                const comandaId = `M-${nuevoConsecutivo}`;
+
+                await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
+                    numeroComanda: comandaId, 
+                    consecutivoDiario: nuevoConsecutivo, 
+                    items: arrayItems, 
+                    total: totalGeneral,
+                    tipoOrigen: 'mesa', 
+                    numeroMesa: clienteMesa,
+                    clienteEnvio: { nombre: clienteNombre, telefono: "En Mesa", direccion: "Mesa #" + clienteMesa, metodoPago: "Pendiente" },
+                    fecha: new Date(), 
+                    estado: 'pendiente', 
+                    estadoPago: 'Pendiente',
+                    comentarios: comentariosExtra
+                });
+
+                // Asegurar que la mesa sigue ocupada
+                const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(clienteMesa)));
+                const qSnap = await getDocs(qM);
+                qSnap.forEach(async (dM) => {
+                    await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'ocupada' });
+                });
+
+                alert(`¡Pedido enviado a cocina exitosamente!`);
+                
+                // Limpiar carrito
+                carrito = {};
+                totalGeneral = 0;
+                document.getElementById('totalVenta').innerText = "$0.00";
+                document.querySelectorAll('.cantidad-num').forEach(el => el.innerText = "0");
+                cerrarModales();
+
+            } catch (error) { 
+                console.error(error); alert("Hubo un problema de conexión. Intenta de nuevo."); 
+            } finally {
+                btnPedir.innerText = "👨‍🍳 Enviar a Cocina"; btnPedir.disabled = false; 
+            }
+        }
+
+        window.llamarMesero = async function() {
+            if(!clienteMesa) return;
+            try {
+                const btn = document.querySelector('.btn-mesa.llamar');
+                btn.innerText = "⏳ Llamando...";
+                
+                const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(clienteMesa)));
+                const qSnap = await getDocs(qM);
+                qSnap.forEach(async (dM) => {
+                    await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'llamar_mesero' });
+                });
+                
+                alert("¡El mesero ha sido notificado y va en camino!");
+                btn.innerText = "🛎️ Llamar al Mesero";
+            } catch (error) {
+                console.error(error); alert("Error al conectar con la caja.");
+            }
+        }
+
+        window.abrirCuenta = async function() {
+            if(!clienteMesa) return;
+            document.getElementById('cuentaNumMesa').innerText = clienteMesa;
+            document.getElementById('modalCuenta').style.display = 'block';
+            
+            const contenedor = document.getElementById('contenidoCuentaLista');
+            contenedor.innerHTML = "<p style='text-align: center;'>Consultando sistema...</p>";
+
+            try {
+                const hoyInicio = new Date(); hoyInicio.setHours(0,0,0,0);
+                const q = query(collection(db, "restaurantes", idRestaurante, "pedidos"), where("numeroMesa", "==", clienteMesa));
+                const snap = await getDocs(q);
+                
+                let cuentaHtml = "";
+                let sumTotal = 0;
+                let pedidosEncontrados = 0;
+
+                snap.forEach(docSnap => {
+                    const ped = docSnap.data();
+                    const fechaOrd = ped.fecha.toDate();
+                    
+                    // Solo pedidos de hoy que no estén pagados
+                    if (fechaOrd >= hoyInicio && ped.estadoPago !== 'Pagado') {
+                        pedidosEncontrados++;
+                        cuentaHtml += `<div style="background: #f8fafc; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">`;
+                        cuentaHtml += `<div style="font-size:0.85rem; color:#7f8c8d; margin-bottom:5px;">Pedido #${ped.numeroComanda}</div>`;
+                        ped.items.forEach(item => {
+                            cuentaHtml += `<div style="display:flex; justify-content:space-between; font-size: 0.95rem; margin-bottom:3px;">`;
+                            cuentaHtml += `<span>${item.cantidad}x ${item.nombre}</span>`;
+                            cuentaHtml += `<strong style="color:#2c3e50;">$${(item.precio * item.cantidad).toFixed(2)}</strong>`;
+                            cuentaHtml += `</div>`;
+                        });
+                        cuentaHtml += `</div>`;
+                        sumTotal += ped.total;
+                    }
+                });
+
+                if (pedidosEncontrados === 0) {
+                    contenedor.innerHTML = "<p style='text-align: center; color: #7f8c8d;'>No tienes pedidos pendientes de cobro.</p>";
+                } else {
+                    contenedor.innerHTML = cuentaHtml;
+                }
+                
+                document.getElementById('totalCuenta').innerText = `$${sumTotal.toFixed(2)}`;
+
+            } catch (error) {
+                console.error(error);
+                contenedor.innerHTML = "<p style='text-align: center; color: #c0392b;'>Error al cargar la cuenta.</p>";
+            }
+        }
+
+        window.pedirLaCuenta = async function() {
+            if(!clienteMesa) return;
+            try {
+                const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(clienteMesa)));
+                const qSnap = await getDocs(qM);
+                qSnap.forEach(async (dM) => {
+                    await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'pedir_cuenta' });
+                });
+                
+                alert("¡Has solicitado la cuenta! Enseguida te atenderemos.");
+                cerrarModales();
+            } catch (error) {
+                console.error(error); alert("Error al conectar con la caja.");
+            }
+        }
+
+        function verificarSiEstaCerrado(data) {
+            const hoy = new Date();
+            const diasStr = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const diaHoy = diasStr[hoy.getDay()];
+
+            let horaApertura, horaCierre;
+
+            if(data.horarios && data.horarios[diaHoy]) {
+                if(!data.horarios[diaHoy].activo) return activarCerrado();
+                horaApertura = data.horarios[diaHoy].abre;
+                horaCierre = data.horarios[diaHoy].cierra;
+            } else if (data.horarioApertura && data.horarioCierre) {
+                horaApertura = data.horarioApertura;
+                horaCierre = data.horarioCierre;
+            } else { return; }
+
+            const [hA, mA] = horaApertura.split(':').map(Number);
+            const [hC, mC] = horaCierre.split(':').map(Number);
+            const timeA = hA * 60 + mA; const timeC = hC * 60 + mC; 
+            const timeNow = hoy.getHours() * 60 + hoy.getMinutes();
+            
+            let isCerrado = false;
+            if (timeA < timeC) {
+                isCerrado = timeNow < timeA || timeNow > timeC; fechaInicioTurno.setHours(hA, mA, 0, 0);
+            } else {
+                isCerrado = timeNow < timeA && timeNow > timeC;
+                if (timeNow <= timeC) fechaInicioTurno.setDate(fechaInicioTurno.getDate() - 1);
+                fechaInicioTurno.setHours(hA, mA, 0, 0);
+            }
+
+            if (isCerrado) activarCerrado();
+        }
+
+        function activarCerrado() {
+            document.getElementById('bannerCerrado').style.display = 'block';
+            document.getElementById('btnProcesar').disabled = true; 
+            document.getElementById('btnProcesar').style.background = '#95a5a6';
+            document.getElementById('btnProcesar').innerText = "Cerrado temporalmente";
+        }
+
+        cargarMenu();
+    </script>
+</body>
+</html>

@@ -1123,7 +1123,7 @@
         window.cargarMesas = async function() {
             const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "mesas")); const contenedor = document.getElementById('mapaMesasContenedor'); contenedor.innerHTML = '';
             let mesas = []; snapshot.forEach(docSnap => mesas.push({ id: docSnap.id, ...docSnap.data() })); mesas.sort((a,b) => a.numero - b.numero);
-            mesas.forEach(mesa => { let claseEstado = 'mesa-libre'; let txtEstado = 'Libre'; if(mesa.estado === 'espera') { claseEstado = 'mesa-espera'; txtEstado = 'En Espera'; } if(mesa.estado === 'ocupada') { claseEstado = 'mesa-ocupada'; txtEstado = 'Ocupada'; } contenedor.innerHTML += `<div class="mesa-cuadro ${claseEstado}" onclick="window.abrirOpcionesMesa('${mesa.id}', '${mesa.numero}', '${mesa.estado}')"><span style="font-size: 2rem;">#${mesa.numero}</span><span style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">${txtEstado}</span></div>`; });
+            mesas.forEach(mesa => { let claseEstado = 'mesa-libre'; let txtEstado = 'Libre'; if(mesa.estado === 'espera') { claseEstado = 'mesa-espera'; txtEstado = 'En Espera'; } if(mesa.estado === 'ocupada') { claseEstado = 'mesa-ocupada'; txtEstado = 'Ocupada'; } if(mesa.estado === 'llamar_mesero') { claseEstado = 'mesa-llamando'; txtEstado = 'Llamando...'; } if(mesa.estado === 'pedir_cuenta') { claseEstado = 'mesa-cuenta'; txtEstado = 'Pidió Cuenta'; } contenedor.innerHTML += `<div class="mesa-cuadro ${claseEstado}" onclick="window.abrirOpcionesMesa('${mesa.id}', '${mesa.numero}', '${mesa.estado}')"><span style="font-size: 2rem;">#${mesa.numero}</span><span style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">${txtEstado}</span></div>`; });
         }
         window.agregarMesa = async function() { const num = (await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"))).size + 1; await addDoc(collection(db, "restaurantes", idRestaurante, "mesas"), { numero: num, estado: 'libre' }); }
         window.cambiarEstadoMesa = async function(mesaId, est) { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", mesaId), { estado: est === 'libre' ? 'espera' : (est === 'espera' ? 'ocupada' : 'libre') }); }
@@ -1139,6 +1139,8 @@
             let txtEstado = 'Libre';
             if(estado === 'espera') txtEstado = 'En Espera';
             if(estado === 'ocupada') txtEstado = 'Ocupada';
+            if(estado === 'llamar_mesero') txtEstado = 'Llamando...';
+            if(estado === 'pedir_cuenta') txtEstado = 'Pidió Cuenta';
             document.getElementById('opcionesMesaEstadoTexto').innerText = txtEstado;
 
             document.getElementById('modalOpcionesMesa').style.display = 'block';
