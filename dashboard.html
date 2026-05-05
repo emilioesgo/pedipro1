@@ -187,6 +187,8 @@
                 Estado: <span id="opcionesMesaEstadoTexto" style="font-weight: bold;"></span>
             </p>
 
+            <div id="opcionesMesaPedidosListos" style="margin-bottom: 15px;"></div>
+            
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button class="btn-add" style="background:#e67e22;" id="btnOpcionesMesaEstado" onclick="window.cambiarEstadoDesdeOpciones()">🔄 Cambiar Estado</button>
                 <button class="btn-add" style="background:#27ae60;" onclick="window.abrirPOSParaMesa()">📝 Tomar Pedido</button>
@@ -1148,6 +1150,16 @@
             if(estado === 'llamar_mesero') txtEstado = 'Llamando...';
             if(estado === 'pedir_cuenta') txtEstado = 'Pidió Cuenta';
             document.getElementById('opcionesMesaEstadoTexto').innerText = txtEstado;
+            
+            let pedidosListosHtml = '';
+            if (window.pedidosGlobales) {
+                window.pedidosGlobales.forEach(p => {
+                    if (p.numeroMesa == numero && p.estado === 'preparado') {
+                        pedidosListosHtml += `<div style="background:#f8f9fa; padding:10px; border-radius:8px; border:1px solid #ddd; text-align:center;"><p style="margin:0 0 10px; font-weight:bold; color:#2c3e50;">Pedido #${p.numeroComanda} Listo</p><button class="btn-add" style="background:#e74c3c; width:100%;" onclick="window.entregarPedidoMesa('${p.id}', '${p.numeroMesa}')">🍽️ Entregado a Mesa</button></div>`;
+                    }
+                });
+            }
+            document.getElementById('opcionesMesaPedidosListos').innerHTML = pedidosListosHtml;
 
             document.getElementById('modalOpcionesMesa').style.display = 'block';
         };
@@ -1157,6 +1169,20 @@
                 window.cambiarEstadoMesa(mesaSeleccionadaOpciones.id, mesaSeleccionadaOpciones.estado);
                 document.getElementById('modalOpcionesMesa').style.display = 'none';
             }
+        };
+
+        window.entregarPedidoMesa = async function(idPedido, numeroMesa) {
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", idPedido), { estado: 'entregado' });
+                const qM = query(collection(db, "restaurantes", idRestaurante, "mesas"), where("numero", "==", parseInt(numeroMesa)));
+                const qSnap = await getDocs(qM);
+                qSnap.forEach(async (dM) => {
+                    await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", dM.id), { estado: 'ocupada' });
+                });
+                document.getElementById('modalOpcionesMesa').style.display = 'none';
+                window.cargarPedidos();
+                window.cargarMesas();
+            } catch(e) { console.error(e); }
         };
 
         window.abrirPOSParaMesa = function() {
