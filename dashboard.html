@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2563eb">
     <title>Panel de Control - MenusGo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -22,6 +25,7 @@
             <div class="nav-item" onclick="cambiarVista('vista-disponibilidad', this)">✅ Disponibilidad</div>
             <div class="nav-item" onclick="cambiarVista('vista-qr', this)">📲 Menú Digital</div>
             <div class="nav-item" onclick="cambiarVista('vista-configuracion', this)">⚙️ Configuración</div>
+            <div id="btnInstallPWA" class="nav-item" style="display:none; background: #2563eb; color: white;" onclick="instalarPWA()">📲 Instalar App</div>
             <hr style="border-color: #34495e; margin: 20px 0;">
             <div class="nav-item" onclick="window.location.href='index.html'" style="color: #e74c3c;">🚪 Cerrar Sesión</div>
         </nav>
@@ -1427,6 +1431,35 @@
                 lista.innerHTML = '<p class="muted-help">No se pudieron cargar los productos.</p>';
             }
         }
+
+        // PWA Installation Logic
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log('Service Worker Registrado'))
+            .catch(err => console.error('Error Service Worker:', err));
+        }
+
+        let promptInstalacion;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            promptInstalacion = e;
+            document.getElementById('btnInstallPWA').style.display = 'flex';
+        });
+
+        window.instalarPWA = async function() {
+            if (promptInstalacion) {
+                promptInstalacion.prompt();
+                const { outcome } = await promptInstalacion.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('btnInstallPWA').style.display = 'none';
+                }
+                promptInstalacion = null;
+            }
+        };
+
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('btnInstallPWA').style.display = 'none';
+        });
     </script>
 </body>
 </html>
