@@ -11,7 +11,9 @@
                         <button type="button" class="period-btn" data-periodo="mes" onclick="window.cambiarPeriodoInicio('mes', this)">Mes</button>
                         <button type="button" class="period-btn" data-periodo="anio" onclick="window.cambiarPeriodoInicio('anio', this)">Año</button>
                     </div>
-                    <input type="date" id="inicioFechaReferencia" onchange="window.cambiarFechaInicio(this.value)">
+                    <input type="date" id="inicioFechaReferencia" onchange="window.cambiarFechaInicio(this.value)" style="margin-right:10px;">
+                    <button class="btn-add" style="background:#e74c3c; width:auto; padding:8px 12px; margin-right:5px; font-size:0.85rem;" onclick="window.descargarGraficasPDF()">📄 Exportar PDF</button>
+                    <button class="btn-add" style="background:#27ae60; width:auto; padding:8px 12px; font-size:0.85rem;" onclick="window.descargarGraficasXLS()">📊 Exportar Excel</button>
                 </div>
             </div>
 

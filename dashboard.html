@@ -8,6 +8,8 @@
     <title>Panel de Control - MenusGo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="assets/dashboard.css">
 
 </head>
@@ -614,15 +616,88 @@
                 data: { labels: productosMas.map(([nombre]) => nombre), datasets: [{ data: productosMas.map(([, data]) => data.cantidad), backgroundColor: '#2563eb', borderRadius: 6 }] },
                 options: { ...opcionesBaseChart(false), indexAxis: 'y' }
             });
+            const productosMenosEntries = Object.entries(productosMenos);
             actualizarGrafica('chartProductosMenos', {
                 type: 'bar',
-                data: { labels: productosMenos.map(([nombre]) => nombre), datasets: [{ data: productosMenos.map(([, data]) => data.cantidad), backgroundColor: '#f97316', borderRadius: 6 }] },
+                data: { labels: productosMenos.map(p => p[0]), datasets: [{ data: productosMenos.map(p => p[1].cantidad), backgroundColor: '#64748b', borderRadius: 6 }] },
                 options: { ...opcionesBaseChart(false), indexAxis: 'y' }
             });
 
-            const estado = document.getElementById('inicioAnalyticsEstado');
-            estado.innerText = totalPedidos > 0 ? `Mostrando ${totalPedidos} pedidos del periodo seleccionado.` : 'No hay pedidos en el periodo seleccionado.';
+            document.getElementById('inicioAnalyticsEstado').style.display = 'none';
+            document.querySelector('.metric-grid').style.display = 'grid';
+            document.querySelector('.analytics-grid').style.display = 'grid';
+
+            // Guardar datos para exportación Excel
+            window.datosDashboardExportar = {
+                resumen: [
+                    { Metrica: "Total Ventas", Valor: totalVentas },
+                    { Metrica: "Total Pedidos", Valor: totalPedidos },
+                    { Metrica: "Ticket Promedio", Valor: ticketPromedio },
+                    { Metrica: "Rango", Valor: rango.texto }
+                ],
+                periodo: serie.labels.map((label, i) => ({
+                    Fecha: label,
+                    Ventas: serie.ventas[i],
+                    Pedidos: serie.pedidos[i],
+                    TicketPromedio: serie.tickets[i]
+                })),
+                metodosPago: metodosEntries.map(m => ({ Metodo: m[0], Total: m[1] })),
+                productos: productosOrdenados.map(p => ({
+                    Producto: p[0],
+                    CantidadVendida: p[1].cantidad,
+                    TotalVentas: p[1].total
+                }))
+            };
         }
+
+        window.descargarGraficasPDF = function() {
+            const element = document.getElementById('vista-inicio');
+            const opt = {
+                margin:       0.5,
+                filename:     `Reporte_PediPro_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            
+            // Ocultar botones para que no salgan en el PDF
+            const controls = element.querySelector('.analytics-controls');
+            if(controls) controls.style.display = 'none';
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                if(controls) controls.style.display = 'flex'; // Restaurar botones
+            });
+        };
+
+        window.descargarGraficasXLS = function() {
+            if(!window.datosDashboardExportar) return alert("Aún no hay datos para exportar.");
+            const wb = XLSX.utils.book_new();
+            
+            const wsResumen = XLSX.utils.json_to_sheet(window.datosDashboardExportar.resumen);
+            XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+            
+            const wsPeriodo = XLSX.utils.json_to_sheet(window.datosDashboardExportar.periodo);
+            XLSX.utils.book_append_sheet(wb, wsPeriodo, "Ventas_por_Periodo");
+            
+            const wsPago = XLSX.utils.json_to_sheet(window.datosDashboardExportar.metodosPago);
+            XLSX.utils.book_append_sheet(wb, wsPago, "Metodos_Pago");
+            
+            const wsProd = XLSX.utils.json_to_sheet(window.datosDashboardExportar.productos);
+            XLSX.utils.book_append_sheet(wb, wsProd, "Productos_Vendidos");
+            
+            XLSX.writeFile(wb, `Reporte_PediPro_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+        };
+
+        window.descargarQR = function() {
+            const qrImg = document.querySelector('#qrcode img');
+            if (!qrImg || !qrImg.src) return alert("Genera primero el código QR.");
+            const enlace = document.createElement('a');
+            enlace.href = qrImg.src;
+            enlace.download = 'Mi_Menu_QR.png';
+            document.body.appendChild(enlace);
+            enlace.click();
+            document.body.removeChild(enlace);
+        };
 
         window.cambiarPeriodoInicio = function(periodo, boton) {
             periodoInicioActual = periodo;
