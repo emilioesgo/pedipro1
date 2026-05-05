@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -166,6 +166,29 @@
             <div id="resultadoCorte" style="margin-top:20px; display:none; background:#fdfdfd; padding:15px; border-radius:8px; border:1px solid #ddd; font-size: 0.95rem;"></div>
             
             <button onclick="document.getElementById('modalCorteCaja').style.display='none'" style="background:none; border:none; width:100%; margin-top:15px; color:#e74c3c; font-weight: bold; cursor:pointer;">Cerrar Pantalla</button>
+        </div>
+    </div>
+
+    <!-- NUEVO MODAL: OPCIONES DE MESA -->
+    <div id="modalOpcionesMesa" class="modal">
+        <div class="modal-content modal-sm">
+            <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+                🗺️ Mesa #<span id="opcionesMesaNum"></span>
+            </h3>
+            
+            <p style="font-size: 1.1rem; text-align: center; color: #7f8c8d; margin-bottom: 10px;">
+                🕒 Hora Actual: <strong id="opcionesMesaHora"></strong>
+            </p>
+            <p style="font-size: 1.1rem; text-align: center; margin-bottom: 20px;">
+                Estado: <span id="opcionesMesaEstadoTexto" style="font-weight: bold;"></span>
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-add" style="background:#e67e22;" id="btnOpcionesMesaEstado" onclick="window.cambiarEstadoDesdeOpciones()">🔄 Cambiar Estado</button>
+                <button class="btn-add" style="background:#27ae60;" onclick="window.abrirPOSParaMesa()">📝 Tomar Pedido</button>
+            </div>
+            
+            <button onclick="document.getElementById('modalOpcionesMesa').style.display='none'" style="background:none; border:none; width:100%; margin-top:15px; color:#e74c3c; font-weight: bold; cursor:pointer;">Cerrar Pantalla</button>
         </div>
     </div>
 
@@ -1100,10 +1123,46 @@
         window.cargarMesas = async function() {
             const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "mesas")); const contenedor = document.getElementById('mapaMesasContenedor'); contenedor.innerHTML = '';
             let mesas = []; snapshot.forEach(docSnap => mesas.push({ id: docSnap.id, ...docSnap.data() })); mesas.sort((a,b) => a.numero - b.numero);
-            mesas.forEach(mesa => { let claseEstado = 'mesa-libre'; let txtEstado = 'Libre'; if(mesa.estado === 'espera') { claseEstado = 'mesa-espera'; txtEstado = 'En Espera'; } if(mesa.estado === 'ocupada') { claseEstado = 'mesa-ocupada'; txtEstado = 'Ocupada'; } contenedor.innerHTML += `<div class="mesa-cuadro ${claseEstado}" onclick="window.cambiarEstadoMesa('${mesa.id}', '${mesa.estado}')"><span style="font-size: 2rem;">#${mesa.numero}</span><span style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">${txtEstado}</span></div>`; });
+            mesas.forEach(mesa => { let claseEstado = 'mesa-libre'; let txtEstado = 'Libre'; if(mesa.estado === 'espera') { claseEstado = 'mesa-espera'; txtEstado = 'En Espera'; } if(mesa.estado === 'ocupada') { claseEstado = 'mesa-ocupada'; txtEstado = 'Ocupada'; } contenedor.innerHTML += `<div class="mesa-cuadro ${claseEstado}" onclick="window.abrirOpcionesMesa('${mesa.id}', '${mesa.numero}', '${mesa.estado}')"><span style="font-size: 2rem;">#${mesa.numero}</span><span style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">${txtEstado}</span></div>`; });
         }
         window.agregarMesa = async function() { const num = (await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"))).size + 1; await addDoc(collection(db, "restaurantes", idRestaurante, "mesas"), { numero: num, estado: 'libre' }); }
         window.cambiarEstadoMesa = async function(mesaId, est) { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", mesaId), { estado: est === 'libre' ? 'espera' : (est === 'espera' ? 'ocupada' : 'libre') }); }
+
+        let mesaSeleccionadaOpciones = null;
+
+        window.abrirOpcionesMesa = function(id, numero, estado) {
+            mesaSeleccionadaOpciones = { id, numero, estado };
+            document.getElementById('opcionesMesaNum').innerText = numero;
+            const now = new Date();
+            document.getElementById('opcionesMesaHora').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            let txtEstado = 'Libre';
+            if(estado === 'espera') txtEstado = 'En Espera';
+            if(estado === 'ocupada') txtEstado = 'Ocupada';
+            document.getElementById('opcionesMesaEstadoTexto').innerText = txtEstado;
+
+            document.getElementById('modalOpcionesMesa').style.display = 'block';
+        };
+
+        window.cambiarEstadoDesdeOpciones = function() {
+            if(mesaSeleccionadaOpciones) {
+                window.cambiarEstadoMesa(mesaSeleccionadaOpciones.id, mesaSeleccionadaOpciones.estado);
+                document.getElementById('modalOpcionesMesa').style.display = 'none';
+            }
+        };
+
+        window.abrirPOSParaMesa = function() {
+            if(mesaSeleccionadaOpciones) {
+                document.getElementById('modalOpcionesMesa').style.display = 'none';
+                window.abrirPOS();
+                
+                setTimeout(() => {
+                    document.getElementById('posTipoPedido').value = 'mesa';
+                    if (typeof cambiarVistaFormPOS === 'function') cambiarVistaFormPOS();
+                    document.getElementById('posNumMesa').value = mesaSeleccionadaOpciones.numero;
+                }, 50);
+            }
+        };
 
         function comprimirImagen(file) {
             return new Promise((resolve, reject) => {
