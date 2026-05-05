@@ -1,25 +1,111 @@
-﻿        <div id="vista-menu" class="vista">
-            <div class="card">
-                <h2>Agregar Producto al Menú</h2>
-                <div class="form-group">
-                    <label>Foto del Producto (Opcional):</label>
-                    <input type="file" id="prodImagen" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
+        <div id="vista-menu" class="vista">
+            <div class="menu-toolbar">
+                <div>
+                    <h2>Mi Menú</h2>
+                    <p>Administra categorías, productos, precios y opciones de servicio.</p>
+                </div>
+                <div class="menu-toolbar-actions">
+                    <button type="button" class="btn-add" onclick="window.mostrarFormularioProducto()">Agregar Nuevo Producto</button>
+                    <button type="button" class="btn-add btn-secondary" onclick="window.mostrarFormularioCategoria()">Agregar Nueva Categoría</button>
+                </div>
+            </div>
+
+            <div id="panelCategoriaMenu" class="card menu-form-card" style="display:none;">
+                <div class="form-card-header">
+                    <h3>Nueva Categoría</h3>
+                    <button type="button" class="btn-icon-close" onclick="window.cerrarPanelesMenu()">×</button>
                 </div>
                 <div class="form-group">
-                    <label>Categoría:</label>
-                    <select id="prodCategoria">
-                        <option value="Comida">🍕 Comida</option><option value="Bebida">🥤 Bebida</option><option value="Postre">🍰 Postre</option><option value="Entrada">🥗 Entrada</option>
-                    </select>
+                    <label>Nombre de la categoría</label>
+                    <input type="text" id="nuevaCategoriaNombre" placeholder="Ej: Hamburguesas, Cafés, Combos">
                 </div>
-                <div class="form-group"><label>Nombre del Producto:</label><input type="text" id="prodNombre"></div>
-                <div class="form-group"><label>Descripción:</label><textarea id="prodDesc"></textarea></div>
-                <div class="form-group"><label>Precio Base ($):</label><input type="number" id="prodPrecio"></div>
-                <div id="seccionVariantes">
-                    <label>Variantes / Extras:</label>
-                    <div id="contenedorVariantes"></div>
-                    <button type="button" class="btn-add" style="background:#95a5a6; margin-top:10px;" id="btnNuevaVariante">+ Agregar Variante</button>
+                <button type="button" class="btn-add" onclick="window.guardarCategoriaMenu()">Guardar Categoría</button>
+            </div>
+
+            <div id="panelProductoMenu" class="card menu-form-card" style="display:none;">
+                <div class="form-card-header">
+                    <h3>Nuevo Producto</h3>
+                    <button type="button" class="btn-icon-close" onclick="window.cerrarPanelesMenu()">×</button>
                 </div>
-                <hr>
-                <button class="btn-add" id="btnGuardarProd">Guardar Producto</button>
+
+                <div class="product-editor-layout">
+                    <div class="product-editor-form">
+                        <div class="form-group">
+                            <label>Nombre del producto</label>
+                            <input type="text" id="prodNombre" placeholder="Ej: Torta especial" oninput="window.actualizarVistaPreviaProducto()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <div class="input-with-action">
+                                <select id="prodCategoria" onchange="window.actualizarVistaPreviaProducto()"></select>
+                                <button type="button" class="btn-add btn-inline" onclick="window.mostrarFormularioCategoria()">Nueva Categoría</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Descripción del producto</label>
+                            <textarea id="prodDesc" placeholder="Describe ingredientes, tamaño o preparación" oninput="window.actualizarVistaPreviaProducto()"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Imagen del producto</label>
+                            <input type="file" id="prodImagen" accept="image/*" onchange="window.previsualizarImagenProducto(this)">
+                            <small>La imagen se optimiza antes de subirla para ocupar menos espacio.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Precio base ($)</label>
+                            <input type="number" id="prodPrecio" min="0" step="0.01" placeholder="0.00" oninput="window.actualizarVistaPreviaProducto()">
+                        </div>
+
+                        <div class="form-section-box">
+                            <div class="section-row-title">
+                                <label>Otros precios</label>
+                                <button type="button" class="btn-add btn-soft" onclick="window.agregarPrecioProducto()">Agregar otro precio</button>
+                            </div>
+                            <div id="contenedorVariantesPrecio" class="variant-list"></div>
+                        </div>
+
+                        <button type="button" class="more-options-toggle" onclick="window.toggleOpcionesProducto()">Más opciones</button>
+                        <div id="panelOpcionesProducto" class="form-section-box" style="display:none;">
+                            <label>Opciones de servicio</label>
+                            <p class="muted-help">Este producto solo se podrá pedir en las opciones activas.</p>
+                            <div class="service-options-grid">
+                                <label><input type="checkbox" class="servicio-producto" value="local" checked onchange="window.actualizarVistaPreviaProducto()"> En Local</label>
+                                <label><input type="checkbox" class="servicio-producto" value="mesa" checked onchange="window.actualizarVistaPreviaProducto()"> Mesas</label>
+                                <label><input type="checkbox" class="servicio-producto" value="pickup" checked onchange="window.actualizarVistaPreviaProducto()"> Pick Up</label>
+                                <label><input type="checkbox" class="servicio-producto" value="domicilio" checked onchange="window.actualizarVistaPreviaProducto()"> Domicilio</label>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-add" id="btnGuardarProd" onclick="window.guardarProducto()">Guardar Producto</button>
+                    </div>
+
+                    <aside class="product-preview-panel">
+                        <span>Vista previa</span>
+                        <div class="product-preview-card">
+                            <div id="previewProductoImagen" class="preview-product-image">Sin imagen</div>
+                            <div class="preview-product-body">
+                                <small id="previewProductoCategoria">Categoría</small>
+                                <h3 id="previewProductoNombre">Nombre del producto</h3>
+                                <p id="previewProductoDesc">Descripción del producto</p>
+                                <strong id="previewProductoPrecio">$0.00</strong>
+                                <div id="previewProductoVariantes" class="preview-variants"></div>
+                                <div id="previewProductoServicios" class="preview-services"></div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+
+            <div class="card menu-list-card">
+                <div class="form-card-header">
+                    <h3>Productos en Mi Menú</h3>
+                    <span id="contadorProductosMenu" class="menu-count">0 productos</span>
+                </div>
+                <div id="listaProductosMenu" class="menu-products-grid">
+                    <p class="muted-help">Cargando productos...</p>
+                </div>
             </div>
         </div>

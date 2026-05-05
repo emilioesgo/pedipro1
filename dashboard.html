@@ -217,6 +217,7 @@
                 window.cargarPedidos(); 
             }
             if(idVista === 'vista-inicio' && window.cargarInicioDashboard) { window.cargarInicioDashboard(); }
+            if(idVista === 'vista-menu' && window.cargarMiMenu) { window.cargarMiMenu(); }
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
             if(idVista === 'vista-caja') { window.cargarPedidos().then(() => window.cargarCaja()); }
         }
@@ -306,6 +307,7 @@
         let periodoInicioActual = "dia";
         let fechaInicioReferencia = new Date();
         let graficasInicio = {};
+        let categoriasDetectadasMenu = [];
 
         if (!idRestaurante) { window.location.href = "index.html"; }
 
@@ -1020,7 +1022,7 @@
                 snapshot.forEach(doc => { if(doc.data().disponible !== false) productosCache.push({ id: doc.id, ...doc.data() }); });
             }
             contenedor.innerHTML = '';
-            productosCache.forEach(p => {
+            productosCache.filter(p => productoDisponibleParaServicio(p, 'mesa')).forEach(p => {
                 const imgHTML = p.imagen ? `<img src="${p.imagen}" class="pos-prod-img">` : `<div class="pos-prod-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;color:#ccc;">🍽️</div>`;
                 const safeName = p.nombre.replace(/[^a-zA-Z0-9]/g, '');
                 contenedor.innerHTML += `
@@ -1063,6 +1065,11 @@
             const arrayItems = Object.keys(carritoPOS).map(nombre => ({ nombre: nombre, precio: carritoPOS[nombre].precio, cantidad: carritoPOS[nombre].cantidad }));
             if (arrayItems.length === 0) return alert("Agrega productos al pedido.");
             const btn = document.getElementById('btnProcesarPOS'); const tipo = document.getElementById('posTipoPedido').value; let total = parseFloat(document.getElementById('posTotal').innerText);
+            const productosNoDisponibles = arrayItems.filter(item => {
+                const producto = productosCache.find(p => p.nombre === item.nombre);
+                return producto && !productoDisponibleParaServicio(producto, tipo === 'mesa' ? 'mesa' : tipo);
+            });
+            if (productosNoDisponibles.length > 0) return alert("Hay productos en el pedido que no están disponibles para esta opción de servicio.");
             let datosEnvio = { nombre: "Cliente Mostrador", telefono: "N/A", direccion: "En Local", metodoPago: "Pendiente" }; let mesa = null;
             if (tipo === 'mesa') { mesa = document.getElementById('posNumMesa').value; if(!mesa) return alert("Ingresa el número de mesa."); } else {
                 datosEnvio.nombre = document.getElementById('posNombre').value || "Cliente Mostrador"; datosEnvio.telefono = document.getElementById('posTelefono').value || "N/A";
@@ -1098,21 +1105,264 @@
         window.agregarMesa = async function() { const num = (await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"))).size + 1; await addDoc(collection(db, "restaurantes", idRestaurante, "mesas"), { numero: num, estado: 'libre' }); }
         window.cambiarEstadoMesa = async function(mesaId, est) { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", mesaId), { estado: est === 'libre' ? 'espera' : (est === 'espera' ? 'ocupada' : 'libre') }); }
 
-        const contenedorVariantes = document.getElementById('contenedorVariantes');
-        document.getElementById('btnNuevaVariante').addEventListener('click', () => { const div = document.createElement('div'); div.className = 'variante-item'; div.innerHTML = `<input type="text" class="v-titulo" placeholder="Título (Ej: Salsa)" style="margin-bottom:5px"><input type="text" class="v-opciones" placeholder="Opciones (Roja, Verde)"><button type="button" class="btn-eliminar" onclick="this.parentElement.remove()">✕ Eliminar</button>`; contenedorVariantes.appendChild(div); });
-        
         function comprimirImagen(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader(); reader.readAsDataURL(file);
-                reader.onload = event => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; const MAX_WIDTH = 600; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; img.onerror = error => reject(error); }; reader.onerror = error => reject(error);
+                reader.onload = event => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; const MAX_WIDTH = 720; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); const webp = canvas.toDataURL('image/webp', 0.62); resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.62)); }; img.onerror = error => reject(error); }; reader.onerror = error => reject(error);
             });
         }
+
+        function categoriasBaseMenu() {
+            const base = ['Comida', 'Bebida', 'Postre', 'Entrada'];
+            const guardadas = Array.isArray(window.restauranteInfo.categoriasMenu) ? window.restauranteInfo.categoriasMenu : [];
+            return [...new Set([...base, ...guardadas, ...categoriasDetectadasMenu].filter(Boolean))];
+        }
+
+        function productoDisponibleParaServicio(producto, servicio) {
+            if (!producto || !producto.opcionesServicio) return true;
+            return producto.opcionesServicio[servicio] !== false;
+        }
+
+        function serviciosProductoSeleccionados() {
+            const servicios = {};
+            document.querySelectorAll('.servicio-producto').forEach(input => {
+                servicios[input.value] = input.checked;
+            });
+            return servicios;
+        }
+
+        function variantesPrecioProducto() {
+            const variantes = [];
+            document.querySelectorAll('.price-variant-row').forEach(row => {
+                const nombre = row.querySelector('.variante-precio-nombre')?.value.trim();
+                const precio = parseFloat(row.querySelector('.variante-precio-valor')?.value);
+                if (nombre && !isNaN(precio)) variantes.push({ nombre, precio });
+            });
+            return variantes;
+        }
+
+        function llenarSelectCategorias(categoriaSeleccionada = '') {
+            const select = document.getElementById('prodCategoria');
+            if (!select) return;
+            const categorias = categoriasBaseMenu();
+            select.innerHTML = categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            if (categoriaSeleccionada && categorias.includes(categoriaSeleccionada)) select.value = categoriaSeleccionada;
+            window.actualizarVistaPreviaProducto();
+        }
+
+        async function obtenerProductosMenu() {
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
+            const productos = [];
+            snapshot.forEach(docSnap => productos.push({ id: docSnap.id, ...docSnap.data() }));
+            productos.sort((a, b) => (a.categoria || '').localeCompare(b.categoria || '') || (a.nombre || '').localeCompare(b.nombre || ''));
+            return productos;
+        }
+
+        window.mostrarFormularioProducto = function() {
+            document.getElementById('panelProductoMenu').style.display = 'block';
+            document.getElementById('panelCategoriaMenu').style.display = 'none';
+            llenarSelectCategorias();
+            window.actualizarVistaPreviaProducto();
+        }
+
+        window.mostrarFormularioCategoria = function() {
+            document.getElementById('panelCategoriaMenu').style.display = 'block';
+            document.getElementById('panelProductoMenu').style.display = 'none';
+            const input = document.getElementById('nuevaCategoriaNombre');
+            if (input) { input.value = ''; input.focus(); }
+        }
+
+        window.cerrarPanelesMenu = function() {
+            const producto = document.getElementById('panelProductoMenu');
+            const categoria = document.getElementById('panelCategoriaMenu');
+            if (producto) producto.style.display = 'none';
+            if (categoria) categoria.style.display = 'none';
+        }
+
+        window.guardarCategoriaMenu = async function() {
+            const input = document.getElementById('nuevaCategoriaNombre');
+            const nombre = input.value.trim();
+            if (!nombre) return alert('Escribe el nombre de la categoría.');
+
+            const categorias = [...new Set([...categoriasBaseMenu(), nombre])];
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante), { categoriasMenu: categorias });
+                window.restauranteInfo.categoriasMenu = categorias;
+                input.value = '';
+                llenarSelectCategorias(nombre);
+                document.getElementById('panelCategoriaMenu').style.display = 'none';
+                document.getElementById('panelProductoMenu').style.display = 'block';
+                alert('Categoría agregada.');
+            } catch (error) {
+                console.error(error);
+                alert('No se pudo guardar la categoría.');
+            }
+        }
+
+        window.agregarPrecioProducto = function(nombre = '', precio = '') {
+            const contenedor = document.getElementById('contenedorVariantesPrecio');
+            if (!contenedor) return;
+            const div = document.createElement('div');
+            div.className = 'price-variant-row';
+            div.innerHTML = `
+                <input type="text" class="variante-precio-nombre" placeholder="Nombre de la variante" value="${nombre}" oninput="window.actualizarVistaPreviaProducto()">
+                <input type="number" class="variante-precio-valor" min="0" step="0.01" placeholder="Precio" value="${precio}" oninput="window.actualizarVistaPreviaProducto()">
+                <button type="button" class="btn-eliminar" onclick="this.parentElement.remove(); window.actualizarVistaPreviaProducto();">Eliminar</button>
+            `;
+            contenedor.appendChild(div);
+            window.actualizarVistaPreviaProducto();
+        }
+
+        window.toggleOpcionesProducto = function() {
+            const panel = document.getElementById('panelOpcionesProducto');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        window.previsualizarImagenProducto = function(input) {
+            const file = input.files && input.files[0];
+            const preview = document.getElementById('previewProductoImagen');
+            if (!file || !preview) return window.actualizarVistaPreviaProducto();
+            const reader = new FileReader();
+            reader.onload = event => {
+                preview.style.backgroundImage = `url('${event.target.result}')`;
+                preview.innerText = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.actualizarVistaPreviaProducto = function() {
+            const nombre = document.getElementById('prodNombre')?.value.trim() || 'Nombre del producto';
+            const categoria = document.getElementById('prodCategoria')?.value || 'Categoría';
+            const desc = document.getElementById('prodDesc')?.value.trim() || 'Descripción del producto';
+            const precio = parseFloat(document.getElementById('prodPrecio')?.value) || 0;
+            const variantes = variantesPrecioProducto();
+            const servicios = serviciosProductoSeleccionados();
+
+            const nombreEl = document.getElementById('previewProductoNombre');
+            const catEl = document.getElementById('previewProductoCategoria');
+            const descEl = document.getElementById('previewProductoDesc');
+            const precioEl = document.getElementById('previewProductoPrecio');
+            const variantesEl = document.getElementById('previewProductoVariantes');
+            const serviciosEl = document.getElementById('previewProductoServicios');
+            if (!nombreEl) return;
+
+            nombreEl.innerText = nombre;
+            catEl.innerText = categoria;
+            descEl.innerText = desc;
+            precioEl.innerText = `$${precio.toFixed(2)}`;
+            variantesEl.innerHTML = variantes.map(v => `<span>${v.nombre}: $${v.precio.toFixed(2)}</span>`).join('');
+            serviciosEl.innerHTML = Object.entries(servicios).filter(([, activo]) => activo).map(([servicio]) => {
+                const nombres = { local: 'En Local', mesa: 'Mesas', pickup: 'Pick Up', domicilio: 'Domicilio' };
+                return `<span>${nombres[servicio] || servicio}</span>`;
+            }).join('');
+        }
+
+        function limpiarFormularioProducto() {
+            document.getElementById('prodNombre').value = '';
+            document.getElementById('prodDesc').value = '';
+            document.getElementById('prodPrecio').value = '';
+            document.getElementById('prodImagen').value = '';
+            document.getElementById('contenedorVariantesPrecio').innerHTML = '';
+            document.querySelectorAll('.servicio-producto').forEach(input => input.checked = true);
+            const preview = document.getElementById('previewProductoImagen');
+            if (preview) { preview.style.backgroundImage = ''; preview.innerText = 'Sin imagen'; }
+            window.actualizarVistaPreviaProducto();
+        }
+
         window.guardarProducto = async function() {
-            const categoria = document.getElementById('prodCategoria').value; const nombre = document.getElementById('prodNombre').value; const desc = document.getElementById('prodDesc').value; const precio = document.getElementById('prodPrecio').value; const imgInput = document.getElementById('prodImagen'); 
-            if (!nombre || !precio) return alert("Llena el Nombre y el Precio");
-            const btn = document.getElementById('btnGuardarProd'); btn.innerText = "Subiendo..."; btn.disabled = true;
-            const variantes = []; document.querySelectorAll('.variante-item').forEach(item => { const titulo = item.querySelector('.v-titulo').value; const opciones = item.querySelector('.v-opciones').value; if(titulo && opciones) variantes.push({ titulo, opciones: opciones.split(',') }); });
-            try { let imagenUrl = ""; if (imgInput.files.length > 0) { const imgB64 = await comprimirImagen(imgInput.files[0]); const imgRef = ref(storage, `restaurantes/${idRestaurante}/productos/${Date.now()}.jpg`); await uploadString(imgRef, imgB64, 'data_url'); imagenUrl = await getDownloadURL(imgRef); } await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), { categoria, nombre, descripcion: desc, precio: parseFloat(precio), variantes, imagen: imagenUrl, fecha: new Date(), disponible: true }); alert("¡Producto añadido!"); document.getElementById('prodNombre').value = ''; document.getElementById('prodDesc').value = ''; document.getElementById('prodPrecio').value = ''; imgInput.value = ''; contenedorVariantes.innerHTML = ''; productosCache = []; } catch (e) { alert("Error al guardar."); } finally { btn.innerText = "Guardar Producto"; btn.disabled = false; }
+            const categoria = document.getElementById('prodCategoria').value;
+            const nombre = document.getElementById('prodNombre').value.trim();
+            const desc = document.getElementById('prodDesc').value.trim();
+            const precio = parseFloat(document.getElementById('prodPrecio').value);
+            const imgInput = document.getElementById('prodImagen');
+            const variantesPrecio = variantesPrecioProducto();
+            const opcionesServicio = serviciosProductoSeleccionados();
+
+            if (!nombre || isNaN(precio)) return alert("Llena el nombre y el precio base.");
+            if (!Object.values(opcionesServicio).some(Boolean)) return alert("Activa al menos una opción de servicio.");
+
+            const btn = document.getElementById('btnGuardarProd');
+            btn.innerText = "Guardando...";
+            btn.disabled = true;
+
+            try {
+                let imagenUrl = "";
+                if (imgInput.files.length > 0) {
+                    const imgB64 = await comprimirImagen(imgInput.files[0]);
+                    const imgRef = ref(storage, `restaurantes/${idRestaurante}/productos/${Date.now()}.webp`);
+                    await uploadString(imgRef, imgB64, 'data_url');
+                    imagenUrl = await getDownloadURL(imgRef);
+                }
+
+                await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), {
+                    categoria,
+                    nombre,
+                    descripcion: desc,
+                    precio,
+                    variantes: [],
+                    variantesPrecio,
+                    opcionesServicio,
+                    imagen: imagenUrl,
+                    fecha: new Date(),
+                    disponible: true
+                });
+
+                alert("¡Producto añadido!");
+                limpiarFormularioProducto();
+                productosCache = [];
+                window.cargarMiMenu();
+            } catch (e) {
+                console.error(e);
+                alert("Error al guardar.");
+            } finally {
+                btn.innerText = "Guardar Producto";
+                btn.disabled = false;
+            }
+        }
+
+        window.cargarMiMenu = async function() {
+            const lista = document.getElementById('listaProductosMenu');
+            const contador = document.getElementById('contadorProductosMenu');
+            if (!lista) return;
+
+            llenarSelectCategorias();
+            lista.innerHTML = '<p class="muted-help">Cargando productos...</p>';
+
+            try {
+                const productos = await obtenerProductosMenu();
+                categoriasDetectadasMenu = [...new Set(productos.map(p => p.categoria).filter(Boolean))];
+                llenarSelectCategorias();
+                contador.innerText = `${productos.length} producto${productos.length === 1 ? '' : 's'}`;
+                if (productos.length === 0) {
+                    lista.innerHTML = '<p class="muted-help">Todavía no tienes productos. Agrega el primero para verlo aquí.</p>';
+                    return;
+                }
+
+                lista.innerHTML = productos.map(p => {
+                    const servicios = p.opcionesServicio || { local: true, mesa: true, pickup: true, domicilio: true };
+                    const nombresServicios = { local: 'En Local', mesa: 'Mesas', pickup: 'Pick Up', domicilio: 'Domicilio' };
+                    const tagsServicios = Object.entries(servicios).filter(([, activo]) => activo).map(([key]) => `<span>${nombresServicios[key] || key}</span>`).join('');
+                    const variantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0
+                        ? p.variantesPrecio.map(v => `<span>${v.nombre}: $${Number(v.precio || 0).toFixed(2)}</span>`).join('')
+                        : '';
+                    const imagen = p.imagen ? `style="background-image:url('${p.imagen}');"` : '';
+                    return `
+                        <article class="menu-product-card">
+                            <div class="menu-product-image" ${imagen}>${p.imagen ? '' : 'Sin imagen'}</div>
+                            <div class="menu-product-body">
+                                <small>${p.categoria || 'Otros'}</small>
+                                <h3>${p.nombre || 'Producto'}</h3>
+                                <p>${p.descripcion || 'Sin descripción'}</p>
+                                <strong>$${Number(p.precio || 0).toFixed(2)}</strong>
+                                <div class="menu-product-tags">${variantes}${tagsServicios}</div>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                lista.innerHTML = '<p class="muted-help">No se pudieron cargar los productos.</p>';
+            }
         }
     </script>
 </body>

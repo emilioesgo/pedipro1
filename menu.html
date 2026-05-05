@@ -226,6 +226,7 @@
         let infoNegocioGlobal = null;
         let datosEnvio = { nombre: "", telefono: "", direccion: "", mapsLink: "", metodoPago: "" };
         let fechaInicioTurno = new Date(); fechaInicioTurno.setHours(0, 0, 0, 0); 
+        let productosMenuGlobal = [];
 
         // DETECTOR DE SCROLL PARA MOSTRAR/OCULTAR BARRA DE CATEGORÍAS
         window.addEventListener('scroll', () => {
@@ -280,14 +281,38 @@
 
             // 3. CARGAR PRODUCTOS Y CATEGORÍAS
             const querySnapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
+            productosMenuGlobal = [];
+            querySnapshot.forEach((doc) => {
+                const p = doc.data(); if (p.disponible === false) return; 
+                productosMenuGlobal.push(p);
+            });
+            renderizarProductosMenu();
+        }
+
+        function productoDisponibleParaServicio(producto, servicio) {
+            if (!producto || !producto.opcionesServicio) return true;
+            return producto.opcionesServicio[servicio] !== false;
+        }
+
+        function precioProductoTexto(producto) {
+            if (Array.isArray(producto.variantesPrecio) && producto.variantesPrecio.length > 0) {
+                const precios = [producto.precio, ...producto.variantesPrecio.map(v => v.precio)].map(Number).filter(v => !isNaN(v));
+                return `Desde $${Math.min(...precios).toFixed(2)}`;
+            }
+            return `$${Number(producto.precio || 0).toFixed(2)}`;
+        }
+
+        function renderizarProductosMenu() {
+            const tipoPedido = document.getElementById('tipoPedidoTop')?.value || 'pickup';
             const contenedor = document.getElementById('listaMenu'); contenedor.innerHTML = ""; 
             const navCategorias = document.getElementById('navCategorias'); navCategorias.innerHTML = "";
             const categorias = {};
 
-            querySnapshot.forEach((doc) => {
-                const p = doc.data(); if (p.disponible === false) return; 
-                const cat = p.categoria || "Otros"; if (!categorias[cat]) categorias[cat] = []; categorias[cat].push(p);
-            });
+            productosMenuGlobal
+                .filter(p => productoDisponibleParaServicio(p, tipoPedido))
+                .forEach(p => {
+                    const cat = p.categoria || "Otros"; if (!categorias[cat]) categorias[cat] = []; categorias[cat].push(p);
+                });
 
             for (const nombreCat in categorias) {
                 const idCatSafe = "cat-" + nombreCat.replace(/[^a-zA-Z0-9]/g, '');
@@ -302,10 +327,13 @@
                 categorias[nombreCat].forEach(p => {
                     let htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
                     const idHTML = p.nombre.replace(/[^a-zA-Z0-9]/g, '');
+                    const variantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0
+                        ? `<div style="display:grid; gap:6px; margin-top:8px;">${p.variantesPrecio.map(v => { const nombreVar = `${p.nombre} - ${v.nombre}`; const idVar = nombreVar.replace(/[^a-zA-Z0-9]/g, ''); return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:#f8f9fa; border-radius:8px; padding:6px 8px;"><small style="color:#2c3e50; font-weight:bold;">${v.nombre}: $${Number(v.precio || 0).toFixed(2)}</small><div class="controles-cantidad" style="transform:scale(0.78); margin:0;"><button class="btn-qty" onclick="modificarItem('${nombreVar}', ${Number(v.precio || 0)}, -1, '${idVar}')">-</button><span class="cantidad-num" id="qty-${idVar}">0</span><button class="btn-qty" onclick="modificarItem('${nombreVar}', ${Number(v.precio || 0)}, 1, '${idVar}')">+</button></div></div>`; }).join('')}</div>`
+                        : "";
                     contenedor.innerHTML += `
                         <div class="producto-card">${htmlImagen}
                             <div class="producto-contenido">
-                                <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">$${p.precio}</span></div>
+                                <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">${precioProductoTexto(p)}</span>${variantes}</div>
                                 <div class="controles-cantidad">
                                     <button class="btn-qty" onclick="modificarItem('${p.nombre}', ${p.precio}, -1, '${idHTML}')">-</button>
                                     <span class="cantidad-num" id="qty-${idHTML}">0</span>
@@ -314,6 +342,9 @@
                             </div>
                         </div>`;
                 });
+            }
+            if (Object.keys(categorias).length === 0) {
+                contenedor.innerHTML = '<p style="color:#7f8c8d; text-align:center; margin-top:30px;">No hay productos disponibles para esta opción de servicio.</p>';
             }
         }
 
@@ -429,6 +460,23 @@
 
             if (tipo === 'pickup') secDir.style.display = 'none';
             if (tipo === 'domicilio') secDir.style.display = 'block';
+
+            let huboAjuste = false;
+            Object.keys(carrito).forEach(nombre => {
+                const producto = productosMenuGlobal.find(p => p.nombre === nombre || nombre.startsWith(`${p.nombre} - `));
+                if (producto && !productoDisponibleParaServicio(producto, tipo)) {
+                    delete carrito[nombre];
+                    huboAjuste = true;
+                }
+            });
+            if (productosMenuGlobal.length > 0) renderizarProductosMenu();
+            if (huboAjuste) {
+                totalGeneral = 0;
+                for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
+                document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
+                document.getElementById('totalCarritoModal').innerText = `$${totalGeneral.toFixed(2)}`;
+                alert("Algunos productos se quitaron porque no están disponibles para esta opción de servicio.");
+            }
         }
 
         window.obtenerUbicacion = function() {
