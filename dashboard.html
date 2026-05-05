@@ -688,12 +688,61 @@
             XLSX.writeFile(wb, `Reporte_PediPro_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
         };
 
-        window.descargarQR = function() {
+        window.descargarQR = async function() {
             const qrImg = document.querySelector('#qrcode img');
             if (!qrImg || !qrImg.src) return alert("Genera primero el código QR.");
+            
+            const canvas = document.createElement('canvas');
+            const size = 1000;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            
+            const qrSize = 800;
+            const margin = (size - qrSize) / 2;
+            
+            await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => { ctx.drawImage(img, margin, margin, qrSize, qrSize); resolve(); };
+                img.src = qrImg.src;
+            });
+            
+            if (window.restauranteInfo && window.restauranteInfo.logo) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const logo = new Image();
+                        logo.crossOrigin = "Anonymous";
+                        logo.onload = () => {
+                            const logoSize = qrSize * 0.25; 
+                            const centerX = size / 2;
+                            const centerY = size / 2;
+                            
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, (logoSize/2) + 15, 0, 2 * Math.PI);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fill();
+                            
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, logoSize/2, 0, 2 * Math.PI);
+                            ctx.clip();
+                            ctx.drawImage(logo, centerX - logoSize/2, centerY - logoSize/2, logoSize, logoSize);
+                            ctx.restore();
+                            
+                            resolve();
+                        };
+                        logo.onerror = reject;
+                        logo.src = window.restauranteInfo.logo;
+                    });
+                } catch(e) { console.warn("No se pudo cargar el logo para el QR", e); }
+            }
+            
             const enlace = document.createElement('a');
-            enlace.href = qrImg.src;
-            enlace.download = 'Mi_Menu_QR.png';
+            enlace.href = canvas.toDataURL("image/png");
+            enlace.download = 'Mi_Menu_QR_PediPro.png';
             document.body.appendChild(enlace);
             enlace.click();
             document.body.removeChild(enlace);
