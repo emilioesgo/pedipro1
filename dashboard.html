@@ -1313,17 +1313,22 @@
                 div.dataset.forma = mesa.forma || 'cuadrada';
                 div.innerHTML = `<span>#${mesa.numero}</span><span>${txtEstado}</span>`;
                 
+                // Solo click simple en modo normal → abrir opciones
                 div.onclick = (e) => {
-                    if(window.modoEdicionMesas) {
-                        window.abrirEdicionIndividualMesa(mesa.id, mesa.numero, mesa.forma || 'cuadrada');
-                    } else {
+                    if(!window.modoEdicionMesas) {
                         window.abrirOpcionesMesa(mesa.id, mesa.numero, mesa.estado);
                     }
                 };
                 
-                // Eventos de arrastre
-                div.onmousedown = (e) => window.iniciarArrastreMesa(e, div);
-                div.ontouchstart = (e) => window.iniciarArrastreMesa(e.touches[0], div);
+                // Arrastre: mousedown inicia, soltarArrastre detecta si fue click o drag
+                div.onmousedown = (e) => { if(window.modoEdicionMesas) window.iniciarArrastreMesa(e, div); };
+                div.ontouchstart = (e) => { 
+                    if(window.modoEdicionMesas) {
+                        e.preventDefault(); 
+                        const t = e.touches[0];
+                        window.iniciarArrastreMesa({ clientX: t.clientX, clientY: t.clientY, preventDefault:()=>{}, stopPropagation:()=>{} }, div);
+                    }
+                };
                 
                 contenedor.appendChild(div);
                 objMesasDOM[mesa.id] = div;
@@ -1404,46 +1409,81 @@
         // ====== LÓGICA DE DRAG & DROP Y EDICIÓN ======
         let arrastrandoDiv = null;
         let arrastreOffset = { x: 0, y: 0 };
+        let arrastrandoInicioPosicion = { x: 0, y: 0 };
+        let estaArrastrando = false;
+        const UMBRAL_ARRASTRE = 6; // píxeles mínimos para considerar que es un arrastre
         
         window.iniciarArrastreMesa = function(e, div) {
             if(!window.modoEdicionMesas) return;
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            
             arrastrandoDiv = div;
-            div.classList.add('mesa-dragging');
-            let rect = div.getBoundingClientRect();
-            let parentRect = document.getElementById('mapaMesasContenedor').getBoundingClientRect();
+            estaArrastrando = false;
+            arrastrandoInicioPosicion = { x: clientX, y: clientY };
             
-            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
+            const rect = div.getBoundingClientRect();
             arrastreOffset.x = clientX - rect.left;
             arrastreOffset.y = clientY - rect.top;
         };
         
         const moverArrastre = (e) => {
             if(!arrastrandoDiv || !window.modoEdicionMesas) return;
-            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            e.preventDefault();
+            
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            
+            const distX = Math.abs(clientX - arrastrandoInicioPosicion.x);
+            const distY = Math.abs(clientY - arrastrandoInicioPosicion.y);
+            
+            if (!estaArrastrando && (distX > UMBRAL_ARRASTRE || distY > UMBRAL_ARRASTRE)) {
+                estaArrastrando = true;
+                arrastrandoDiv.classList.add('mesa-dragging');
+            }
+            
+            if (!estaArrastrando) return;
             
             const parent = document.getElementById('mapaMesasContenedor');
-            let parentRect = parent.getBoundingClientRect();
+            const parentRect = parent.getBoundingClientRect();
             let x = clientX - parentRect.left - arrastreOffset.x;
             let y = clientY - parentRect.top - arrastreOffset.y;
             
-            x = Math.max(0, Math.min(x, parentRect.width - 70));
-            y = Math.max(0, Math.min(y, parentRect.height - 70));
+            x = Math.max(0, Math.min(x, parentRect.width - 80));
+            y = Math.max(0, Math.min(y, parentRect.height - 80));
             
-            arrastrandoDiv.style.left = `${x}px`;
-            arrastrandoDiv.style.top = `${y}px`;
+            arrastrandoDiv.style.left = `${Math.round(x)}px`;
+            arrastrandoDiv.style.top = `${Math.round(y)}px`;
         };
         
-        const soltarArrastre = () => {
-            if(arrastrandoDiv) arrastrandoDiv.classList.remove('mesa-dragging');
+        const soltarArrastre = (e) => {
+            if(!arrastrandoDiv) return;
+            arrastrandoDiv.classList.remove('mesa-dragging');
+            
+            // Si no se arrastró, es un click real → abrir editor
+            if (!estaArrastrando && window.modoEdicionMesas) {
+                const id = arrastrandoDiv.dataset.id;
+                const numero = arrastrandoDiv.dataset.numero;
+                const forma = arrastrandoDiv.dataset.forma;
+                window.abrirEdicionIndividualMesa(id, numero, forma);
+            }
+            
             arrastrandoDiv = null;
+            estaArrastrando = false;
         };
 
         document.addEventListener('mousemove', moverArrastre);
-        document.addEventListener('touchmove', moverArrastre, {passive: false});
         document.addEventListener('mouseup', soltarArrastre);
+        // Touch support
+        document.addEventListener('touchmove', (e) => {
+            if(!arrastrandoDiv || !window.modoEdicionMesas) return;
+            e.preventDefault();
+            const t = e.touches[0];
+            moverArrastre({ clientX: t.clientX, clientY: t.clientY, preventDefault: ()=>{} });
+        }, {passive: false});
         document.addEventListener('touchend', soltarArrastre);
 
         window.toggleModoEdicionMesas = function() {
