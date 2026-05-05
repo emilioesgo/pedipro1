@@ -1017,12 +1017,14 @@
         function renderizarHTMLPedidos(ordenes, esModoHistorial) {
             const tbody = document.getElementById('tbody-pedidos'); const contComandas = document.getElementById('lista-pedidos-comandas');
             tbody.innerHTML = ''; if(!esModoHistorial) contComandas.innerHTML = '';
-            if(ordenes.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay pedidos.</td></tr>'; if(!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>'; return; }
+            if(ordenes.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay pedidos.</td></tr>'; if(!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>'; return; }
             ordenes.forEach(ped => {
                 const numComanda = ped.numeroComanda || "S/N"; const fechaObj = ped.fecha.toDate(); const fechaFormat = fechaObj.toLocaleDateString() + " " + fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const esMesa = ped.tipoOrigen === 'mesa'; const tipoStr = esMesa ? "En Mesa" : "Domicilio/Pick"; const badgeClass = esMesa ? "badge-mesa" : "badge-online";
                 let clienteInfo = esMesa ? `Mesa #${ped.numeroMesa}` : (ped.clienteEnvio ? ped.clienteEnvio.nombre : "Cliente Web"); let estadoPago = ped.estadoPago || "Pendiente"; 
-                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td><td>${fechaFormat}</td><td><span class="badge-pago">${estadoPago}</span></td><td><strong>$${ped.total.toFixed(2)}</strong></td></tr>`;
+                let textoEstatus = ''; let colorEstatus = ''; switch(ped.estado) { case 'pendiente': textoEstatus = '👨‍🍳 En Preparación'; colorEstatus = '#e67e22'; break; case 'preparado': textoEstatus = '✅ Listo para entregar'; colorEstatus = '#3498db'; break; case 'entregado': textoEstatus = '🍽️ Entregado'; colorEstatus = '#27ae60'; break; case 'enviado': textoEstatus = '🛵 Enviado'; colorEstatus = '#9b59b6'; break; default: textoEstatus = ped.estado || 'Desconocido'; colorEstatus = '#95a5a6'; }
+                let badgeEstatus = `<span style="background:${colorEstatus}; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; display:inline-block; text-align:center;">${textoEstatus}</span>`;
+                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td><td>${fechaFormat}</td><td>${badgeEstatus}</td><td><span class="badge-pago">${estadoPago}</span></td><td><strong>$${ped.total.toFixed(2)}</strong></td></tr>`;
                 if (!esModoHistorial && ped.estado === 'pendiente') {
                     let itemsHtml = ''; ped.items.forEach(i => itemsHtml += `<li><strong>${i.cantidad}x</strong> ${i.nombre}</li>`);
                     let comentariosHtml = ped.comentarios ? `<p style="margin:5px 0; font-size:0.9rem; color:#e67e22;"><strong>📝 Notas:</strong> ${ped.comentarios}</p>` : '';
@@ -1037,10 +1039,25 @@
             let infoHtml = ped.tipoOrigen === 'mesa' ? `<p><strong>📍 Tipo:</strong> Mesa #${ped.numeroMesa}</p>` : `<p><strong>🛵 Tipo:</strong> Domicilio/Pick Up</p><p><strong>👤 Cliente:</strong> ${ped.clienteEnvio?.nombre}</p><p><strong>📞 Tel:</strong> ${ped.clienteEnvio?.telefono}</p><p><strong>🏠 Dir:</strong> ${ped.clienteEnvio?.direccion}</p>`;
             if (ped.comentarios) infoHtml += `<p><strong>📝 Notas:</strong> <span style="color: #e67e22;">${ped.comentarios}</span></p>`;
             let itemsHtml = ''; ped.items.forEach(i => { itemsHtml += `<li style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ddd; padding-bottom: 5px;"><span><strong>${i.cantidad}x</strong> ${i.nombre}</span><span style="color: #7f8c8d;">$${(i.precio * i.cantidad).toFixed(2)}</span></li>`; });
-            document.getElementById('detalleContenido').innerHTML = `<div style="background: #f8f9fa; padding: 15px; margin-bottom: 15px;">${infoHtml}</div><ul style="list-style: none; padding: 0;">${itemsHtml}</ul><div style="text-align: right; margin-top: 15px; font-size: 1.3rem; color: #27ae60; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>`;
+            
+            let btnAccionHtml = '';
+            if (ped.estado === 'preparado') {
+                if (ped.tipoOrigen === 'pickup') btnAccionHtml = `<button class="btn-add" style="background:#27ae60; width:100%; margin-top:15px;" onclick="window.marcarPedidoComo('${ped.id}', 'entregado')">✅ Marcar como Entregado</button>`;
+                else if (ped.tipoOrigen === 'domicilio') btnAccionHtml = `<button class="btn-add" style="background:#9b59b6; width:100%; margin-top:15px;" onclick="window.marcarPedidoComo('${ped.id}', 'enviado')">🛵 Marcar como Enviado</button>`;
+            }
+
+            document.getElementById('detalleContenido').innerHTML = `<div style="background: #f8f9fa; padding: 15px; margin-bottom: 15px;">${infoHtml}</div><ul style="list-style: none; padding: 0;">${itemsHtml}</ul><div style="text-align: right; margin-top: 15px; font-size: 1.3rem; color: #27ae60; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>${btnAccionHtml}`;
             document.getElementById('modalDetallePedido').style.display = 'block';
         }
-        window.completarComanda = async function(docId) { if(confirm("¿Orden preparada?")) { try { await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", docId), { estado: 'completado' }); } catch (error) { console.error(error); } } }
+
+        window.marcarPedidoComo = async function(idPedido, nuevoEstado) {
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", idPedido), { estado: nuevoEstado });
+                document.getElementById('modalDetallePedido').style.display = 'none';
+                window.cargarPedidos();
+            } catch(e) { console.error(e); }
+        }
+        window.completarComanda = async function(docId) { if(confirm("¿Orden preparada?")) { try { await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", docId), { estado: 'preparado' }); window.cargarPedidos(); } catch (error) { console.error(error); } } }
 
         window.abrirPOS = async function() {
             document.getElementById('modalPOS').style.display = 'block';
