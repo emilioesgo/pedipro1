@@ -1019,7 +1019,8 @@
                 tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td><td>${fechaFormat}</td><td><span class="badge-pago">${estadoPago}</span></td><td><strong>$${ped.total.toFixed(2)}</strong></td></tr>`;
                 if (!esModoHistorial && ped.estado === 'pendiente') {
                     let itemsHtml = ''; ped.items.forEach(i => itemsHtml += `<li><strong>${i.cantidad}x</strong> ${i.nombre}</li>`);
-                    contComandas.innerHTML += `<div class="pedido-card" style="border-left-color: ${esMesa ? '#27ae60' : '#2980b9'};"><div style="display:flex; justify-content:space-between; align-items:center;"><h4>${numComanda}</h4><span class="badge-tipo ${badgeClass}">${tipoStr}</span></div><p style="margin:5px 0; font-size:0.85rem; color:#7f8c8d;">👤 ${clienteInfo}</p><hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;"><ul>${itemsHtml}</ul><button class="btn-completar" onclick="window.completarComanda('${ped.id}')">✔️ Completar Comanda</button></div>`;
+                    let comentariosHtml = ped.comentarios ? `<p style="margin:5px 0; font-size:0.9rem; color:#e67e22;"><strong>📝 Notas:</strong> ${ped.comentarios}</p>` : '';
+                    contComandas.innerHTML += `<div class="pedido-card" style="border-left-color: ${esMesa ? '#27ae60' : '#2980b9'};"><div style="display:flex; justify-content:space-between; align-items:center;"><h4>${numComanda}</h4><span class="badge-tipo ${badgeClass}">${tipoStr}</span></div><p style="margin:5px 0; font-size:0.85rem; color:#7f8c8d;">👤 ${clienteInfo}</p>${comentariosHtml}<hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;"><ul>${itemsHtml}</ul><button class="btn-completar" onclick="window.completarComanda('${ped.id}')">✔️ Completar Comanda</button></div>`;
                 }
             });
             if (!esModoHistorial && contComandas.innerHTML === '') contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">Cocina limpia. ✨</p>';
@@ -1028,6 +1029,7 @@
         window.verDetallePedido = function(idPedido) {
             const ped = window.pedidosGlobales.find(p => p.id === idPedido); if(!ped) return;
             let infoHtml = ped.tipoOrigen === 'mesa' ? `<p><strong>📍 Tipo:</strong> Mesa #${ped.numeroMesa}</p>` : `<p><strong>🛵 Tipo:</strong> Domicilio/Pick Up</p><p><strong>👤 Cliente:</strong> ${ped.clienteEnvio?.nombre}</p><p><strong>📞 Tel:</strong> ${ped.clienteEnvio?.telefono}</p><p><strong>🏠 Dir:</strong> ${ped.clienteEnvio?.direccion}</p>`;
+            if (ped.comentarios) infoHtml += `<p><strong>📝 Notas:</strong> <span style="color: #e67e22;">${ped.comentarios}</span></p>`;
             let itemsHtml = ''; ped.items.forEach(i => { itemsHtml += `<li style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ddd; padding-bottom: 5px;"><span><strong>${i.cantidad}x</strong> ${i.nombre}</span><span style="color: #7f8c8d;">$${(i.precio * i.cantidad).toFixed(2)}</span></li>`; });
             document.getElementById('detalleContenido').innerHTML = `<div style="background: #f8f9fa; padding: 15px; margin-bottom: 15px;">${infoHtml}</div><ul style="list-style: none; padding: 0;">${itemsHtml}</ul><div style="text-align: right; margin-top: 15px; font-size: 1.3rem; color: #27ae60; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>`;
             document.getElementById('modalDetallePedido').style.display = 'block';
