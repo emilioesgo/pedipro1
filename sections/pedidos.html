@@ -28,8 +28,12 @@
                 <div id="lista-pedidos-comandas" class="comanda-grid" style="display: none;"></div>
 
                 <div id="lista-pedidos-mesas" style="display: none;">
-                    <button class="btn-add" style="width: auto; background: #34495e;" onclick="window.agregarMesa()">➕ Agregar Nueva Mesa</button>
-                    <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 10px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <button id="btnModoEdicionMesa" class="btn-add" style="width: auto; background: #e67e22;" onclick="window.toggleModoEdicionMesas()">🛠️ Modo Edición (Plano)</button>
+                        <button id="btnAgregarMesaLienzo" class="btn-add" style="width: auto; background: #34495e; display: none;" onclick="window.agregarMesaLienzo()">➕ Agregar Mesa</button>
+                        <button id="btnGuardarMesas" class="btn-add" style="width: auto; background: #27ae60; display: none;" onclick="window.guardarDistribucionMesas()">💾 Guardar Distribución</button>
+                    </div>
+                    <p id="textoMesaInfo" style="font-size: 0.85rem; color: #7f8c8d; margin-top: 5px;">
                         Toca una mesa para cambiar su estado: 🟩 Libre ➔ 🟨 Espera ➔ 🟥 Ocupada.
                     </p>
                     <div id="mapaMesasContenedor" class="mapa-mesas"></div>
