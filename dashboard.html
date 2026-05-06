@@ -855,7 +855,9 @@
                 if(document.getElementById('vista-caja').classList.contains('activa')) window.cargarCaja();
                 if(document.getElementById('vista-inicio').classList.contains('activa')) window.cargarInicioDashboard();
             });
-            onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => { window.cargarMesas(); });
+            onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => { 
+                if(!window.modoEdicionMesas) window.cargarMesas(); 
+            });
         }
         cargarDatos();
 
@@ -1461,10 +1463,26 @@
         }
 
         window.agregarMesaLienzo = async function() {
-            const num = (await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"))).size + 1; 
+            // 1. Si estamos en modo edición, guardar primero para no perder cambios del usuario
+            if(window.modoEdicionMesas) {
+                await window.guardarDistribucionMesas(true); 
+            }
+
+            // 2. Obtener el número más alto para la nueva mesa
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"));
+            let maxNum = 0;
+            snapshot.forEach(docSnap => {
+                const n = docSnap.data().numero || 0;
+                if(n > maxNum) maxNum = n;
+            });
+            const num = maxNum + 1;
+
+            // 3. Agregar la mesa a Firestore
             await addDoc(collection(db, "restaurantes", idRestaurante, "mesas"), { 
                 numero: num, estado: 'libre', x: 20, y: 20, forma: 'cuadrada' 
             }); 
+            
+            // 4. Recargar el lienzo
             window.cargarMesas();
         }
         window.cambiarEstadoMesa = async function(mesaId, est) { await updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", mesaId), { estado: est === 'libre' ? 'espera' : (est === 'espera' ? 'ocupada' : 'libre') }); }
@@ -1637,9 +1655,10 @@
             }
         };
 
-        window.guardarDistribucionMesas = async function() {
+        window.guardarDistribucionMesas = async function(silencioso = false) {
             const btn = document.getElementById('btnGuardarMesas');
-            btn.disabled = true; btn.innerText = "Guardando...";
+            if(btn) { btn.disabled = true; btn.innerText = "Guardando..."; }
+            
             try {
                 const promesas = Object.values(objMesasDOM).map(div => {
                     return updateDoc(doc(db, "restaurantes", idRestaurante, "mesas", div.dataset.id), {
@@ -1649,13 +1668,16 @@
                     });
                 });
                 await Promise.all(promesas);
-                alert("Distribución guardada correctamente.");
-                window.toggleModoEdicionMesas();
+                
+                if(!silencioso) {
+                    alert("Distribución guardada correctamente.");
+                    window.toggleModoEdicionMesas();
+                }
             } catch(e) {
                 console.error(e);
-                alert("Error al guardar distribución.");
+                if(!silencioso) alert("Error al guardar distribución.");
             }
-            btn.disabled = false; btn.innerText = "💾 Guardar Distribución";
+            if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Distribución"; }
         };
 
         window.abrirEdicionIndividualMesa = function(id, numero, forma) {
