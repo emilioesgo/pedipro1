@@ -872,162 +872,179 @@
                 document.getElementById('txtCajeroActual').innerText = cajeroActual;
                 document.getElementById('btnIniciarTurno').style.display = 'none';
                 document.getElementById('btnFinalizarTurno').style.display = 'inline-block';
+                document.querySelector('.pos-status-bar').classList.add('active');
+                window.cargarCaja();
             }
         }
 
         window.finalizarTurnoCaja = function() {
             if(confirm("¿Estás seguro de finalizar tu turno en caja? Asegúrate de haber hecho el corte a ciegas primero.")) {
                 cajeroActual = "";
-                document.getElementById('txtCajeroActual').innerText = "Ninguno (Inicia turno para poder cobrar)";
+                document.getElementById('txtCajeroActual').innerText = "Ninguno";
                 document.getElementById('btnIniciarTurno').style.display = 'inline-block';
                 document.getElementById('btnFinalizarTurno').style.display = 'none';
+                document.querySelector('.pos-status-bar').classList.remove('active');
+                window.cancelarSeleccionCaja();
+                window.cargarCaja();
             }
         }
 
+        // Reloj POS
+        setInterval(() => {
+            const el = document.getElementById('posClock');
+            if(el) el.innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+        let pedidoSeleccionadoCaja = null;
+        let metodoPagoSeleccionado = "";
+        let montoRecibidoKeypad = "";
+
         window.cargarCaja = function() {
-            const tbody = document.getElementById('tbody-caja-pendientes');
-            tbody.innerHTML = '';
+            const container = document.getElementById('tbody-caja-pendientes');
+            if(!container) return;
+            container.innerHTML = '';
             
-            // Filtramos solo los pedidos del turno (window.pedidosGlobales) que NO estén pagados
             let pendientes = window.pedidosGlobales.filter(p => p.estadoPago !== 'Pagado');
+            document.getElementById('countPendientes').innerText = pendientes.length;
             
             if(pendientes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">🎉 Todo al día. No hay comandas pendientes de cobro.</td></tr>';
+                container.innerHTML = '<div class="pos-empty-state">🎉 Todo al día. No hay comandas pendientes.</div>';
                 return;
             }
             
             pendientes.forEach(p => {
                 let infoCliente = p.tipoOrigen === 'mesa' ? `Mesa #${p.numeroMesa}` : (p.clienteEnvio ? p.clienteEnvio.nombre : "Mostrador");
-                tbody.innerHTML += `
-                    <tr>
-                        <td><strong>${p.numeroComanda}</strong></td>
-                        <td>${infoCliente}</td>
-                        <td style="color:#27ae60; font-weight:bold; font-size: 1.1rem;">$${p.total.toFixed(2)}</td>
-                        <td><button class="btn-add" style="background:#2ecc71; padding:8px 15px; width:auto; display:flex; align-items:center; gap:5px;" onclick="window.abrirModalCobro('${p.id}')">💰 Cobrar</button></td>
-                    </tr>
+                const isSelected = pedidoSeleccionadoCaja && pedidoSeleccionadoCaja.id === p.id ? 'selected' : '';
+                
+                container.innerHTML += `
+                    <div class="caja-item-card ${isSelected}" onclick="window.seleccionarPedidoCaja('${p.id}')">
+                        <div class="item-info">
+                            <h4>${p.numeroComanda}</h4>
+                            <span>${infoCliente}</span>
+                        </div>
+                        <div class="item-total">$${p.total.toFixed(2)}</div>
+                    </div>
                 `;
             });
         }
 
-        window.abrirModalCobro = function(id) {
-            if(!cajeroActual) return alert("❌ Acceso Denegado. Debes iniciar turno ingresando tu nombre para poder cobrar.");
+        window.seleccionarPedidoCaja = function(id) {
+            if(!cajeroActual) return alert("❌ Acceso Denegado. Debes iniciar turno para poder cobrar.");
             
             const ped = window.pedidosGlobales.find(p => p.id === id);
             if(!ped) return;
-            
-            document.getElementById('cobroDbId').value = ped.id;
-            document.getElementById('cobroComandaId').innerText = ped.numeroComanda;
-            document.getElementById('cobroTotal').innerText = ped.total.toFixed(2);
-            
-            // Reiniciar inputs del formulario
-            document.getElementById('cobroMetodo').value = "";
-            document.getElementById('cobroRecibido').value = "";
-            document.getElementById('cobroCambio').innerText = "0.00";
-            document.getElementById('cobroVoucher').value = "";
-            window.cambiarFormCobro();
-            
-            document.getElementById('modalCobro').style.display = 'block';
-        }
 
-        window.cambiarFormCobro = function() {
-            const metodo = document.getElementById('cobroMetodo').value;
-            document.getElementById('cobroEfectivoDiv').style.display = metodo === 'Efectivo' ? 'block' : 'none';
-            document.getElementById('cobroTarjetaDiv').style.display = metodo === 'Tarjeta' ? 'block' : 'none';
-            // Transferencia no necesita input extra
-        }
+            pedidoSeleccionadoCaja = ped;
+            window.cargarCaja(); // Refrescar lista para mostrar selección
 
-        window.calcularCambio = function() {
-            const total = parseFloat(document.getElementById('cobroTotal').innerText);
-            const recibido = parseFloat(document.getElementById('cobroRecibido').value) || 0;
-            const cambio = recibido - total;
-            document.getElementById('cobroCambio').innerText = cambio >= 0 ? cambio.toFixed(2) : "0.00";
-        }
+            // Habilitar panel derecho
+            const panel = document.getElementById('posCobroPanel');
+            panel.style.opacity = "1";
+            panel.style.pointerEvents = "auto";
 
-        window.imprimirTicketCobro = function() {
-            const id = document.getElementById('cobroDbId').value;
-            const ped = window.pedidosGlobales.find(p => p.id === id);
-            if(!ped) return;
-            
-            let itemsHtml = '';
+            document.getElementById('txtFolioTicket').innerText = "#" + ped.numeroComanda;
+            document.getElementById('txtTicketSubtotal').innerText = "$" + ped.total.toFixed(2);
+            document.getElementById('txtTicketTotal').innerText = "$" + ped.total.toFixed(2);
+
+            let itemsHtml = "";
             ped.items.forEach(i => {
-                itemsHtml += `<tr><td style="padding: 2px 0;">${i.cantidad}</td><td style="padding: 2px 0;">${i.nombre}</td><td style="text-align:right; padding: 2px 0;">$${(i.precio*i.cantidad).toFixed(2)}</td></tr>`;
+                itemsHtml += `
+                    <div class="ticket-item-row">
+                        <span>${i.cantidad}x ${i.nombre}</span>
+                        <span>$${(i.precio * i.cantidad).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            document.getElementById('ticketItemsList').innerHTML = itemsHtml;
+
+            // Reset pago
+            window.seleccionarMetodoCobro("");
+            montoRecibidoKeypad = "";
+            document.getElementById('posRecibidoDisplay').innerText = "0";
+            document.getElementById('posCambioDisplay').innerText = "$0.00";
+        }
+
+        window.seleccionarMetodoCobro = function(metodo) {
+            metodoPagoSeleccionado = metodo;
+            document.querySelectorAll('.pay-method-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.method === metodo);
             });
 
-            const ventana = window.open('', '_blank', 'width=400,height=600');
-            ventana.document.write(`
-                <html>
-                <head>
-                    <title>Ticket ${ped.numeroComanda}</title>
-                    <style>
-                        body { font-family: monospace; width: 300px; margin: 0 auto; padding: 15px; font-size: 14px; }
-                        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-                        td, th { text-align: left; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
-                        h2, h3, p { margin: 5px 0; }
-                    </style>
-                </head>
-                <body>
-                    <h2 style="text-align:center;">${window.restauranteInfo.nombre || 'Restaurante'}</h2>
-                    <h3 style="text-align:center;">Ticket de Venta</h3>
-                    <p><strong>Comanda:</strong> ${ped.numeroComanda}</p>
-                    <p><strong>Fecha:</strong> ${new Date().toLocaleString()}</p>
-                    <p><strong>Cajero:</strong> ${cajeroActual}</p>
-                    <p><strong>Tipo:</strong> ${ped.tipoOrigen.toUpperCase()}</p>
-                    <table>
-                        <tr><th>Cant</th><th>Producto</th><th style="text-align:right;">Total</th></tr>
-                        ${itemsHtml}
-                    </table>
-                    <h2 style="text-align:right;">TOTAL: $${ped.total.toFixed(2)}</h2>
-                    <p style="text-align:center; margin-top:20px; font-size:12px;">¡Gracias por su preferencia!</p>
-                </body>
-                </html>
-            `);
-            ventana.document.close();
-            setTimeout(() => { ventana.print(); }, 500);
+            document.getElementById('panelCobroEfectivo').style.display = metodo === 'Efectivo' ? 'block' : 'none';
+            document.getElementById('panelCobroTarjeta').style.display = metodo === 'Tarjeta' ? 'block' : 'none';
         }
 
-        window.procesarPagoFinal = async function() {
-            const id = document.getElementById('cobroDbId').value;
-            const ped = window.pedidosGlobales.find(p => p.id === id);
-            if(!ped) return;
+        window.tecladoPOS = function(val) {
+            if(val === 'clear') {
+                montoRecibidoKeypad = "";
+            } else {
+                montoRecibidoKeypad += val;
+            }
+            
+            const num = parseFloat(montoRecibidoKeypad) || 0;
+            document.getElementById('posRecibidoDisplay').innerText = num.toLocaleString();
+            
+            const total = pedidoSeleccionadoCaja ? pedidoSeleccionadoCaja.total : 0;
+            const cambio = num - total;
+            document.getElementById('posCambioDisplay').innerText = "$" + (cambio >= 0 ? cambio.toFixed(2) : "0.00");
+        }
 
-            const metodo = document.getElementById('cobroMetodo').value;
-            if(!metodo) return alert("Debes seleccionar obligatoriamente un método de pago.");
+        window.cancelarSeleccionCaja = function() {
+            pedidoSeleccionadoCaja = null;
+            const panel = document.getElementById('posCobroPanel');
+            panel.style.opacity = "0.5";
+            panel.style.pointerEvents = "none";
+            document.getElementById('ticketItemsList').innerHTML = "";
+            document.getElementById('txtFolioTicket').innerText = "#0000";
+            document.getElementById('txtTicketSubtotal').innerText = "$0.00";
+            document.getElementById('txtTicketTotal').innerText = "$0.00";
+            window.cargarCaja();
+        }
 
+        window.finalizarCobroPOS = async function() {
+            if(!pedidoSeleccionadoCaja) return;
+            if(!metodoPagoSeleccionado) return alert("Selecciona un método de pago.");
+
+            const total = pedidoSeleccionadoCaja.total;
             let dataExtra = {};
-            if(metodo === 'Efectivo') {
-                const recibido = parseFloat(document.getElementById('cobroRecibido').value);
-                if(isNaN(recibido) || recibido < ped.total) return alert("Para cobros en efectivo, el monto recibido debe ser válido y mayor o igual al total a cobrar.");
-                dataExtra = { montoRecibido: recibido, cambioEntregado: recibido - ped.total };
-            } else if (metodo === 'Tarjeta') {
-                const voucher = document.getElementById('cobroVoucher').value.trim();
-                if(!voucher) return alert("Para cobros con tarjeta, es obligatorio ingresar el folio de aprobación del voucher.");
-                dataExtra = { folioVoucher: voucher };
+
+            if(metodoPagoSeleccionado === 'Efectivo') {
+                const recibido = parseFloat(montoRecibidoKeypad) || 0;
+                if(recibido < total) return alert("El monto recibido es menor al total.");
+                dataExtra = { montoRecibido: recibido, cambioEntregado: recibido - total };
+            } else if(metodoPagoSeleccionado === 'Tarjeta') {
+                const ref = document.getElementById('posVoucherRef').value.trim();
+                if(!ref) return alert("Ingresa la referencia del voucher.");
+                dataExtra = { folioVoucher: ref };
             }
 
             try {
-                const btn = document.querySelector('#modalCobro .btn-add[style*="background:#27ae60"]');
-                btn.innerText = "Procesando..."; btn.disabled = true;
+                const btn = document.getElementById('btnFinalizarCobroPOS');
+                btn.innerText = "PROCESANDO..."; btn.disabled = true;
 
-                // Actualizamos estadoPago a 'Pagado' y guardamos datos contables de caja
-                await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", id), {
+                await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", pedidoSeleccionadoCaja.id), {
                     estadoPago: 'Pagado',
-                    metodoPagoCobro: metodo,
+                    metodoPagoCobro: metodoPagoSeleccionado,
                     cajeroAtendio: cajeroActual,
                     datosPagoExtra: dataExtra,
                     fechaCobro: new Date()
                 });
 
-                alert("✅ ¡Comanda cobrada exitosamente!");
-                document.getElementById('modalCobro').style.display = 'none';
-                window.cargarCaja(); // Refrescar lista
-
+                alert("✅ Venta finalizada con éxito.");
+                window.cancelarSeleccionCaja();
+                window.cargarCaja();
+                
             } catch (e) {
-                console.error(e); alert("Hubo un error de conexión al cobrar.");
+                console.error(e); alert("Error al procesar cobro.");
             } finally {
-                const btn = document.querySelector('#modalCobro .btn-add[style*="background:#27ae60"]');
-                btn.innerText = "💰 Procesar Cobro"; btn.disabled = false;
+                const btn = document.getElementById('btnFinalizarCobroPOS');
+                btn.innerText = "💰 COBRAR AHORA"; btn.disabled = false;
             }
         }
+
+
+        // El modal de cobro legado ya no se usa, el sistema ahora usa el panel lateral del POS.
+
 
         // CORTE A CIEGAS
         window.ejecutarCorte = function() {

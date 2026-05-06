@@ -1,31 +1,101 @@
-﻿        <div id="vista-caja" class="vista">
-            <div class="card">
-                <h2>Caja y Sistema de Cobro</h2>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <button class="btn-add" id="btnIniciarTurno" style="background:#2ecc71; width:auto;" onclick="iniciarTurnoCaja()">🟢 Iniciar Turno</button>
-                    <button class="btn-add" id="btnFinalizarTurno" style="background:#e74c3c; width:auto; display:none;" onclick="finalizarTurnoCaja()">🔴 Finalizar Turno</button>
-                    <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="document.getElementById('modalCorteCaja').style.display='block'">📊 Corte a Ciegas</button>
+<div id="vista-caja" class="vista">
+    <div class="pos-container">
+        <!-- BARRA SUPERIOR DE ESTADO -->
+        <div class="pos-status-bar">
+            <div class="pos-cashier-info">
+                <span class="status-indicator" id="posStatusIndicator"></span>
+                <span id="txtCajeroActual">Ninguno</span>
+            </div>
+            <div class="pos-clock" id="posClock">00:00:00</div>
+            <div class="pos-actions">
+                <button class="pos-btn btn-turno" id="btnIniciarTurno" onclick="iniciarTurnoCaja()">🟢 Iniciar Turno</button>
+                <button class="pos-btn btn-turno-off" id="btnFinalizarTurno" onclick="finalizarTurnoCaja()" style="display:none;">🔴 Finalizar</button>
+                <button class="pos-btn btn-corte" onclick="document.getElementById('modalCorteCaja').style.display='block'">📊 Corte</button>
+            </div>
+        </div>
+
+        <div class="pos-main-layout">
+            <!-- COLUMNA IZQUIERDA: COMANDAS PENDIENTES -->
+            <div class="pos-left-panel">
+                <div class="panel-header">
+                    <h3>📥 Comandas Pendientes</h3>
+                    <span class="badge-count" id="countPendientes">0</span>
+                </div>
+                <div class="pos-scroll-area" id="tbody-caja-pendientes">
+                    <!-- Cargando dinámicamente -->
+                    <div class="pos-empty-state">Inicia turno para ver comandas</div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA: COBRO ACTUAL (ESTILO TICKET) -->
+            <div class="pos-right-panel" id="posCobroPanel" style="opacity: 0.5; pointer-events: none;">
+                <div class="ticket-header">
+                    <h3>Detalle de Venta</h3>
+                    <span id="txtFolioTicket">#0000</span>
                 </div>
                 
-                <p style="background: #e8f4fd; padding: 10px; border-radius: 5px; color: #2980b9; font-weight: bold;">
-                    👤 Cajero Actual: <span id="txtCajeroActual">Ninguno (Inicia turno para poder cobrar)</span>
-                </p>
+                <div class="ticket-body">
+                    <div class="ticket-items" id="ticketItemsList">
+                        <!-- Items del pedido -->
+                    </div>
+                    
+                    <div class="ticket-summary">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span id="txtTicketSubtotal">$0.00</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>TOTAL</span>
+                            <span id="txtTicketTotal">$0.00</span>
+                        </div>
+                    </div>
+                </div>
 
-                <h3 style="margin-top: 30px; border-bottom: 2px solid #e67e22; padding-bottom: 5px; color:#2c3e50;">Comandas Pendientes de Pago</h3>
-                <div style="overflow-x: auto;">
-                    <table class="tabla-profesional">
-                        <thead>
-                            <tr>
-                                <th># Comanda</th>
-                                <th>Cliente / Origen</th>
-                                <th>Total</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-caja-pendientes">
-                            <tr><td colspan="4" style="text-align: center;">Cargando comandas pendientes...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="pos-payment-section">
+                    <label>Método de Pago:</label>
+                    <div class="payment-grid">
+                        <button class="pay-method-btn" data-method="Efectivo" onclick="seleccionarMetodoCobro('Efectivo')">💵 Efectivo</button>
+                        <button class="pay-method-btn" data-method="Tarjeta" onclick="seleccionarMetodoCobro('Tarjeta')">💳 Tarjeta</button>
+                        <button class="pay-method-btn" data-method="Transferencia" onclick="seleccionarMetodoCobro('Transferencia')">🏦 Transf.</button>
+                    </div>
+
+                    <div id="panelCobroEfectivo" class="cobro-subpanel" style="display:none;">
+                        <div class="received-input-wrap">
+                            <label>Efectivo Recibido:</label>
+                            <div class="pos-amount-display">$<span id="posRecibidoDisplay">0</span></div>
+                        </div>
+                        
+                        <!-- TECLADO NUMÉRICO POS -->
+                        <div class="pos-keypad">
+                            <button onclick="tecladoPOS('7')">7</button>
+                            <button onclick="tecladoPOS('8')">8</button>
+                            <button onclick="tecladoPOS('9')">9</button>
+                            <button onclick="tecladoPOS('4')">4</button>
+                            <button onclick="tecladoPOS('5')">5</button>
+                            <button onclick="tecladoPOS('6')">6</button>
+                            <button onclick="tecladoPOS('1')">1</button>
+                            <button onclick="tecladoPOS('2')">2</button>
+                            <button onclick="tecladoPOS('3')">3</button>
+                            <button onclick="tecladoPOS('0')">0</button>
+                            <button onclick="tecladoPOS('00')">00</button>
+                            <button class="btn-clear" onclick="tecladoPOS('clear')">C</button>
+                        </div>
+
+                        <div class="change-display">
+                            Cambio: <span id="posCambioDisplay">$0.00</span>
+                        </div>
+                    </div>
+
+                    <div id="panelCobroTarjeta" class="cobro-subpanel" style="display:none;">
+                        <input type="text" id="posVoucherRef" placeholder="Referencia del Voucher" class="pos-input">
+                    </div>
+
+                    <div class="pos-final-actions">
+                        <button class="btn-cancel-pos" onclick="cancelarSeleccionCaja()">Cancelar</button>
+                        <button class="btn-charge-pos" id="btnFinalizarCobroPOS" onclick="finalizarCobroPOS()">💰 COBRAR AHORA</button>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
