@@ -905,10 +905,20 @@
             container.innerHTML = '';
             
             let pendientes = window.pedidosGlobales.filter(p => p.estadoPago !== 'Pagado');
+            
+            // Aplicar filtro de búsqueda si existe
+            const search = document.getElementById('posSearchOrder')?.value.toLowerCase() || "";
+            if(search) {
+                pendientes = pendientes.filter(p => {
+                    const infoCliente = p.tipoOrigen === 'mesa' ? `Mesa #${p.numeroMesa}` : (p.clienteEnvio ? p.clienteEnvio.nombre : "Mostrador");
+                    return p.numeroComanda.toLowerCase().includes(search) || infoCliente.toLowerCase().includes(search);
+                });
+            }
+
             document.getElementById('countPendientes').innerText = pendientes.length;
             
             if(pendientes.length === 0) {
-                container.innerHTML = '<div class="pos-empty-state">🎉 Todo al día. No hay comandas pendientes.</div>';
+                container.innerHTML = '<div class="pos-empty-state">🎉 Todo al día. No hay comandas que coincidan.</div>';
                 return;
             }
             
@@ -926,6 +936,10 @@
                     </div>
                 `;
             });
+        }
+
+        window.filtrarCaja = function() {
+            window.cargarCaja();
         }
 
         window.seleccionarPedidoCaja = function(id) {
