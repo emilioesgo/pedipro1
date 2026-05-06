@@ -742,11 +742,178 @@
   }
 
   /* ============================================================
-     RESPONSIVE
+     RESPONSIVE – MEJORADO PARA MÓVILES Y TABLETS
   ============================================================ */
+  /* ---- TABLET / PANTALLAS MEDIANAS (máx. 900px) ---- */
   @media (max-width: 900px) {
-    .pos-main-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-    .pos-clock { font-size: 1.4rem; }
+    .pos-main-layout {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+    }
+
+    .pos-left-panel {
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+
+    .pos-clock {
+      font-size: 1.6rem;
+      position: static;
+      transform: none;
+      margin: 0 auto;
+    }
+
+    .pos-status-bar {
+      justify-content: space-between;
+      flex-wrap: wrap;
+      height: auto;
+      padding: 10px 16px;
+    }
+
+    .pos-actions {
+      margin-top: 8px;
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  /* ---- MÓVIL (máx. 768px) ---- */
+  @media (max-width: 768px) {
+    .pos-main-layout {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+    }
+
+    .pos-left-panel {
+      max-height: 40vh;
+    }
+
+    .pos-status-bar {
+      padding: 8px 12px;
+      height: auto;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .pos-cashier-info {
+      min-width: auto;
+      gap: 8px;
+      order: 1;
+      flex: 1 1 auto;
+    }
+
+    .pos-clock {
+      font-size: 1.4rem;
+      position: static;
+      transform: none;
+      order: 2;
+      margin: 0 8px;
+    }
+
+    .pos-actions {
+      order: 3;
+      margin-top: 4px;
+      width: 100%;
+      justify-content: space-evenly;
+    }
+
+    .pos-btn {
+      font-size: 0.72rem;
+      padding: 8px 12px;
+      gap: 4px;
+    }
+
+    .payment-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .pay-method-btn {
+      padding: 10px 6px;
+      font-size: 0.75rem;
+    }
+
+    .pos-keypad button {
+      padding: 12px 4px;
+      font-size: 1.1rem;
+    }
+
+    .btn-charge-pos {
+      font-size: 1rem;
+      padding: 12px 18px;
+    }
+
+    .ticket-summary .summary-row.total {
+      font-size: 1.2rem;
+    }
+
+    .pos-final-actions {
+      grid-template-columns: 1fr 2fr;
+    }
+  }
+
+  /* ---- MÓVIL PEQUEÑO (máx. 480px) ---- */
+  @media (max-width: 480px) {
+    .pos-left-panel {
+      max-height: 35vh;
+    }
+
+    .pos-clock {
+      font-size: 1.2rem;
+    }
+
+    .pos-status-bar {
+      padding: 6px 8px;
+      gap: 4px;
+    }
+
+    .pos-btn {
+      font-size: 0.7rem;
+      padding: 6px 10px;
+    }
+
+    .payment-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .pay-method-btn {
+      flex-direction: row;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .pos-keypad button {
+      padding: 14px 2px;
+      font-size: 1rem;
+    }
+
+    .btn-charge-pos {
+      font-size: 0.95rem;
+      padding: 14px 12px;
+      letter-spacing: 1px;
+    }
+
+    .pos-final-actions {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .btn-cancel-pos {
+      order: 2;
+    }
+
+    .btn-charge-pos {
+      order: 1;
+    }
+
+    .ticket-summary .summary-row.total {
+      font-size: 1.1rem;
+    }
+
+    #posCambioDisplay {
+      font-size: 1.2rem !important;
+    }
   }
 
   /* ============================================================
