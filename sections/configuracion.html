@@ -1,85 +1,450 @@
         <div id="vista-configuracion" class="vista">
-            <div class="card">
-                <h2>⚙️ Configuración del Restaurante</h2>
 
-                <!-- BLOQUE 1: IMÁGENES -->
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px; margin-bottom:20px;">
-                    <h3 style="margin-top:0; color:#2c3e50;">🖼️ Logo y Portada</h3>
-                    <div class="form-group">
-                        <label>Logo del Restaurante:</label>
-                        <input type="file" id="confLogo" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
-                        <img id="imgPrevLogo" class="img-preview" style="display: none;">
+            <style>
+                /* ===== CONFIG SHELL ===== */
+                .cfg-shell {
+                    display: flex;
+                    gap: 0;
+                    min-height: calc(100vh - 120px);
+                    background: var(--surface);
+                    border-radius: 16px;
+                    box-shadow: var(--shadow);
+                    overflow: hidden;
+                    border: 1px solid var(--line);
+                }
+
+                /* ===== LEFT SIDEBAR NAV ===== */
+                .cfg-nav {
+                    width: 240px;
+                    min-width: 240px;
+                    background: #0f172a;
+                    padding: 24px 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                .cfg-nav-header {
+                    padding: 0 20px 20px;
+                    border-bottom: 1px solid rgba(255,255,255,0.08);
+                    margin-bottom: 8px;
+                }
+                .cfg-nav-header h3 {
+                    margin: 0;
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
+                    color: #64748b;
+                    font-weight: 700;
+                }
+                .cfg-nav-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 11px 20px;
+                    cursor: pointer;
+                    color: #94a3b8;
+                    font-size: 0.88rem;
+                    font-weight: 500;
+                    border-left: 3px solid transparent;
+                    transition: all 0.15s ease;
+                    user-select: none;
+                }
+                .cfg-nav-item:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+                .cfg-nav-item.activo { background: rgba(37,99,235,0.15); color: #60a5fa; border-left-color: #3b82f6; }
+                .cfg-nav-icon { font-size: 1.1rem; width: 22px; text-align: center; }
+                .cfg-nav-badge { margin-left: auto; background: #ef4444; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 99px; font-weight: 700; }
+
+                /* ===== MAIN CONTENT AREA ===== */
+                .cfg-main {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    background: #f8fafc;
+                    overflow: hidden;
+                }
+                .cfg-topbar {
+                    background: white;
+                    padding: 20px 32px;
+                    border-bottom: 1px solid #e5e7eb;
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                }
+                .cfg-topbar-icon {
+                    width: 40px; height: 40px;
+                    border-radius: 10px;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 1.2rem;
+                    background: linear-gradient(135deg, #2563eb, #7c3aed);
+                    color: white;
+                    box-shadow: 0 4px 10px rgba(37,99,235,0.3);
+                }
+                .cfg-topbar-info h2 { margin: 0; font-size: 1.1rem; color: #0f172a; }
+                .cfg-topbar-info p  { margin: 2px 0 0; font-size: 0.8rem; color: #64748b; }
+
+                .cfg-body { flex: 1; padding: 28px 32px; overflow-y: auto; }
+
+                /* ===== PANELS ===== */
+                .cfg-panel { display: none; }
+                .cfg-panel.activo { display: block; }
+
+                .cfg-section {
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                    margin-bottom: 20px;
+                    overflow: hidden;
+                }
+                .cfg-section-head {
+                    padding: 16px 20px;
+                    border-bottom: 1px solid #f1f5f9;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .cfg-section-head h4 {
+                    margin: 0; font-size: 0.95rem; color: #0f172a; font-weight: 700;
+                }
+                .cfg-section-head p { margin: 2px 0 0; font-size: 0.78rem; color: #64748b; }
+                .cfg-section-body { padding: 20px; }
+
+                /* Field rows */
+                .cfg-field { margin-bottom: 16px; }
+                .cfg-field:last-child { margin-bottom: 0; }
+                .cfg-label {
+                    display: block; font-size: 0.82rem; font-weight: 600;
+                    color: #374151; margin-bottom: 6px;
+                }
+                .cfg-input {
+                    width: 100%; padding: 10px 14px; border: 1px solid #d1d5db;
+                    border-radius: 8px; font-size: 0.9rem; font-family: inherit;
+                    background: #f9fafb; transition: border 0.15s, box-shadow 0.15s;
+                    box-sizing: border-box;
+                }
+                .cfg-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); background: white; }
+                .cfg-input-hint { font-size: 0.75rem; color: #6b7280; margin-top: 5px; display: block; }
+
+                /* Image uploader */
+                .cfg-img-upload {
+                    border: 2px dashed #cbd5e1; border-radius: 10px;
+                    padding: 24px; text-align: center; cursor: pointer;
+                    background: #f8fafc; transition: 0.2s;
+                }
+                .cfg-img-upload:hover { border-color: #3b82f6; background: #eff6ff; }
+                .cfg-img-upload input[type="file"] { display: none; }
+                .cfg-img-upload label { cursor: pointer; display: block; }
+                .cfg-img-upload .upload-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+                .cfg-img-upload p { margin: 0; font-size: 0.85rem; color: #6b7280; }
+                .cfg-preview { margin-top: 14px; position: relative; display: inline-block; }
+                .cfg-preview img { max-width: 160px; max-height: 100px; border-radius: 8px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                .cfg-preview-remove {
+                    position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
+                    background: #ef4444; color: white; border: none; border-radius: 50%;
+                    font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+                }
+
+                /* Toggle row */
+                .cfg-toggle-row {
+                    display: flex; align-items: center;
+                    justify-content: space-between;
+                    padding: 14px 0;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+                .cfg-toggle-row:last-child { border-bottom: 0; padding-bottom: 0; }
+                .cfg-toggle-info .t-title { font-size: 0.88rem; font-weight: 600; color: #111827; }
+                .cfg-toggle-info .t-sub   { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+
+                /* Transfer fields */
+                .cfg-transfer-fields {
+                    background: #eff6ff; border: 1px solid #bfdbfe;
+                    border-radius: 8px; padding: 16px; margin-top: 12px;
+                    display: none;
+                }
+                .cfg-transfer-fields.visible { display: block; }
+
+                /* Action bar */
+                .cfg-action-bar {
+                    background: white; border-top: 1px solid #e5e7eb;
+                    padding: 16px 32px;
+                    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+                }
+                .cfg-btn {
+                    padding: 10px 22px; border: none; border-radius: 8px;
+                    font-size: 0.88rem; font-weight: 700; cursor: pointer; font-family: inherit;
+                    transition: filter 0.15s, transform 0.1s;
+                    display: flex; align-items: center; gap: 7px;
+                }
+                .cfg-btn:hover { filter: brightness(0.92); transform: translateY(-1px); }
+                .cfg-btn:active { transform: scale(0.98); }
+                .cfg-btn-primary { background: #2563eb; color: white; }
+                .cfg-btn-success { background: #16a34a; color: white; }
+                .cfg-btn-warning { background: #d97706; color: white; }
+                .cfg-btn-purple  { background: #7c3aed; color: white; }
+                .cfg-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+                /* Horario table */
+                .cfg-horario-table { width: 100%; border-collapse: collapse; }
+                .cfg-horario-table th {
+                    text-align: left; padding: 10px 12px;
+                    font-size: 0.75rem; color: #6b7280; text-transform: uppercase;
+                    letter-spacing: 0.06em; border-bottom: 1px solid #e5e7eb;
+                }
+                .cfg-horario-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+                .cfg-horario-table tr:last-child td { border-bottom: 0; }
+                .cfg-horario-table input[type="time"] {
+                    padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px;
+                    font-size: 0.85rem; font-family: inherit; background: #f9fafb;
+                }
+
+                @media (max-width: 768px) {
+                    .cfg-shell { flex-direction: column; }
+                    .cfg-nav { width: 100%; flex-direction: row; flex-wrap: wrap; padding: 12px; gap: 4px; }
+                    .cfg-nav-header { display: none; }
+                    .cfg-nav-item { border-left: 0; border-bottom: 3px solid transparent; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; }
+                    .cfg-nav-item.activo { border-bottom-color: #3b82f6; }
+                    .cfg-body { padding: 16px; }
+                }
+            </style>
+
+            <div class="cfg-shell">
+
+                <!-- NAV IZQUIERDO -->
+                <nav class="cfg-nav">
+                    <div class="cfg-nav-header"><h3>Configuración</h3></div>
+                    <div class="cfg-nav-item activo" onclick="abrirPanelConfig('panel-imagenes', this)" id="cfgnav-imagenes">
+                        <span class="cfg-nav-icon">🖼️</span> Identidad Visual
                     </div>
-                    <div class="form-group">
-                        <label>🎆 Imagen de Portada (Banner Menú):</label>
-                        <input type="file" id="confPortada" accept="image/*" style="border: 1px dashed #3498db; background: #e8f4fd;">
-                        <img id="imgPrevPortada" class="img-preview" style="display: none; max-width: 250px;">
+                    <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-link', this)" id="cfgnav-link">
+                        <span class="cfg-nav-icon">🔗</span> Link del Menú
                     </div>
-                    <button class="btn-add" id="btnGuardarImagenes" onclick="window.guardarImagenes()" style="background:#3498db; margin-top:10px;">💾 Guardar Imágenes</button>
-                </div>
-
-                <!-- BLOQUE 2: LINK PERSONALIZADO -->
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px; margin-bottom:20px;">
-                    <h3 style="margin-top:0; color:#2c3e50;">🔗 Link Personalizado del Menú</h3>
-                    <div class="form-group">
-                        <label>Identificador de la URL (Nombre de tu negocio):</label>
-                        <input type="text" id="confSlug" placeholder="ejemplo: mi-restaurante" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9-]/g, '')">
-                        <small style="color:#7f8c8d;">Los clientes verán: emilioesgo.github.io/pedipro1/menu.html?id=<b>tu-alias</b></small>
+                    <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-pagos', this)" id="cfgnav-pagos">
+                        <span class="cfg-nav-icon">💳</span> Formas de Pago
                     </div>
-                    <button class="btn-add" id="btnGuardarSlug" onclick="window.guardarSlug()" style="background:#8e44ad; margin-top:10px;">💾 Guardar Link</button>
-                </div>
+                    <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-horarios', this)" id="cfgnav-horarios">
+                        <span class="cfg-nav-icon">🕒</span> Horarios
+                    </div>
+                </nav>
 
-                <!-- BLOQUE 3: FORMAS DE PAGO -->
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px; margin-bottom:20px;">
-                    <h3 style="margin-top:0; color:#2c3e50;">💳 Formas de Pago Aceptadas</h3>
-                    <p style="color:#7f8c8d; font-size:0.9rem; margin-top:0;">Activa las formas de pago que aceptas. Solo aparecerán en el menú las que estén activas.</p>
+                <!-- AREA PRINCIPAL -->
+                <div class="cfg-main">
 
-                    <div style="display:flex; flex-direction:column; gap:14px;">
-                        <!-- Efectivo -->
-                        <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; background:white; border:1px solid #e2e8f0; border-radius:8px;">
-                            <span style="font-weight:bold; color:#2c3e50;">💵 Efectivo</span>
-                            <label class="switch"><input type="checkbox" id="pagoEfectivo"><span class="slider"></span></label>
+                    <!-- TOPBAR DINÁMICA -->
+                    <div class="cfg-topbar">
+                        <div class="cfg-topbar-icon" id="cfgTopbarIcon">🖼️</div>
+                        <div class="cfg-topbar-info">
+                            <h2 id="cfgTopbarTitle">Identidad Visual</h2>
+                            <p id="cfgTopbarDesc">Logo y portada que se muestran en el menú de tus clientes</p>
                         </div>
-                        <!-- Tarjeta de Débito -->
-                        <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; background:white; border:1px solid #e2e8f0; border-radius:8px;">
-                            <span style="font-weight:bold; color:#2c3e50;">💳 Tarjeta de Débito</span>
-                            <label class="switch"><input type="checkbox" id="pagoTarjeta"><span class="slider"></span></label>
-                        </div>
-                        <!-- Transferencia -->
-                        <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
-                            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px;">
-                                <span style="font-weight:bold; color:#2c3e50;">🏦 Transferencia Electrónica (SPEI)</span>
-                                <label class="switch"><input type="checkbox" id="pagoTransferencia" onchange="window.toggleSeccionTransferencia(this.checked)"><span class="slider"></span></label>
+                    </div>
+
+                    <div class="cfg-body">
+
+                        <!-- ===== PANEL: IDENTIDAD VISUAL ===== -->
+                        <div class="cfg-panel activo" id="panel-imagenes">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>🏷️</span>
+                                    <div><h4>Logo del Restaurante</h4><p>Aparece en el menú digital, código QR y comprobantes</p></div>
+                                </div>
+                                <div class="cfg-section-body">
+                                    <div class="cfg-img-upload" onclick="document.getElementById('confLogo').click()">
+                                        <label>
+                                            <span class="upload-icon">📁</span>
+                                            <p>Haz clic para seleccionar tu logo</p>
+                                            <p style="margin-top:4px; font-size:0.72rem; color:#9ca3af;">PNG, JPG · Recomendado 400×400px</p>
+                                        </label>
+                                        <input type="file" id="confLogo" accept="image/*" onchange="previewImg(this,'prevLogoWrap','imgPrevLogo')">
+                                    </div>
+                                    <div id="prevLogoWrap" class="cfg-preview" style="display:none;">
+                                        <img id="imgPrevLogo" src="" alt="Logo">
+                                    </div>
+                                </div>
                             </div>
-                            <div id="seccionDatosTransferencia" style="display:none; padding:0 14px 14px;">
-                                <div class="form-group" style="margin-bottom:10px;">
-                                    <label style="font-size:0.85rem;">Nombre del Beneficiario:</label>
-                                    <input type="text" id="transBeneficiario" class="form-group input" placeholder="Nombre completo como aparece en la cuenta" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; font-family:inherit;">
+
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>🎆</span>
+                                    <div><h4>Imagen de Portada (Banner)</h4><p>Imagen de fondo que aparece en la cabecera del menú</p></div>
                                 </div>
-                                <div class="form-group" style="margin-bottom:10px;">
-                                    <label style="font-size:0.85rem;">CLABE Interbancaria (18 dígitos):</label>
-                                    <input type="text" id="transClabe" class="form-group input" placeholder="000000000000000000" maxlength="18" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; font-family:inherit; letter-spacing:2px;">
-                                </div>
-                                <div class="form-group">
-                                    <label style="font-size:0.85rem;">Número de Tarjeta (16 dígitos):</label>
-                                    <input type="text" id="transNumTarjeta" class="form-group input" placeholder="0000 0000 0000 0000" maxlength="19" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; font-family:inherit; letter-spacing:2px;">
+                                <div class="cfg-section-body">
+                                    <div class="cfg-img-upload" onclick="document.getElementById('confPortada').click()">
+                                        <label>
+                                            <span class="upload-icon">📁</span>
+                                            <p>Haz clic para seleccionar tu portada</p>
+                                            <p style="margin-top:4px; font-size:0.72rem; color:#9ca3af;">PNG, JPG · Recomendado 1200×400px</p>
+                                        </label>
+                                        <input type="file" id="confPortada" accept="image/*" onchange="previewImg(this,'prevPortadaWrap','imgPrevPortada')">
+                                    </div>
+                                    <div id="prevPortadaWrap" class="cfg-preview" style="display:none;">
+                                        <img id="imgPrevPortada" src="" alt="Portada" style="max-width:240px; max-height:100px;">
+                                    </div>
                                 </div>
                             </div>
+
+                            <div class="cfg-action-bar">
+                                <button class="cfg-btn cfg-btn-primary" id="btnGuardarImagenes" onclick="window.guardarImagenes()">
+                                    💾 Guardar Imágenes
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <button class="btn-add" id="btnGuardarPagos" onclick="window.guardarFormasPago()" style="background:#27ae60; margin-top:15px;">💾 Guardar Formas de Pago</button>
-                </div>
 
-                <!-- BLOQUE 4: HORARIOS -->
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px; margin-bottom:20px;">
-                    <h3 style="margin-top:0; color:#2c3e50;">🕒 Horarios por Día de la Semana</h3>
-                    <p style="color:#7f8c8d; font-size:0.9rem; margin-top:0;">Activa los días que laboras y define la hora de apertura y cierre. El menú digital se apagará automáticamente fuera de este horario.</p>
-                    <table class="table-horarios">
-                        <thead><tr><th>Día</th><th>¿Abierto?</th><th>Apertura</th><th>Cierre</th></tr></thead>
-                        <tbody id="tbodyHorarios"><!-- Se llena con JS --></tbody>
-                    </table>
-                    <button class="btn-add" id="btnGuardarHorarios" onclick="window.guardarHorarios()" style="background:#e67e22; margin-top:15px;">💾 Guardar Horarios</button>
-                </div>
+                        <!-- ===== PANEL: LINK DEL MENÚ ===== -->
+                        <div class="cfg-panel" id="panel-link">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>✏️</span>
+                                    <div><h4>Identificador de URL</h4><p>Personaliza el enlace que verán tus clientes</p></div>
+                                </div>
+                                <div class="cfg-section-body">
+                                    <div class="cfg-field">
+                                        <label class="cfg-label">Alias del negocio</label>
+                                        <input type="text" id="confSlug" class="cfg-input" placeholder="Ej: mi-restaurante-tacos"
+                                            oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); actualizarPreviewSlug(this.value)">
+                                        <span class="cfg-input-hint">Solo letras minúsculas, números y guiones. Sin espacios.</span>
+                                    </div>
+                                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; margin-top:4px;">
+                                        <p style="margin:0 0 4px; font-size:0.78rem; font-weight:700; color:#166534;">🔗 Enlace que verán tus clientes:</p>
+                                        <p id="previewSlugUrl" style="margin:0; font-size:0.82rem; color:#166534; word-break:break-all; font-family:monospace;">emilioesgo.github.io/pedipro1/menu.html?id=<strong>tu-alias</strong></p>
+                                    </div>
+                                </div>
+                            </div>
 
-            </div>
+                            <div class="cfg-action-bar">
+                                <button class="cfg-btn cfg-btn-purple" id="btnGuardarSlug" onclick="window.guardarSlug()">
+                                    💾 Guardar Link
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ===== PANEL: FORMAS DE PAGO ===== -->
+                        <div class="cfg-panel" id="panel-pagos">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>💵</span>
+                                    <div><h4>Métodos de Pago Aceptados</h4><p>Solo los activos aparecerán en el menú digital de tus clientes</p></div>
+                                </div>
+                                <div class="cfg-section-body">
+                                    <div class="cfg-toggle-row">
+                                        <div class="cfg-toggle-info">
+                                            <div class="t-title">💵 Efectivo</div>
+                                            <div class="t-sub">Pago en moneda física al entregar el pedido</div>
+                                        </div>
+                                        <label class="switch"><input type="checkbox" id="pagoEfectivo"><span class="slider"></span></label>
+                                    </div>
+                                    <div class="cfg-toggle-row">
+                                        <div class="cfg-toggle-info">
+                                            <div class="t-title">💳 Tarjeta de Débito</div>
+                                            <div class="t-sub">Terminal punto de venta (TPV)</div>
+                                        </div>
+                                        <label class="switch"><input type="checkbox" id="pagoTarjeta"><span class="slider"></span></label>
+                                    </div>
+                                    <div class="cfg-toggle-row">
+                                        <div class="cfg-toggle-info">
+                                            <div class="t-title">🏦 Transferencia Electrónica (SPEI)</div>
+                                            <div class="t-sub">Pago por app bancaria con CLABE o número de tarjeta</div>
+                                        </div>
+                                        <label class="switch"><input type="checkbox" id="pagoTransferencia" onchange="window.toggleSeccionTransferencia(this.checked)"><span class="slider"></span></label>
+                                    </div>
+
+                                    <!-- Datos bancarios para transferencia -->
+                                    <div id="seccionDatosTransferencia" class="cfg-transfer-fields">
+                                        <p style="margin:0 0 12px; font-size:0.8rem; font-weight:700; color:#1d4ed8;">📋 Datos que verá el cliente para hacer su pago:</p>
+                                        <div class="cfg-field">
+                                            <label class="cfg-label">Nombre del Beneficiario</label>
+                                            <input type="text" id="transBeneficiario" class="cfg-input" placeholder="Nombre completo como aparece en la cuenta bancaria">
+                                        </div>
+                                        <div class="cfg-field">
+                                            <label class="cfg-label">CLABE Interbancaria <span style="color:#6b7280; font-weight:400;">(18 dígitos)</span></label>
+                                            <input type="text" id="transClabe" class="cfg-input" placeholder="000000000000000000" maxlength="18" style="letter-spacing:3px; font-family:monospace; font-size:1rem;">
+                                        </div>
+                                        <div class="cfg-field" style="margin-bottom:0;">
+                                            <label class="cfg-label">Número de Tarjeta <span style="color:#6b7280; font-weight:400;">(16 dígitos — opcional)</span></label>
+                                            <input type="text" id="transNumTarjeta" class="cfg-input" placeholder="0000 0000 0000 0000" maxlength="19" style="letter-spacing:3px; font-family:monospace; font-size:1rem;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cfg-action-bar">
+                                <button class="cfg-btn cfg-btn-success" id="btnGuardarPagos" onclick="window.guardarFormasPago()">
+                                    💾 Guardar Formas de Pago
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ===== PANEL: HORARIOS ===== -->
+                        <div class="cfg-panel" id="panel-horarios">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>📅</span>
+                                    <div><h4>Días y Horas de Operación</h4><p>El menú se apaga automáticamente fuera de estos horarios</p></div>
+                                </div>
+                                <div class="cfg-section-body" style="padding:0;">
+                                    <table class="cfg-horario-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Día</th>
+                                                <th>Abierto</th>
+                                                <th>Apertura</th>
+                                                <th>Cierre</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyHorarios"><!-- JS --></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="cfg-action-bar">
+                                <button class="cfg-btn cfg-btn-warning" id="btnGuardarHorarios" onclick="window.guardarHorarios()">
+                                    💾 Guardar Horarios
+                                </button>
+                            </div>
+                        </div>
+
+                    </div><!-- /.cfg-body -->
+                </div><!-- /.cfg-main -->
+            </div><!-- /.cfg-shell -->
+
+            <script>
+                const cfgPanelMeta = {
+                    'panel-imagenes': { icon: '🖼️', title: 'Identidad Visual', desc: 'Logo y portada que se muestran en el menú de tus clientes' },
+                    'panel-link':     { icon: '🔗', title: 'Link del Menú',    desc: 'URL personalizada para compartir con tus clientes' },
+                    'panel-pagos':    { icon: '💳', title: 'Formas de Pago',   desc: 'Métodos que aparecerán disponibles en el menú digital' },
+                    'panel-horarios': { icon: '🕒', title: 'Horarios',         desc: 'Días y horas en que tu menú digital estará activo' },
+                };
+
+                window.abrirPanelConfig = function(panelId, navEl) {
+                    document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('activo'));
+                    document.querySelectorAll('.cfg-nav-item').forEach(n => n.classList.remove('activo'));
+                    document.getElementById(panelId).classList.add('activo');
+                    navEl.classList.add('activo');
+                    const meta = cfgPanelMeta[panelId];
+                    if(meta) {
+                        document.getElementById('cfgTopbarIcon').innerText = meta.icon;
+                        document.getElementById('cfgTopbarTitle').innerText = meta.title;
+                        document.getElementById('cfgTopbarDesc').innerText = meta.desc;
+                    }
+                };
+
+                window.previewImg = function(input, wrapId, imgId) {
+                    const wrap = document.getElementById(wrapId);
+                    const img  = document.getElementById(imgId);
+                    if(input.files && input.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = e => { img.src = e.target.result; wrap.style.display = 'inline-block'; };
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                };
+
+                window.actualizarPreviewSlug = function(val) {
+                    const el = document.getElementById('previewSlugUrl');
+                    if(el) el.innerHTML = `emilioesgo.github.io/pedipro1/menu.html?id=<strong>${val || 'tu-alias'}</strong>`;
+                };
+
+                window.toggleSeccionTransferencia = function(activo) {
+                    const sec = document.getElementById('seccionDatosTransferencia');
+                    if(sec) { if(activo) sec.classList.add('visible'); else sec.classList.remove('visible'); }
+                };
+            </script>
+
         </div>

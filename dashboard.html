@@ -252,9 +252,12 @@
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
             if(idVista === 'vista-caja') { window.cargarPedidos().then(() => window.cargarCaja()); }
             if(idVista === 'vista-configuracion' && window.restauranteInfo) {
-                if(window.restauranteInfo.slug) document.getElementById('confSlug').value = window.restauranteInfo.slug;
-                if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('imgPrevLogo').style.display = 'block'; }
-                if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('imgPrevPortada').style.display = 'block'; }
+                if(window.restauranteInfo.slug) {
+                    document.getElementById('confSlug').value = window.restauranteInfo.slug;
+                    window.actualizarPreviewSlug(window.restauranteInfo.slug);
+                }
+                if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('prevLogoWrap').style.display = 'inline-block'; }
+                if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('prevPortadaWrap').style.display = 'inline-block'; }
                 const fp = window.restauranteInfo.formasPago || {};
                 document.getElementById('pagoEfectivo').checked = fp.efectivo !== false;
                 document.getElementById('pagoTarjeta').checked = fp.tarjeta !== false;
@@ -820,8 +823,14 @@
                 actualizarEnlaceUI(window.restauranteInfo.slug);
                 if(window.restauranteInfo.slug) document.getElementById('confSlug').value = window.restauranteInfo.slug;
 
-                if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('imgPrevLogo').style.display = 'block'; }
-                if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('imgPrevPortada').style.display = 'block'; }
+                if(window.restauranteInfo.logo) { 
+                    const lgEl = document.getElementById('imgPrevLogo'); const lgWrap = document.getElementById('prevLogoWrap');
+                    if(lgEl) lgEl.src = window.restauranteInfo.logo; if(lgWrap) lgWrap.style.display = 'inline-block';
+                }
+                if(window.restauranteInfo.portada) { 
+                    const ptEl = document.getElementById('imgPrevPortada'); const ptWrap = document.getElementById('prevPortadaWrap');
+                    if(ptEl) ptEl.src = window.restauranteInfo.portada; if(ptWrap) ptWrap.style.display = 'inline-block';
+                }
 
                 // Cargar formas de pago guardadas
                 const fp = window.restauranteInfo.formasPago || {};
