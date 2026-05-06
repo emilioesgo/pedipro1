@@ -101,6 +101,13 @@
         </div>
 
         <div id="listaMenu"></div>
+
+        <!-- PANEL DE DIAGNÓSTICO (Temporal para depuración) -->
+        <div id="debugPanel" style="margin-top: 50px; padding: 15px; background: #eee; border-radius: 8px; font-size: 0.8rem; font-family: monospace; display: none;">
+            <h4 style="margin-top:0;">🛠️ Info de Depuración:</h4>
+            <div id="debugContent"></div>
+            <button onclick="this.parentElement.style.display='none'" style="margin-top:10px;">Cerrar Panel</button>
+        </div>
     </div>
 
     <!-- BOTONES FLOTANTES DE ACCIÓN MESA -->
@@ -231,118 +238,147 @@
             else nav.classList.remove('visible');
         });
 
+        function updateDebug(msg) {
+            console.log("DEBUG:", msg);
+            const content = document.getElementById('debugContent');
+            if(content) content.innerHTML += `<div>> ${msg}</div>`;
+        }
+
         async function cargarMenu() {
+            updateDebug("Iniciando cargarMenu() para Mesa...");
             if (!idRestaurante) {
-                document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px;'>ID de Restaurante requerido.</h2>";
+                updateDebug("Error: No hay ID en la URL.");
                 return;
             }
+            document.getElementById('debugPanel').style.display = 'block';
+            updateDebug("ID Restaurante: " + idRestaurante);
 
             let restRef = doc(db, "restaurantes", idRestaurante);
             let restSnap = await getDoc(restRef);
             
             if (!restSnap.exists()) {
+                updateDebug("Buscando por slug...");
                 const qBusquedaAlias = query(collection(db, "restaurantes"), where("slug", "==", idRestaurante));
                 const queryAlias = await getDocs(qBusquedaAlias);
                 if (!queryAlias.empty) {
                     restSnap = queryAlias.docs[0];
                     idRestaurante = restSnap.id; 
                 } else {
-                    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px;'>Restaurante no encontrado 😢</h2>";
+                    updateDebug("Restaurante no encontrado.");
+                    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; font-family:sans-serif;'>Restaurante no encontrado 😢</h2>";
                     return;
                 }
             }
-            
+
             const data = restSnap.data();
             infoNegocioGlobal = data;
+            updateDebug("Restaurante: " + data.nombre);
             document.getElementById('nombreRestaurante').innerText = data.nombre;
-            document.title = "Menú Mesa - " + data.nombre;
-
             if(data.portada) document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
             if(data.logo) { 
                 document.getElementById('logoRestaurante').src = data.logo; 
                 document.getElementById('logoRestaurante').style.display = 'inline-block'; 
-                document.getElementById('dynamic-favicon').href = data.logo;
             }
 
-            verificarSiEstaCerrado(data);
-
-            // 3. CARGAR PRODUCTOS Y CATEGORÍAS
             try {
+                updateDebug("Cargando productos...");
                 const snapProds = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
                 productosMenuGlobal = [];
-                snapProds.forEach((doc) => {
-                    const p = doc.data(); if (p.disponible === false) return; 
-                    p.id = doc.id;
+                snapProds.forEach((docSnapshot) => {
+                    const p = docSnapshot.data(); if (p.disponible === false) return; 
+                    p.id = docSnapshot.id;
                     productosMenuGlobal.push(p);
                 });
+                updateDebug("Productos: " + productosMenuGlobal.length);
 
                 personalizacionesGlobales = [];
                 try {
                     const snapPers = await getDocs(collection(db, "restaurantes", idRestaurante, "personalizaciones"));
-                    snapPers.forEach((doc) => {
-                        personalizacionesGlobales.push({ id: doc.id, ...doc.data() });
+                    snapPers.forEach((docSnapshot) => {
+                        personalizacionesGlobales.push({ id: docSnapshot.id, ...docSnapshot.data() });
                     });
-                } catch(e) { console.warn("No hay personalizaciones."); }
+                    updateDebug("Personalizaciones: " + personalizacionesGlobales.length);
+                } catch(e) { console.warn("No se pudieron cargar personalizaciones."); }
 
                 renderizarProductosMenu();
             } catch (error) {
+                updateDebug("Error Firebase: " + error.message);
                 console.error(error);
-                document.getElementById('listaMenu').innerHTML = '<p style="text-align:center; padding:20px; color:#e74c3c;">Error al cargar el menú.</p>';
             }
         }
 
+        function productoDisponibleParaServicio(p, servicio) {
+            if (p.opcionesServicio && p.opcionesServicio[servicio] === false) return false;
+            return true;
+        }
+
         function renderizarProductosMenu() {
-            const contenedor = document.getElementById('listaMenu'); contenedor.innerHTML = ""; 
-            const navCategorias = document.getElementById('navCategorias'); navCategorias.innerHTML = "";
-            const categorias = {};
+            try {
+                const contenedor = document.getElementById('listaMenu'); contenedor.innerHTML = ""; 
+                const navCategorias = document.getElementById('navCategorias'); navCategorias.innerHTML = "";
+                const categorias = {};
 
-            productosMenuGlobal
-                .filter(p => !p.opcionesServicio || p.opcionesServicio.mesa !== false)
-                .forEach(p => {
-                    const cat = p.categoria || "Otros"; if (!categorias[cat]) categorias[cat] = []; categorias[cat].push(p);
+                productosMenuGlobal
+                    .filter(p => productoDisponibleParaServicio(p, 'mesa'))
+                    .forEach(p => {
+                        const cat = String(p.categoria || "Otros"); 
+                        if (!categorias[cat]) categorias[cat] = []; 
+                        categorias[cat].push(p);
+                    });
+
+                const nombresCategorias = Object.keys(categorias);
+                nombresCategorias.forEach(nombreCat => {
+                    const idCatSafe = "cat-" + String(nombreCat).replace(/[^a-zA-Z0-9]/g, '');
+                    navCategorias.innerHTML += `<a href="#${idCatSafe}" class="cat-chip">${nombreCat}</a>`;
+                    contenedor.innerHTML += `<h2 id="${idCatSafe}" class="categoria-titulo">${nombreCat}</h2>`;
+                    
+                    categorias[nombreCat].forEach(p => {
+                        try {
+                            const nombreProd = String(p.nombre || "Producto sin nombre");
+                            const precioProd = Number(p.precio || 0);
+                            const idHTML = String(p.id || Math.random());
+                            const tieneVariantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0;
+                            const tienePers = Array.isArray(p.personalizacionesIds) && p.personalizacionesIds.length > 0;
+                            const nombreEscapado = nombreProd.replace(/'/g, "\\'");
+                            const htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
+
+                            if (tieneVariantes || tienePers) {
+                                contenedor.innerHTML += `
+                                    <div class="producto-card" onclick="window.abrirModalProducto('${p.id}')">
+                                        ${htmlImagen}
+                                        <div class="producto-contenido">
+                                            <div class="info">
+                                                <h3>${nombreProd}</h3>
+                                                <p>${p.descripcion || ""}</p>
+                                                <span class="precio">${precioProductoTexto(p)}</span>
+                                                ${tienePers ? `<small style="color:#27ae60; font-weight:bold;">✨ Personalizable</small>` : ''}
+                                            </div>
+                                            <button class="btn-qty" style="width:auto; padding:0 15px; border-radius:20px; background:#e67e22; color:white; font-size:0.9rem;">Ver opciones</button>
+                                        </div>
+                                    </div>`;
+                            } else {
+                                contenedor.innerHTML += `
+                                    <div class="producto-card">
+                                        ${htmlImagen}
+                                        <div class="producto-contenido">
+                                            <div class="info"><h3>${nombreProd}</h3><p>${p.descripcion || ""}</p><span class="precio">${precioProductoTexto(p)}</span></div>
+                                            <div class="controles-cantidad">
+                                                <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${precioProd}, -1, '${idHTML}')">-</button>
+                                                <span class="cantidad-num" id="qty-${idHTML}">${carrito[nombreProd]?.cantidad || 0}</span>
+                                                <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${precioProd}, 1, '${idHTML}')">+</button>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                            }
+                        } catch (e) { console.error("Error en producto individual:", e); }
+                    });
                 });
-
-            for (const nombreCat in categorias) {
-                const idCatSafe = "cat-" + nombreCat.replace(/[^a-zA-Z0-9]/g, '');
-                navCategorias.innerHTML += `<a href="#${idCatSafe}" class="cat-chip">${nombreCat}</a>`;
-                contenedor.innerHTML += `<h2 id="${idCatSafe}" class="categoria-titulo">${nombreCat}</h2>`;
                 
-                categorias[nombreCat].forEach(p => {
-                    let htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
-                    const idHTML = p.id;
-                    const tieneVariantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0;
-                    const tienePers = Array.isArray(p.personalizacionesIds) && p.personalizacionesIds.length > 0;
-                    const nombreEscapado = p.nombre.replace(/'/g, "\\'");
-
-                    if (tieneVariantes || tienePers) {
-                        contenedor.innerHTML += `
-                            <div class="producto-card" onclick="window.abrirModalProducto('${p.id}')">
-                                ${htmlImagen}
-                                <div class="producto-contenido">
-                                    <div class="info">
-                                        <h3>${p.nombre}</h3>
-                                        <p>${p.descripcion}</p>
-                                        <span class="precio">${precioProductoTexto(p)}</span>
-                                        ${tienePers ? `<small style="color:#27ae60; font-weight:bold;">✨ Personalizable</small>` : ''}
-                                    </div>
-                                    <button class="btn-qty" style="width:auto; padding:0 15px; border-radius:20px; background:#e67e22; color:white; font-size:0.9rem;">Ver opciones</button>
-                                </div>
-                            </div>`;
-                    } else {
-                        contenedor.innerHTML += `
-                            <div class="producto-card">
-                                ${htmlImagen}
-                                <div class="producto-contenido">
-                                    <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">${precioProductoTexto(p)}</span></div>
-                                    <div class="controles-cantidad">
-                                        <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${p.precio}, -1, '${idHTML}')">-</button>
-                                        <span class="cantidad-num" id="qty-${idHTML}">${carrito[p.nombre]?.cantidad || 0}</span>
-                                        <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${p.precio}, 1, '${idHTML}')">+</button>
-                                    </div>
-                                </div>
-                            </div>`;
-                    }
-                });
+                if (nombresCategorias.length === 0) {
+                    contenedor.innerHTML = '<p style="color:#7f8c8d; text-align:center; margin-top:30px;">Aún no hay productos en este menú.</p>';
+                }
+            } catch (err) {
+                console.error("Error general en renderizarProductosMenu:", err);
             }
         }
 

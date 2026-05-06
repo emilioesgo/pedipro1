@@ -137,6 +137,13 @@
         </div>
 
         <div id="listaMenu"></div>
+
+        <!-- PANEL DE DIAGNÓSTICO (Temporal para depuración) -->
+        <div id="debugPanel" style="margin-top: 50px; padding: 15px; background: #eee; border-radius: 8px; font-size: 0.8rem; font-family: monospace; display: none;">
+            <h4 style="margin-top:0;">🛠️ Info de Depuración:</h4>
+            <div id="debugContent"></div>
+            <button onclick="this.parentElement.style.display='none'" style="margin-top:10px;">Cerrar Panel</button>
+        </div>
     </div>
 
     <!-- MODAL 1: VER CARRITO Y COMENTARIOS -->
@@ -277,20 +284,38 @@
             }
         });
 
+        function updateDebug(msg) {
+            console.log("DEBUG:", msg);
+            const content = document.getElementById('debugContent');
+            if(content) content.innerHTML += `<div>> ${msg}</div>`;
+        }
+
         async function cargarMenu() {
-            if (!idRestaurante) return;
+            updateDebug("Iniciando cargarMenu()...");
+            if (!idRestaurante) {
+                updateDebug("Error: No hay ID en la URL.");
+                document.body.innerHTML = "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h2>Falta el ID del restaurante 📲</h2><p>Por favor usa el enlace correcto que te proporcionó el negocio.</p></div>";
+                return;
+            }
+            
+            // Mostrar panel si hay ID (ayuda a ver qué pasa)
+            document.getElementById('debugPanel').style.display = 'block';
+            updateDebug("ID Restaurante (inicial): " + idRestaurante);
 
             // 1. LÓGICA DE ALIAS/URL PERSONALIZADA
             let restRef = doc(db, "restaurantes", idRestaurante);
             let restSnap = await getDoc(restRef);
             
             if (!restSnap.exists()) {
+                console.log("No se encontró restaurante por ID, buscando por slug...");
                 const qBusquedaAlias = query(collection(db, "restaurantes"), where("slug", "==", idRestaurante));
                 const queryAlias = await getDocs(qBusquedaAlias);
                 if (!queryAlias.empty) {
                     restSnap = queryAlias.docs[0];
                     idRestaurante = restSnap.id; 
+                    console.log("Restaurante encontrado por slug. Nuevo ID:", idRestaurante);
                 } else {
+                    console.error("Restaurante no encontrado en Firebase.");
                     document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; font-family:sans-serif;'>Restaurante no encontrado 😢</h2>";
                     return;
                 }
@@ -298,6 +323,7 @@
             
             const data = restSnap.data();
             infoNegocioGlobal = data;
+            updateDebug("Restaurante encontrado: " + data.nombre);
             document.getElementById('nombreRestaurante').innerText = data.nombre;
             document.title = "Menú - " + data.nombre;
             numWhatsApp = data.whatsapp;
@@ -309,10 +335,9 @@
                 document.getElementById('dynamic-favicon').href = data.logo;
             }
 
-            // Llenar formas de pago dinámicamente
             renderizarFormasPago(data.formasPago);
-
             document.getElementById('switchPickup').checked = true;
+            updateDebug("Configuración inicial lista.");
             sincronizarTipoPedido('pickup');
 
             // 2. LÓGICA DE HORARIOS AVANZADOS O SIMPLES
@@ -321,28 +346,36 @@
 
             // 3. CARGAR PRODUCTOS Y CATEGORÍAS
             try {
-                // Primero productos
+                updateDebug("Consultando colección 'productos'...");
                 const snapProds = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
                 productosMenuGlobal = [];
-                snapProds.forEach((doc) => {
-                    const p = doc.data(); if (p.disponible === false) return; 
-                    p.id = doc.id;
+                snapProds.forEach((docSnapshot) => {
+                    const p = docSnapshot.data(); 
+                    if (p.disponible === false) return; 
+                    p.id = docSnapshot.id;
                     productosMenuGlobal.push(p);
                 });
+                updateDebug("Productos recibidos de Firebase: " + productosMenuGlobal.length);
 
-                // Luego personalizaciones (silencioso si falla)
+                updateDebug("Consultando colección 'personalizaciones'...");
                 personalizacionesGlobales = [];
                 try {
                     const snapPers = await getDocs(collection(db, "restaurantes", idRestaurante, "personalizaciones"));
-                    snapPers.forEach((doc) => {
-                        personalizacionesGlobales.push({ id: doc.id, ...doc.data() });
+                    snapPers.forEach((docSnapshot) => {
+                        personalizacionesGlobales.push({ id: docSnapshot.id, ...docSnapshot.data() });
                     });
-                } catch(e) { console.warn("No se pudieron cargar personalizaciones o no existen."); }
+                    updateDebug("Personalizaciones recibidas: " + personalizacionesGlobales.length);
+                } catch(e) { 
+                    updateDebug("Advertencia: No se cargaron personalizaciones.");
+                    console.warn("No se pudieron cargar personalizaciones:", e); 
+                }
 
+                updateDebug("Llamando a renderizarProductosMenu()...");
                 renderizarProductosMenu();
             } catch (error) {
-                console.error("Error al cargar el menú:", error);
-                document.getElementById('listaMenu').innerHTML = '<p style="text-align:center; padding:20px; color:#e74c3c;">Error al cargar el menú. Por favor intenta recargar la página.</p>';
+                updateDebug("ERROR CRÍTICO: " + error.message);
+                console.error("Error crítico al cargar el menú:", error);
+                document.getElementById('listaMenu').innerHTML = '<p style="text-align:center; padding:20px; color:#e74c3c;">Error al cargar los productos. Por favor intenta recargar la página.</p>';
             }
         }
 
@@ -360,66 +393,90 @@
         }
 
         function renderizarProductosMenu() {
-            const tipoPedido = document.getElementById('tipoPedidoTop')?.value || 'pickup';
-            const contenedor = document.getElementById('listaMenu'); contenedor.innerHTML = ""; 
-            const navCategorias = document.getElementById('navCategorias'); navCategorias.innerHTML = "";
-            const categorias = {};
-
-            productosMenuGlobal
-                .filter(p => productoDisponibleParaServicio(p, tipoPedido))
-                .forEach(p => {
-                    const cat = p.categoria || "Otros"; if (!categorias[cat]) categorias[cat] = []; categorias[cat].push(p);
-                });
-
-            for (const nombreCat in categorias) {
-                const idCatSafe = "cat-" + nombreCat.replace(/[^a-zA-Z0-9]/g, '');
-                navCategorias.innerHTML += `<a href="#${idCatSafe}" class="cat-chip">${nombreCat}</a>`;
-                contenedor.innerHTML += `<h2 id="${idCatSafe}" class="categoria-titulo">${nombreCat}</h2>`;
+            try {
+                const tipoPedido = document.getElementById('tipoPedidoTop')?.value || 'pickup';
+                const contenedor = document.getElementById('listaMenu'); 
+                if(!contenedor) return console.error("No se encontró el contenedor #listaMenu");
                 
-                categorias[nombreCat].forEach(p => {
-                    let htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
-                    const idHTML = p.id;
-                    const tieneVariantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0;
-                    const tienePers = Array.isArray(p.personalizacionesIds) && p.personalizacionesIds.length > 0;
-                    const nombreEscapado = p.nombre.replace(/'/g, "\\'");
+                contenedor.innerHTML = ""; 
+                const navCategorias = document.getElementById('navCategorias'); 
+                if(navCategorias) navCategorias.innerHTML = "";
+                
+                const categorias = {};
+                updateDebug("Iniciando render para tipo: " + tipoPedido);
 
-                    // Si tiene variantes o personalizaciones, abre modal. Si no, +/- directo.
-                    if (tieneVariantes || tienePers) {
-                        contenedor.innerHTML += `
-                            <div class="producto-card" onclick="window.abrirModalProducto('${p.id}')">
-                                ${htmlImagen}
-                                <div class="producto-contenido">
-                                    <div class="info">
-                                        <h3>${p.nombre}</h3>
-                                        <p>${p.descripcion}</p>
-                                        <span class="precio">${precioProductoTexto(p)}</span>
-                                        ${tienePers ? `<small style="color:#27ae60; font-weight:bold;">✨ Personalizable</small>` : ''}
-                                    </div>
-                                    <button class="btn-qty" style="width:auto; padding:0 15px; border-radius:20px; background:#e67e22; color:white; font-size:0.9rem;">Ver opciones</button>
-                                </div>
-                            </div>`;
-                    } else {
-                        contenedor.innerHTML += `
-                            <div class="producto-card">
-                                ${htmlImagen}
-                                <div class="producto-contenido">
-                                    <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">${precioProductoTexto(p)}</span></div>
-                                    <div class="controles-cantidad">
-                                        <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${p.precio}, -1, '${idHTML}')">-</button>
-                                        <span class="cantidad-num" id="qty-${idHTML}">${carrito[p.nombre]?.cantidad || 0}</span>
-                                        <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${p.precio}, 1, '${idHTML}')">+</button>
-                                    </div>
-                                </div>
-                            </div>`;
-                    }
+                productosMenuGlobal
+                    .filter(p => productoDisponibleParaServicio(p, tipoPedido))
+                    .forEach(p => {
+                        const cat = String(p.categoria || "Otros"); 
+                        if (!categorias[cat]) categorias[cat] = []; 
+                        categorias[cat].push(p);
+                    });
+
+                const nombresCategorias = Object.keys(categorias);
+                updateDebug("Categorías filtradas: " + nombresCategorias.join(", "));
+
+                nombresCategorias.forEach(nombreCat => {
+                    const idCatSafe = "cat-" + String(nombreCat).replace(/[^a-zA-Z0-9]/g, '');
+                    if(navCategorias) navCategorias.innerHTML += `<a href="#${idCatSafe}" class="cat-chip">${nombreCat}</a>`;
+                    contenedor.innerHTML += `<h2 id="${idCatSafe}" class="categoria-titulo">${nombreCat}</h2>`;
+                    
+                    categorias[nombreCat].forEach(p => {
+                        try {
+                            const nombreProd = String(p.nombre || "Producto sin nombre");
+                            const precioProd = Number(p.precio || 0);
+                            const idHTML = String(p.id || Math.random());
+                            const tieneVariantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0;
+                            const tienePers = Array.isArray(p.personalizacionesIds) && p.personalizacionesIds.length > 0;
+                            const nombreEscapado = nombreProd.replace(/'/g, "\\'");
+                            const htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
+
+                            if (tieneVariantes || tienePers) {
+                                contenedor.innerHTML += `
+                                    <div class="producto-card" onclick="window.abrirModalProducto('${p.id}')">
+                                        ${htmlImagen}
+                                        <div class="producto-contenido">
+                                            <div class="info">
+                                                <h3>${nombreProd}</h3>
+                                                <p>${p.descripcion || ""}</p>
+                                                <span class="precio">${precioProductoTexto(p)}</span>
+                                                ${tienePers ? `<small style="color:#27ae60; font-weight:bold;">✨ Personalizable</small>` : ''}
+                                            </div>
+                                            <button class="btn-qty" style="width:auto; padding:0 15px; border-radius:20px; background:#e67e22; color:white; font-size:0.9rem;">Ver opciones</button>
+                                        </div>
+                                    </div>`;
+                            } else {
+                                contenedor.innerHTML += `
+                                    <div class="producto-card">
+                                        ${htmlImagen}
+                                        <div class="producto-contenido">
+                                            <div class="info"><h3>${nombreProd}</h3><p>${p.descripcion || ""}</p><span class="precio">${precioProductoTexto(p)}</span></div>
+                                            <div class="controles-cantidad">
+                                                <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${precioProd}, -1, '${idHTML}')">-</button>
+                                                <span class="cantidad-num" id="qty-${idHTML}">${carrito[nombreProd]?.cantidad || 0}</span>
+                                                <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${precioProd}, 1, '${idHTML}')">+</button>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                            }
+                        } catch (e) { 
+                            updateDebug("Error en producto: " + (p.nombre || 'sin nombre'));
+                            console.error("Error al renderizar producto individual:", p, e); 
+                        }
+                    });
                 });
-            }
-            if (Object.keys(categorias).length === 0) {
-                if (productosMenuGlobal.length === 0) {
-                    contenedor.innerHTML = '<p style="color:#7f8c8d; text-align:center; margin-top:30px;">Aún no hay productos en este menú.</p>';
-                } else {
-                    contenedor.innerHTML = '<p style="color:#7f8c8d; text-align:center; margin-top:30px;">No hay productos disponibles para: ' + (tipoPedido === 'pickup' ? 'Pick Up' : 'Domicilio') + '</p>';
+                
+                if (nombresCategorias.length === 0) {
+                    updateDebug("No se encontraron categorías para mostrar.");
+                    if (productosMenuGlobal.length === 0) {
+                        contenedor.innerHTML = '<p style="text-align:center; margin-top:30px;">Aún no hay productos en este menú.</p>';
+                    } else {
+                        contenedor.innerHTML = '<p style="text-align:center; margin-top:30px;">No hay productos disponibles para: ' + (tipoPedido === 'pickup' ? 'Pick Up' : 'Domicilio') + '</p>';
+                    }
                 }
+            } catch (err) {
+                updateDebug("Error en renderizarProductosMenu: " + err.message);
+                console.error("Error general en renderizarProductosMenu:", err);
             }
         }
 
