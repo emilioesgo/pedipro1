@@ -168,12 +168,17 @@
                     <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Adjuntar mi ubicación (GPS)</button>
                 </div>
 
-                <select id="domPago" class="form-input" style="margin-top: 10px; font-weight: bold; color: #2c3e50;" required>
+                <select id="domPago" class="form-input" style="margin-top: 10px; font-weight: bold; color: #2c3e50;" onchange="mostrarInfoTransferencia(this.value)" required>
                     <option value="" disabled selected>💳 ¿Cómo vas a pagar?</option>
-                    <option value="Efectivo">💵 Efectivo</option>
-                    <option value="Tarjeta">💳 Tarjeta (Terminal)</option>
-                    <option value="Transferencia">🏦 Transferencia Electrónica</option>
                 </select>
+                
+                <!-- Datos de transferencia si aplica -->
+                <div id="infoTransferencia" style="display:none; background:#eaf4fb; border:1px solid #3498db; border-radius:8px; padding:12px; margin-top:8px; font-size:0.9rem;">
+                    <p style="margin:0 0 6px; font-weight:bold; color:#2980b9;">🏦 Datos para Transferencia:</p>
+                    <p style="margin:3px 0;"><strong>Beneficiario:</strong> <span id="transBeneficiarioDisplay"></span></p>
+                    <p style="margin:3px 0;"><strong>CLABE:</strong> <span id="transClabeDisplay" style="letter-spacing:2px;"></span></p>
+                    <p style="margin:3px 0;"><strong>No. Tarjeta:</strong> <span id="transNumTarjetaDisplay" style="letter-spacing:2px;"></span></p>
+                </div>
                 
                 <button class="btn-pedir" onclick="procesarYEnviarPedido()" style="margin-top:20px; background: #25d366;">📲 Enviar Pedido por WhatsApp</button>
             </div>
@@ -267,11 +272,12 @@
             if(data.logo) { 
                 document.getElementById('logoRestaurante').src = data.logo; 
                 document.getElementById('logoRestaurante').style.display = 'inline-block'; 
-                // Colocar el Favicon Dinámico
                 document.getElementById('dynamic-favicon').href = data.logo;
             }
 
-            // Seleccionar por defecto "Pick Up"
+            // Llenar formas de pago dinámicamente
+            renderizarFormasPago(data.formasPago);
+
             document.getElementById('switchPickup').checked = true;
             sincronizarTipoPedido('pickup');
 
@@ -550,6 +556,27 @@
                 document.querySelector('#formularioDatosEnvio .btn-pedir').innerText = "📲 Enviar Pedido por WhatsApp"; document.querySelector('#formularioDatosEnvio .btn-pedir').disabled = false; 
             }
         }
+
+        function renderizarFormasPago(fp) {
+            const sel = document.getElementById('domPago');
+            sel.innerHTML = '<option value="" disabled selected>💳 ¿Cómo vas a pagar?</option>';
+            if (!fp || fp.efectivo !== false) sel.innerHTML += '<option value="Efectivo">💵 Efectivo</option>';
+            if (!fp || fp.tarjeta !== false) sel.innerHTML += '<option value="Tarjeta de Débito">💳 Tarjeta de Débito (Terminal)</option>';
+            if (fp && fp.transferencia === true) sel.innerHTML += '<option value="Transferencia">🏦 Transferencia Electrónica</option>';
+        }
+
+        window.mostrarInfoTransferencia = function(valor) {
+            const div = document.getElementById('infoTransferencia');
+            if(valor === 'Transferencia' && infoNegocioGlobal && infoNegocioGlobal.formasPago) {
+                const fp = infoNegocioGlobal.formasPago;
+                document.getElementById('transBeneficiarioDisplay').innerText = fp.transBeneficiario || 'No especificado';
+                document.getElementById('transClabeDisplay').innerText = fp.transClabe || 'No especificada';
+                document.getElementById('transNumTarjetaDisplay').innerText = fp.transNumTarjeta || 'No especificada';
+                div.style.display = 'block';
+            } else {
+                div.style.display = 'none';
+            }
+        };
 
         // LÓGICA DE HORARIOS
         function verificarSiEstaCerrado(data) {

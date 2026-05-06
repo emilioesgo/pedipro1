@@ -251,6 +251,23 @@
             if(idVista === 'vista-menu' && window.cargarMiMenu) { window.cargarMiMenu(); }
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
             if(idVista === 'vista-caja') { window.cargarPedidos().then(() => window.cargarCaja()); }
+            if(idVista === 'vista-configuracion' && window.restauranteInfo) {
+                if(window.restauranteInfo.slug) document.getElementById('confSlug').value = window.restauranteInfo.slug;
+                if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('imgPrevLogo').style.display = 'block'; }
+                if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('imgPrevPortada').style.display = 'block'; }
+                const fp = window.restauranteInfo.formasPago || {};
+                document.getElementById('pagoEfectivo').checked = fp.efectivo !== false;
+                document.getElementById('pagoTarjeta').checked = fp.tarjeta !== false;
+                const transActiva = fp.transferencia === true;
+                document.getElementById('pagoTransferencia').checked = transActiva;
+                window.toggleSeccionTransferencia(transActiva);
+                if(transActiva) {
+                    if(fp.transBeneficiario) document.getElementById('transBeneficiario').value = fp.transBeneficiario;
+                    if(fp.transClabe) document.getElementById('transClabe').value = fp.transClabe;
+                    if(fp.transNumTarjeta) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta;
+                }
+                renderizarTablaHorarios(window.restauranteInfo.horarios);
+            }
         }
 
         function filtrarPestana(tipo) {
@@ -806,6 +823,19 @@
                 if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('imgPrevLogo').style.display = 'block'; }
                 if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('imgPrevPortada').style.display = 'block'; }
 
+                // Cargar formas de pago guardadas
+                const fp = window.restauranteInfo.formasPago || {};
+                if(document.getElementById('pagoEfectivo')) document.getElementById('pagoEfectivo').checked = fp.efectivo !== false;
+                if(document.getElementById('pagoTarjeta')) document.getElementById('pagoTarjeta').checked = fp.tarjeta !== false;
+                const transActiva = fp.transferencia === true;
+                if(document.getElementById('pagoTransferencia')) document.getElementById('pagoTransferencia').checked = transActiva;
+                if(transActiva) {
+                    if(document.getElementById('seccionDatosTransferencia')) document.getElementById('seccionDatosTransferencia').style.display = 'block';
+                    if(document.getElementById('transBeneficiario') && fp.transBeneficiario) document.getElementById('transBeneficiario').value = fp.transBeneficiario;
+                    if(document.getElementById('transClabe') && fp.transClabe) document.getElementById('transClabe').value = fp.transClabe;
+                    if(document.getElementById('transNumTarjeta') && fp.transNumTarjeta) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta;
+                }
+
                 renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
             window.cargarInicioDashboard();
@@ -1044,22 +1074,17 @@
         // FUNCIONES DE GUARDADO, HORARIOS Y DEMÁS INTACTAS
         // --------------------------------------------------------
 
-        window.guardarConfiguracion = async function() {
-            const btn = document.getElementById('btnGuardarConfig');
-            btn.innerText = "Guardando..."; btn.disabled = true;
+        window.toggleSeccionTransferencia = function(activo) {
+            const sec = document.getElementById('seccionDatosTransferencia');
+            if(sec) sec.style.display = activo ? 'block' : 'none';
+        };
 
+        window.guardarImagenes = async function() {
+            const btn = document.getElementById('btnGuardarImagenes');
+            btn.innerText = "Guardando..."; btn.disabled = true;
             const logoInput = document.getElementById('confLogo');
             const portadaInput = document.getElementById('confPortada');
-            const slug = document.getElementById('confSlug').value.trim();
-
-            let dataActualizada = { slug: slug };
-
-            let horariosNuevos = {};
-            diasSemana.forEach(dia => {
-                horariosNuevos[dia] = { activo: document.getElementById(`chk_${dia}`).checked, abre: document.getElementById(`abre_${dia}`).value, cierra: document.getElementById(`cierra_${dia}`).value };
-            });
-            dataActualizada.horarios = horariosNuevos;
-
+            let dataActualizada = {};
             try {
                 if (logoInput.files.length > 0) {
                     const logoBase64 = await comprimirImagen(logoInput.files[0]);
@@ -1075,15 +1100,66 @@
                     dataActualizada.portada = await getDownloadURL(portadaRef);
                     document.getElementById('imgPrevPortada').src = dataActualizada.portada; document.getElementById('imgPrevPortada').style.display = 'block';
                 }
+                if(Object.keys(dataActualizada).length > 0) {
+                    await updateDoc(doc(db, "restaurantes", idRestaurante), dataActualizada);
+                    window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada };
+                    alert("✅ Imágenes guardadas correctamente.");
+                } else { alert("Selecciona al menos una imagen para guardar."); }
+            } catch (error) { console.error(error); alert("Error al guardar imágenes."); }
+            finally { btn.innerText = "💾 Guardar Imágenes"; btn.disabled = false; }
+        };
 
-                await updateDoc(doc(db, "restaurantes", idRestaurante), dataActualizada);
-                window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada }; 
-                
-                actualizarEnlaceUI(slug); 
-                alert("✅ Configuración y horarios guardados.");
-            } catch (error) { console.error(error); alert("Error al guardar."); } 
-            finally { btn.innerText = "💾 Guardar Configuración"; btn.disabled = false; }
-        }
+        window.guardarSlug = async function() {
+            const btn = document.getElementById('btnGuardarSlug');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+            const slug = document.getElementById('confSlug').value.trim();
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante), { slug });
+                window.restauranteInfo = { ...window.restauranteInfo, slug };
+                actualizarEnlaceUI(slug);
+                alert("✅ Link personalizado guardado.");
+            } catch (error) { console.error(error); alert("Error al guardar el link."); }
+            finally { btn.innerText = "💾 Guardar Link"; btn.disabled = false; }
+        };
+
+        window.guardarHorarios = async function() {
+            const btn = document.getElementById('btnGuardarHorarios');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+            let horariosNuevos = {};
+            diasSemana.forEach(dia => {
+                horariosNuevos[dia] = { activo: document.getElementById(`chk_${dia}`).checked, abre: document.getElementById(`abre_${dia}`).value, cierra: document.getElementById(`cierra_${dia}`).value };
+            });
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante), { horarios: horariosNuevos });
+                window.restauranteInfo = { ...window.restauranteInfo, horarios: horariosNuevos };
+                alert("✅ Horarios guardados correctamente.");
+            } catch (error) { console.error(error); alert("Error al guardar horarios."); }
+            finally { btn.innerText = "💾 Guardar Horarios"; btn.disabled = false; }
+        };
+
+        window.guardarFormasPago = async function() {
+            const btn = document.getElementById('btnGuardarPagos');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+            const transActiva = document.getElementById('pagoTransferencia').checked;
+            const fp = {
+                efectivo: document.getElementById('pagoEfectivo').checked,
+                tarjeta: document.getElementById('pagoTarjeta').checked,
+                transferencia: transActiva,
+                transBeneficiario: transActiva ? document.getElementById('transBeneficiario').value.trim() : '',
+                transClabe: transActiva ? document.getElementById('transClabe').value.trim() : '',
+                transNumTarjeta: transActiva ? document.getElementById('transNumTarjeta').value.trim() : '',
+            };
+            if(transActiva && (!fp.transBeneficiario || !fp.transClabe)) {
+                alert("Para Transferencia debes ingresar el Nombre del Beneficiario y la CLABE.");
+                btn.innerText = "💾 Guardar Formas de Pago"; btn.disabled = false; return;
+            }
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante), { formasPago: fp });
+                window.restauranteInfo = { ...window.restauranteInfo, formasPago: fp };
+                alert("✅ Formas de pago guardadas.");
+            } catch (error) { console.error(error); alert("Error al guardar formas de pago."); }
+            finally { btn.innerText = "💾 Guardar Formas de Pago"; btn.disabled = false; }
+        };
 
         function obtenerHoraCierreHoy() {
             const hoy = new Date();
