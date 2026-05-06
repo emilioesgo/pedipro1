@@ -101,13 +101,6 @@
         </div>
 
         <div id="listaMenu"></div>
-
-        <!-- PANEL DE DIAGNÓSTICO (Temporal para depuración) -->
-        <div id="debugPanel" style="margin-top: 50px; padding: 15px; background: #eee; border-radius: 8px; font-size: 0.8rem; font-family: monospace; display: none;">
-            <h4 style="margin-top:0;">🛠️ Info de Depuración:</h4>
-            <div id="debugContent"></div>
-            <button onclick="this.parentElement.style.display='none'" style="margin-top:10px;">Cerrar Panel</button>
-        </div>
     </div>
 
     <!-- BOTONES FLOTANTES DE ACCIÓN MESA -->
@@ -238,33 +231,19 @@
             else nav.classList.remove('visible');
         });
 
-        function updateDebug(msg) {
-            console.log("DEBUG:", msg);
-            const content = document.getElementById('debugContent');
-            if(content) content.innerHTML += `<div>> ${msg}</div>`;
-        }
-
         async function cargarMenu() {
-            updateDebug("Iniciando cargarMenu() para Mesa...");
-            if (!idRestaurante) {
-                updateDebug("Error: No hay ID en la URL.");
-                return;
-            }
-            document.getElementById('debugPanel').style.display = 'block';
-            updateDebug("ID Restaurante: " + idRestaurante);
+            if (!idRestaurante) return;
 
             let restRef = doc(db, "restaurantes", idRestaurante);
             let restSnap = await getDoc(restRef);
             
             if (!restSnap.exists()) {
-                updateDebug("Buscando por slug...");
                 const qBusquedaAlias = query(collection(db, "restaurantes"), where("slug", "==", idRestaurante));
                 const queryAlias = await getDocs(qBusquedaAlias);
                 if (!queryAlias.empty) {
                     restSnap = queryAlias.docs[0];
                     idRestaurante = restSnap.id; 
                 } else {
-                    updateDebug("Restaurante no encontrado.");
                     document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; font-family:sans-serif;'>Restaurante no encontrado 😢</h2>";
                     return;
                 }
@@ -272,7 +251,6 @@
 
             const data = restSnap.data();
             infoNegocioGlobal = data;
-            updateDebug("Restaurante: " + data.nombre);
             document.getElementById('nombreRestaurante').innerText = data.nombre;
             if(data.portada) document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
             if(data.logo) { 
@@ -281,7 +259,6 @@
             }
 
             try {
-                updateDebug("Cargando productos...");
                 const snapProds = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
                 productosMenuGlobal = [];
                 snapProds.forEach((docSnapshot) => {
@@ -289,7 +266,6 @@
                     p.id = docSnapshot.id;
                     productosMenuGlobal.push(p);
                 });
-                updateDebug("Productos: " + productosMenuGlobal.length);
 
                 personalizacionesGlobales = [];
                 try {
@@ -297,12 +273,10 @@
                     snapPers.forEach((docSnapshot) => {
                         personalizacionesGlobales.push({ id: docSnapshot.id, ...docSnapshot.data() });
                     });
-                    updateDebug("Personalizaciones: " + personalizacionesGlobales.length);
                 } catch(e) { console.warn("No se pudieron cargar personalizaciones."); }
 
                 renderizarProductosMenu();
             } catch (error) {
-                updateDebug("Error Firebase: " + error.message);
                 console.error(error);
             }
         }
