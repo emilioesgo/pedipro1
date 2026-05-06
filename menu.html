@@ -6,7 +6,8 @@
     <title>Cargando Menú...</title>
     <!-- Favicon Dinámico -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Se añade Inter (más legible) manteniendo las otras fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link id="dynamic-favicon" rel="shortcut icon" type="image/x-icon" href="data:image/x-icon;,">
     <style>
 
@@ -28,11 +29,14 @@
       --blue:           #3b82f6;
       --purple:         #a855f7;
       --text-primary:   #e8edf5;
-      --text-secondary: #000000;
-      --text-muted:     #4a5568;
+      /* CORREGIDO para visibilidad: gris claro en lugar de negro */
+      --text-secondary: #cbd5e1;
+      /* Aclarado para mejor contraste */
+      --text-muted:     #94a3b8;
+      /* Fuente principal más legible */
       --font-ui:        'Barlow Condensed', sans-serif;
       --font-mono:      'Share Tech Mono', monospace;
-      --font-label:     'Rajdhani', sans-serif;
+      --font-label:     'Inter', sans-serif;
       --radius:         10px;
       --radius-lg:      16px;
     }
@@ -93,7 +97,7 @@
       color: var(--accent);
       border: 1px solid rgba(245,166,35,0.4);
       padding: 8px 16px; border-radius: 20px;
-      font-family: var(--font-ui); font-size: 0.85rem; font-weight: 700;
+      font-family: var(--font-ui); font-size: 0.9rem; font-weight: 700;
       letter-spacing: 0.5px; cursor: pointer; text-decoration: none;
       backdrop-filter: blur(6px);
       display: flex; align-items: center; gap: 5px; transition: 0.2s;
@@ -119,7 +123,7 @@
       color: var(--text-secondary);
       padding: 6px 16px; border-radius: 20px;
       text-decoration: none;
-      font-family: var(--font-ui); font-weight: 700; font-size: 0.85rem;
+      font-family: var(--font-ui); font-weight: 700; font-size: 0.9rem;
       letter-spacing: 0.5px;
       border: 1.5px solid var(--border-bright);
       transition: 0.2s; white-space: nowrap;
@@ -139,7 +143,7 @@
       color: var(--accent);
       border-bottom: 2px solid var(--accent);
       text-transform: capitalize;
-      font-family: var(--font-ui); font-size: 1.35rem; font-weight: 800;
+      font-family: var(--font-ui); font-size: 1.5rem; font-weight: 800;
       letter-spacing: 2px; text-shadow: 0 0 20px rgba(245,166,35,0.3);
     }
 
@@ -153,7 +157,7 @@
     .switch-container input[type="radio"] { display: none; }
     .switch-label {
       flex: 1; text-align: center; padding: 12px;
-      font-family: var(--font-ui); font-weight: 700; font-size: 0.95rem;
+      font-family: var(--font-ui); font-weight: 700; font-size: 1rem;
       letter-spacing: 0.5px; color: var(--text-muted);
       cursor: pointer; z-index: 1; transition: 0.3s; margin: 0;
     }
@@ -211,11 +215,11 @@
     }
     .info { flex: 1; padding-right: 10px; }
     .info h3 {
-      margin: 0; font-size: 1.05rem;
+      margin: 0; font-size: 1.1rem;
       font-family: var(--font-ui); font-weight: 700; letter-spacing: 0.5px;
       color: var(--text-primary);
     }
-    .info p { margin: 4px 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; }
+    .info p { margin: 4px 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.4; }
     .precio {
       font-family: var(--font-mono); font-weight: 400; font-size: 1rem;
       color: var(--accent); display: block; margin-top: 5px;
@@ -308,7 +312,7 @@
       margin-top: 0; text-align: center;
       color: var(--text-primary);
       border-bottom: 1px solid var(--border-bright); padding-bottom: 12px;
-      font-family: var(--font-ui); font-size: 1.15rem; font-weight: 800;
+      font-family: var(--font-ui); font-size: 1.25rem; font-weight: 800;
       letter-spacing: 1.5px; text-transform: uppercase;
     }
 
