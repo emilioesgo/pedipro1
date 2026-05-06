@@ -1080,12 +1080,52 @@
         }
 
         // --------------------------------------------------------
-        // FUNCIONES DE GUARDADO, HORARIOS Y DEMÁS INTACTAS
-        // --------------------------------------------------------
+        // ===== FUNCIONES DEL PANEL DE CONFIGURACIÓN =====
+        const cfgPanelMeta = {
+            'panel-imagenes': { icon: '🖼️', title: 'Identidad Visual',  desc: 'Logo y portada que se muestran en el menú de tus clientes' },
+            'panel-link':     { icon: '🔗', title: 'Link del Menú',     desc: 'URL personalizada para compartir con tus clientes' },
+            'panel-pagos':    { icon: '💳', title: 'Formas de Pago',    desc: 'Métodos que aparecerán disponibles en el menú digital' },
+            'panel-horarios': { icon: '🕒', title: 'Horarios',          desc: 'Días y horas en que tu menú digital estará activo' },
+        };
+
+        window.abrirPanelConfig = function(panelId, navEl) {
+            document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('activo'));
+            document.querySelectorAll('.cfg-nav-item').forEach(n => n.classList.remove('activo'));
+            const panel = document.getElementById(panelId);
+            if(panel) panel.classList.add('activo');
+            if(navEl) navEl.classList.add('activo');
+            const meta = cfgPanelMeta[panelId];
+            if(meta) {
+                const iconEl = document.getElementById('cfgTopbarIcon');
+                const titleEl = document.getElementById('cfgTopbarTitle');
+                const descEl  = document.getElementById('cfgTopbarDesc');
+                if(iconEl) iconEl.innerText = meta.icon;
+                if(titleEl) titleEl.innerText = meta.title;
+                if(descEl) descEl.innerText = meta.desc;
+            }
+        };
+
+        window.previewImg = function(input, wrapId, imgId) {
+            if(input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img  = document.getElementById(imgId);
+                    const wrap = document.getElementById(wrapId);
+                    if(img)  img.src = e.target.result;
+                    if(wrap) wrap.style.display = 'inline-block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        window.actualizarPreviewSlug = function(val) {
+            const el = document.getElementById('previewSlugUrl');
+            if(el) el.innerHTML = `emilioesgo.github.io/pedipro1/menu.html?id=<strong>${val || 'tu-alias'}</strong>`;
+        };
 
         window.toggleSeccionTransferencia = function(activo) {
             const sec = document.getElementById('seccionDatosTransferencia');
-            if(sec) sec.style.display = activo ? 'block' : 'none';
+            if(sec) { if(activo) sec.classList.add('visible'); else sec.classList.remove('visible'); }
         };
 
         window.guardarImagenes = async function() {
