@@ -5,9 +5,20 @@
                     <p>Administra categorías, productos, precios y opciones de servicio.</p>
                 </div>
                 <div class="menu-toolbar-actions">
-                    <button type="button" class="btn-add" onclick="window.mostrarFormularioProducto()">Agregar Nuevo Producto</button>
-                    <button type="button" class="btn-add btn-secondary" onclick="window.mostrarFormularioCategoria()">Agregar Nueva Categoría</button>
+                    <div class="menu-tabs">
+                        <button type="button" id="tabProductos" class="tab-btn activo" onclick="window.cambiarSubVistaMenu('productos')">🍔 Productos</button>
+                        <button type="button" id="tabPersonalizaciones" class="tab-btn" onclick="window.cambiarSubVistaMenu('personalizaciones')">✨ Personalizaciones</button>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Botones de Acción (Se muestran/ocultan según la pestaña) -->
+            <div id="accionesProductos" class="menu-toolbar-actions" style="margin-bottom: 20px;">
+                <button type="button" class="btn-add" onclick="window.mostrarFormularioProducto()">Agregar Nuevo Producto</button>
+                <button type="button" class="btn-add btn-secondary" onclick="window.mostrarFormularioCategoria()">Agregar Nueva Categoría</button>
+            </div>
+            <div id="accionesPersonalizaciones" class="menu-toolbar-actions" style="margin-bottom: 20px; display:none;">
+                <button type="button" class="btn-add" onclick="window.mostrarFormularioPersonalizacion()">Agregar Nueva Personalización</button>
             </div>
 
             <div id="panelCategoriaMenu" class="card menu-form-card" style="display:none;">
@@ -79,6 +90,17 @@
                             </div>
                         </div>
 
+                        <!-- SECCIÓN PERSONALIZACIONES EN PRODUCTO -->
+                        <div class="form-section-box">
+                            <div class="section-row-title">
+                                <label>Personalizaciones vinculadas</label>
+                                <button type="button" class="btn-add btn-soft" onclick="window.abrirSeleccionPersonalizaciones()">Vincular Personalización</button>
+                            </div>
+                            <div id="contenedorPersonalizacionesProducto" class="variant-list">
+                                <!-- Se llenan con las personalizaciones vinculadas -->
+                            </div>
+                        </div>
+
                         <button type="button" class="btn-add" id="btnGuardarProd" onclick="window.guardarProducto()">Guardar Producto</button>
                     </div>
 
@@ -99,13 +121,109 @@
                 </div>
             </div>
 
-            <div class="card menu-list-card">
+            <div id="seccionProductosMenu" class="card menu-list-card">
                 <div class="form-card-header">
                     <h3>Productos en Mi Menú</h3>
                     <span id="contadorProductosMenu" class="menu-count">0 productos</span>
                 </div>
                 <div id="listaProductosMenu" class="menu-products-grid">
                     <p class="muted-help">Cargando productos...</p>
+                </div>
+            </div>
+
+            <!-- SECCIÓN LISTADO PERSONALIZACIONES -->
+            <div id="seccionPersonalizacionesMenu" class="card menu-list-card" style="display:none;">
+                <div class="form-card-header">
+                    <h3>Mis Personalizaciones</h3>
+                    <span id="contadorPersonalizacionesMenu" class="menu-count">0 personalizaciones</span>
+                </div>
+                <div id="listaPersonalizacionesMenu" class="menu-products-grid">
+                    <p class="muted-help">No tienes personalizaciones creadas.</p>
+                </div>
+            </div>
+
+            <!-- FORMULARIO NUEVA PERSONALIZACIÓN -->
+            <div id="panelPersonalizacionMenu" class="card menu-form-card" style="display:none;">
+                <div class="form-card-header">
+                    <h3>Configurar Personalización</h3>
+                    <button type="button" class="btn-icon-close" onclick="window.cerrarPanelesMenu()">×</button>
+                </div>
+
+                <div class="product-editor-layout">
+                    <div class="product-editor-form">
+                        <div class="form-group">
+                            <label>Nombre de la Personalización <small style="color:#7f8c8d; font-weight:normal;">(Instrucciones para el cliente)</small></label>
+                            <input type="text" id="persNombre" placeholder="Ej: Elige tus extras" oninput="window.actualizarVistaPreviaPersonalizacion()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Etiqueta Distintiva <small style="color:#7f8c8d; font-weight:normal;">(Solo para tu control interno)</small></label>
+                            <input type="text" id="persEtiqueta" placeholder="Ej: Extras de Hamburguesas" oninput="window.actualizarVistaPreviaPersonalizacion()">
+                        </div>
+
+                        <div class="form-section-box">
+                            <div class="section-row-title">
+                                <label>Opciones</label>
+                                <button type="button" class="btn-add btn-soft" onclick="window.agregarOpcionPersonalizacion()">Agregar opción</button>
+                            </div>
+                            <div id="contenedorOpcionesPersonalizacion" class="variant-list">
+                                <!-- Filas de Ingrediente y Precio -->
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>¿Permitir repetir la misma opción?</label>
+                            <select id="persRepeticiones" onchange="window.actualizarVistaPreviaPersonalizacion()">
+                                <option value="no">No</option>
+                                <option value="si">Si</option>
+                            </select>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                            <div class="form-group">
+                                <label>Mínimo a elegir</label>
+                                <input type="number" id="persMin" value="0" min="0" oninput="window.actualizarVistaPreviaPersonalizacion()">
+                            </div>
+                            <div class="form-group">
+                                <label>Máximo a elegir</label>
+                                <input type="number" id="persMax" value="1" min="1" oninput="window.actualizarVistaPreviaPersonalizacion()">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:10px; margin-top:20px;">
+                            <button type="button" class="btn-add btn-secondary" onclick="window.cerrarPanelesMenu()">Cancelar</button>
+                            <button type="button" class="btn-add" id="btnGuardarPers" onclick="window.guardarPersonalizacion()">Agregar esta personalización</button>
+                        </div>
+                    </div>
+
+                    <aside class="product-preview-panel">
+                        <span>Vista previa en el Menú</span>
+                        <div id="previewPersonalizacion" class="card" style="padding:15px; background:white; border:1px solid #ddd; border-radius:10px;">
+                            <h4 id="previewPersNombre" style="margin:0; color:#2c3e50;">Nombre de Personalización</h4>
+                            <p id="previewPersInstrucciones" style="margin:4px 0 10px; font-size:0.85rem; color:#7f8c8d;">(Instrucciones para el cliente)</p>
+                            <div id="previewPersOpciones" style="display:flex; flex-direction:column; gap:8px;">
+                                <!-- Opciones simuladas -->
+                            </div>
+                            <div id="previewPersCantidades" style="margin-top:12px; font-size:0.75rem; color:#e67e22; font-weight:bold; border-top:1px dashed #eee; padding-top:8px;">
+                                Mínimo: 0 | Máximo: 1
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+
+            <!-- MODAL SELECCIÓN DE PERSONALIZACIONES PARA PRODUCTO -->
+            <div id="modalSeleccionPersonalizaciones" class="modal">
+                <div class="modal-content" style="max-width:500px;">
+                    <h3>Vincular Personalizaciones</h3>
+                    <p class="muted-help">Selecciona las personalizaciones que quieres que aparezcan al pedir este producto.</p>
+                    <div id="listaPersonalizacionesDisponibles" style="max-height:300px; overflow-y:auto; margin:15px 0; border:1px solid #eee; border-radius:8px;">
+                        <!-- Listado con checkboxes -->
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-add" onclick="window.confirmarVinculacionPersonalizaciones()">Aceptar</button>
+                        <button class="btn-add btn-secondary" onclick="document.getElementById('modalSeleccionPersonalizaciones').style.display='none'">Cerrar</button>
+                    </div>
                 </div>
             </div>
         </div>

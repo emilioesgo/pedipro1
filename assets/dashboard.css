@@ -848,3 +848,20 @@ input:checked + .slider:before { transform: translateX(20px); }
         grid-template-columns: 1fr;
     }
 }
+
+/* TABS PARA SUBVISTAS */
+.menu-tabs { display: flex; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 10px; }
+.tab-btn { background: none; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; transition: 0.2s; }
+.tab-btn:hover { background: #e2e8f0; }
+.tab-btn.activo { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+.variant-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.price-variant-row, .option-row-pers { display: flex; gap: 8px; align-items: center; }
+.option-row-pers input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; }
+
+.pers-card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 16px; position: relative; transition: transform 0.2s; }
+.pers-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+.pers-card h4 { margin: 0; font-size: 1rem; color: var(--text); }
+.pers-card .badge-internal { background: #f1f5f9; color: #64748b; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; font-weight: 600; }
+.pers-card .opciones-summary { font-size: 0.8rem; color: var(--muted); margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+.pers-card .opciones-summary span { background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; }

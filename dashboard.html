@@ -1846,6 +1846,18 @@
                 const nombres = { local: 'En Local', mesa: 'Mesas', pickup: 'Pick Up', domicilio: 'Domicilio' };
                 return `<span>${nombres[servicio] || servicio}</span>`;
             }).join('');
+            // Personalizaciones
+            const contPers = document.getElementById('previewProductoServicios');
+            const vinculadas = document.querySelectorAll('#contenedorPersonalizacionesProducto div[data-id]');
+            if (vinculadas.length > 0) {
+                let htmlPers = '<div style="margin-top:10px; border-top:1px dashed #ddd; padding-top:10px; width:100%;"><small style="color:#666; font-weight:bold; display:block; margin-bottom:5px;">Personalizaciones:</small>';
+                vinculadas.forEach(div => {
+                    const nombre = div.querySelector('strong').innerText;
+                    htmlPers += `<div style="font-size:0.75rem; background:#f1f5f9; padding:4px 8px; border-radius:4px; margin-bottom:4px; border:1px solid #e2e8f0;">✨ ${nombre}</div>`;
+                });
+                htmlPers += '</div>';
+                contPers.innerHTML += htmlPers;
+            }
         }
 
         function limpiarFormularioProducto() {
@@ -1854,6 +1866,7 @@
             document.getElementById('prodPrecio').value = '';
             document.getElementById('prodImagen').value = '';
             document.getElementById('contenedorVariantesPrecio').innerHTML = '';
+            document.getElementById('contenedorPersonalizacionesProducto').innerHTML = '';
             document.querySelectorAll('.servicio-producto').forEach(input => input.checked = true);
             const preview = document.getElementById('previewProductoImagen');
             if (preview) { preview.style.backgroundImage = ''; preview.innerText = 'Sin imagen'; }
@@ -1885,6 +1898,9 @@
                     imagenUrl = await getDownloadURL(imgRef);
                 }
 
+                // Obtener personalizaciones vinculadas
+                const personalizacionesIds = Array.from(document.querySelectorAll('#contenedorPersonalizacionesProducto div[data-id]')).map(div => div.dataset.id);
+
                 await addDoc(collection(db, "restaurantes", idRestaurante, "productos"), {
                     categoria,
                     nombre,
@@ -1893,6 +1909,7 @@
                     variantes: [],
                     variantesPrecio,
                     opcionesServicio,
+                    personalizacionesIds,
                     imagen: imagenUrl,
                     fecha: new Date(),
                     disponible: true
@@ -1920,41 +1937,255 @@
             lista.innerHTML = '<p class="muted-help">Cargando productos...</p>';
 
             try {
-                const productos = await obtenerProductosMenu();
+                const [productos, personalizaciones] = await Promise.all([
+                    obtenerProductosMenu(),
+                    obtenerPersonalizaciones()
+                ]);
+                
+                window.personalizacionesGlobales = personalizaciones;
+
                 categoriasDetectadasMenu = [...new Set(productos.map(p => p.categoria).filter(Boolean))];
                 llenarSelectCategorias();
                 contador.innerText = `${productos.length} producto${productos.length === 1 ? '' : 's'}`;
+                
                 if (productos.length === 0) {
                     lista.innerHTML = '<p class="muted-help">Todavía no tienes productos. Agrega el primero para verlo aquí.</p>';
-                    return;
+                } else {
+                    lista.innerHTML = productos.map(p => {
+                        const servicios = p.opcionesServicio || { local: true, mesa: true, pickup: true, domicilio: true };
+                        const nombresServicios = { local: 'En Local', mesa: 'Mesas', pickup: 'Pick Up', domicilio: 'Domicilio' };
+                        const tagsServicios = Object.entries(servicios).filter(([, activo]) => activo).map(([key]) => `<span>${nombresServicios[key] || key}</span>`).join('');
+                        const variantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0
+                            ? p.variantesPrecio.map(v => `<span>${v.nombre}: $${Number(v.precio || 0).toFixed(2)}</span>`).join('')
+                            : '';
+                        
+                        let persCount = Array.isArray(p.personalizacionesIds) ? p.personalizacionesIds.length : 0;
+                        const tagPers = persCount > 0 ? `<span style="background:#fef3c7; color:#92400e; border-color:#fde68a;">✨ ${persCount} pers.</span>` : '';
+
+                        const imagen = p.imagen ? `style="background-image:url('${p.imagen}');"` : '';
+                        return `
+                            <article class="menu-product-card">
+                                <div class="menu-product-image" ${imagen}>${p.imagen ? '' : 'Sin imagen'}</div>
+                                <div class="menu-product-body">
+                                    <small>${p.categoria || 'Otros'}</small>
+                                    <h3>${p.nombre || 'Producto'}</h3>
+                                    <p>${p.descripcion || 'Sin descripción'}</p>
+                                    <strong>$${Number(p.precio || 0).toFixed(2)}</strong>
+                                    <div class="menu-product-tags">${tagPers}${variantes}${tagsServicios}</div>
+                                </div>
+                            </article>
+                        `;
+                    }).join('');
                 }
 
-                lista.innerHTML = productos.map(p => {
-                    const servicios = p.opcionesServicio || { local: true, mesa: true, pickup: true, domicilio: true };
-                    const nombresServicios = { local: 'En Local', mesa: 'Mesas', pickup: 'Pick Up', domicilio: 'Domicilio' };
-                    const tagsServicios = Object.entries(servicios).filter(([, activo]) => activo).map(([key]) => `<span>${nombresServicios[key] || key}</span>`).join('');
-                    const variantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0
-                        ? p.variantesPrecio.map(v => `<span>${v.nombre}: $${Number(v.precio || 0).toFixed(2)}</span>`).join('')
-                        : '';
-                    const imagen = p.imagen ? `style="background-image:url('${p.imagen}');"` : '';
-                    return `
-                        <article class="menu-product-card">
-                            <div class="menu-product-image" ${imagen}>${p.imagen ? '' : 'Sin imagen'}</div>
-                            <div class="menu-product-body">
-                                <small>${p.categoria || 'Otros'}</small>
-                                <h3>${p.nombre || 'Producto'}</h3>
-                                <p>${p.descripcion || 'Sin descripción'}</p>
-                                <strong>$${Number(p.precio || 0).toFixed(2)}</strong>
-                                <div class="menu-product-tags">${variantes}${tagsServicios}</div>
-                            </div>
-                        </article>
-                    `;
-                }).join('');
+                // Cargar Personalizaciones en su propia lista
+                window.renderizarPersonalizaciones(personalizaciones);
+
             } catch (error) {
                 console.error(error);
                 lista.innerHTML = '<p class="muted-help">No se pudieron cargar los productos.</p>';
             }
         }
+
+        // ====== LÓGICA DE PERSONALIZACIONES ======
+
+        async function obtenerPersonalizaciones() {
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "personalizaciones"));
+            const personalizaciones = [];
+            snapshot.forEach(docSnap => personalizaciones.push({ id: docSnap.id, ...docSnap.data() }));
+            return personalizaciones;
+        }
+
+        window.cambiarSubVistaMenu = function(tipo) {
+            const tabProds = document.getElementById('tabProductos');
+            const tabPers  = document.getElementById('tabPersonalizaciones');
+            const secProds = document.getElementById('seccionProductosMenu');
+            const secPers  = document.getElementById('seccionPersonalizacionesMenu');
+            const accProds = document.getElementById('accionesProductos');
+            const accPers  = document.getElementById('accionesPersonalizaciones');
+
+            if(tipo === 'productos') {
+                tabProds.classList.add('activo'); tabPers.classList.remove('activo');
+                secProds.style.display = 'block'; secPers.style.display = 'none';
+                accProds.style.display = 'flex'; accPers.style.display = 'none';
+            } else {
+                tabProds.classList.remove('activo'); tabPers.classList.add('activo');
+                secProds.style.display = 'none'; secPers.style.display = 'block';
+                accProds.style.display = 'none'; accPers.style.display = 'flex';
+                window.cargarMiMenu(); // Recargar para asegurar data fresca
+            }
+            window.cerrarPanelesMenu();
+        };
+
+        window.mostrarFormularioPersonalizacion = function() {
+            document.getElementById('panelPersonalizacionMenu').style.display = 'block';
+            document.getElementById('panelProductoMenu').style.display = 'none';
+            document.getElementById('panelCategoriaMenu').style.display = 'none';
+            limpiarFormularioPersonalizacion();
+        };
+
+        function limpiarFormularioPersonalizacion() {
+            document.getElementById('persNombre').value = '';
+            document.getElementById('persEtiqueta').value = '';
+            document.getElementById('persRepeticiones').value = 'no';
+            document.getElementById('persMin').value = '0';
+            document.getElementById('persMax').value = '1';
+            document.getElementById('contenedorOpcionesPersonalizacion').innerHTML = '';
+            window.agregarOpcionPersonalizacion();
+            window.actualizarVistaPreviaPersonalizacion();
+        }
+
+        window.agregarOpcionPersonalizacion = function(nombre = '', precio = '') {
+            const cont = document.getElementById('contenedorOpcionesPersonalizacion');
+            const div = document.createElement('div');
+            div.className = 'option-row-pers';
+            div.innerHTML = `
+                <input type="text" placeholder="Ingrediente/Opción" value="${nombre}" oninput="window.actualizarVistaPreviaPersonalizacion()">
+                <input type="number" placeholder="$ Precio" step="0.01" value="${precio}" oninput="window.actualizarVistaPreviaPersonalizacion()">
+                <button type="button" class="btn-icon-close" onclick="this.parentElement.remove(); window.actualizarVistaPreviaPersonalizacion();">×</button>
+            `;
+            cont.appendChild(div);
+            window.actualizarVistaPreviaPersonalizacion();
+        };
+
+        window.actualizarVistaPreviaPersonalizacion = function() {
+            const nombre = document.getElementById('persNombre').value || 'Nombre de Personalización';
+            const min = document.getElementById('persMin').value || 0;
+            const max = document.getElementById('persMax').value || 1;
+            
+            document.getElementById('previewPersNombre').innerText = nombre;
+            document.getElementById('previewPersInstrucciones').innerText = `(Mínimo ${min}, Máximo ${max})`;
+            document.getElementById('previewPersCantidades').innerText = `Mínimo: ${min} | Máximo: ${max}`;
+
+            const contPreview = document.getElementById('previewPersOpciones');
+            contPreview.innerHTML = '';
+            
+            document.querySelectorAll('#contenedorOpcionesPersonalizacion .option-row-pers').forEach(row => {
+                const optNombre = row.querySelectorAll('input')[0].value || 'Opción...';
+                const optPrecio = parseFloat(row.querySelectorAll('input')[1].value) || 0;
+                contPreview.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #eee; padding:6px 10px; border-radius:6px; font-size:0.85rem;">
+                        <span>${optNombre}</span>
+                        <span style="color:#e67e22; font-weight:bold;">${optPrecio > 0 ? '+$'+optPrecio.toFixed(2) : 'Gratis'}</span>
+                    </div>
+                `;
+            });
+        };
+
+        window.guardarPersonalizacion = async function() {
+            const nombre = document.getElementById('persNombre').value.trim();
+            const etiqueta = document.getElementById('persEtiqueta').value.trim();
+            const min = parseInt(document.getElementById('persMin').value);
+            const max = parseInt(document.getElementById('persMax').value);
+            const permiteRepeticiones = document.getElementById('persRepeticiones').value === 'si';
+
+            const opciones = [];
+            document.querySelectorAll('#contenedorOpcionesPersonalizacion .option-row-pers').forEach(row => {
+                const n = row.querySelectorAll('input')[0].value.trim();
+                const p = parseFloat(row.querySelectorAll('input')[1].value);
+                if(n) opciones.push({ nombre: n, precio: isNaN(p) ? 0 : p });
+            });
+
+            if(!nombre) return alert("Ingresa el nombre de la personalización.");
+            if(opciones.length === 0) return alert("Agrega al menos una opción.");
+
+            const btn = document.getElementById('btnGuardarPers');
+            btn.disabled = true; btn.innerText = "Guardando...";
+
+            try {
+                await addDoc(collection(db, "restaurantes", idRestaurante, "personalizaciones"), {
+                    nombre, etiquetaInterna: etiqueta, min, max, permiteRepeticiones, opciones, fecha: new Date()
+                });
+                alert("Personalización guardada con éxito.");
+                window.cerrarPanelesMenu();
+                window.cargarMiMenu();
+            } catch(e) { console.error(e); alert("Error al guardar."); }
+            finally { btn.disabled = false; btn.innerText = "Agregar esta personalización"; }
+        };
+
+        window.renderizarPersonalizaciones = function(personalizaciones) {
+            const lista = document.getElementById('listaPersonalizacionesMenu');
+            const contador = document.getElementById('contadorPersonalizacionesMenu');
+            if(!lista) return;
+
+            contador.innerText = `${personalizaciones.length} personalización${personalizaciones.length === 1 ? '' : 'es'}`;
+            
+            if(personalizaciones.length === 0) {
+                lista.innerHTML = '<p class="muted-help">No tienes personalizaciones creadas.</p>';
+                return;
+            }
+
+            lista.innerHTML = personalizaciones.map(p => `
+                <div class="pers-card">
+                    <h4>${p.nombre}</h4>
+                    ${p.etiquetaInterna ? `<span class="badge-internal">${p.etiquetaInterna}</span>` : ''}
+                    <div class="opciones-summary">
+                        ${p.opciones.slice(0, 4).map(o => `<span>${o.nombre}</span>`).join('')}
+                        ${p.opciones.length > 4 ? `<span>+${p.opciones.length - 4} más</span>` : ''}
+                    </div>
+                    <div style="margin-top:10px; font-size:0.75rem; color:#7f8c8d;">
+                        Reglas: Min ${p.min}, Max ${p.max} | Repetir: ${p.permiteRepeticiones ? 'Si' : 'No'}
+                    </div>
+                    <button class="btn-icon-close" style="position:absolute; top:10px; right:10px; color:#ef4444;" onclick="window.eliminarPersonalizacion('${p.id}')">×</button>
+                </div>
+            `).join('');
+        };
+
+        window.eliminarPersonalizacion = async function(id) {
+            if(confirm("¿Seguro que quieres eliminar esta personalización? Se desvinculará de todos los productos.")) {
+                await deleteDoc(doc(db, "restaurantes", idRestaurante, "personalizaciones", id));
+                window.cargarMiMenu();
+            }
+        };
+
+        // --- VINCULACIÓN CON PRODUCTO ---
+
+        window.abrirSeleccionPersonalizaciones = function() {
+            const lista = document.getElementById('listaPersonalizacionesDisponibles');
+            if(!window.personalizacionesGlobales || window.personalizacionesGlobales.length === 0) {
+                return alert("Primero debes crear personalizaciones en la pestaña de Personalizaciones.");
+            }
+
+            // Marcar las que ya están vinculadas
+            const vinculadasIds = Array.from(document.querySelectorAll('#contenedorPersonalizacionesProducto div[data-id]')).map(div => div.dataset.id);
+
+            lista.innerHTML = window.personalizacionesGlobales.map(p => `
+                <label style="display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid #eee; cursor:pointer;">
+                    <input type="checkbox" class="check-pers-vincular" value="${p.id}" data-nombre="${p.nombre}" data-etiqueta="${p.etiquetaInterna || ''}" ${vinculadasIds.includes(p.id) ? 'checked' : ''}>
+                    <div>
+                        <div style="font-weight:600; color:#2c3e50;">${p.nombre}</div>
+                        <div style="font-size:0.75rem; color:#7f8c8d;">${p.etiquetaInterna || '(Sin etiqueta interna)'}</div>
+                    </div>
+                </label>
+            `).join('');
+
+            document.getElementById('modalSeleccionPersonalizaciones').style.display = 'block';
+        };
+
+        window.confirmarVinculacionPersonalizaciones = function() {
+            const contenedor = document.getElementById('contenedorPersonalizacionesProducto');
+            contenedor.innerHTML = '';
+            
+            document.querySelectorAll('.check-pers-vincular:checked').forEach(chk => {
+                const div = document.createElement('div');
+                div.className = 'price-variant-row';
+                div.dataset.id = chk.value;
+                div.style.background = '#f1f5f9';
+                div.style.padding = '8px 12px';
+                div.style.borderRadius = '8px';
+                div.style.justifyContent = 'space-between';
+                div.innerHTML = `
+                    <div>
+                        <strong style="font-size:0.85rem;">${chk.dataset.nombre}</strong>
+                        <div style="font-size:0.7rem; color:#64748b;">${chk.dataset.etiqueta}</div>
+                    </div>
+                    <button type="button" class="btn-icon-close" onclick="this.parentElement.remove()">×</button>
+                `;
+                contenedor.appendChild(div);
+            });
+
+            document.getElementById('modalSeleccionPersonalizaciones').style.display = 'none';
+        };
 
         // PWA Installation Logic
         if ('serviceWorker' in navigator) {
