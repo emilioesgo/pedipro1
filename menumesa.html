@@ -68,6 +68,16 @@
         .item-carrito-nombre { flex: 1; font-weight: bold; color: #2c3e50; font-size: 0.95rem; }
         .item-carrito-subtotal { color: #e67e22; font-weight: bold; margin-right: 10px; }
 
+        /* ESTILOS PERSONALIZACIONES EN MODAL */
+        .pers-seccion { margin-bottom: 20px; border-top: 1px solid #eee; padding-top: 15px; }
+        .pers-titulo { font-weight: bold; color: #2c3e50; font-size: 1rem; margin-bottom: 4px; display: block; }
+        .pers-instrucciones { font-size: 0.8rem; color: #7f8c8d; margin-bottom: 10px; display: block; }
+        .pers-opcion { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .pers-opcion:active { transform: scale(0.98); }
+        .pers-opcion.seleccionada { border-color: #2ecc71; background: #eafaf1; }
+        .pers-opcion-info { display: flex; align-items: center; gap: 10px; }
+        .pers-opcion-precio { color: #e67e22; font-weight: bold; font-size: 0.9rem; }
+        .pers-opcion input { transform: scale(1.2); pointer-events: none; }
     </style>
 </head>
 <body>
@@ -141,23 +151,46 @@
         </div>
     </div>
 
-    <!-- MODAL 2: VER CUENTA -->
+    <!-- MODAL 2: DETALLE DE PRODUCTO -->
+    <div id="modalProducto" class="modal">
+        <div class="modal-content" style="max-width: 500px; padding: 0; overflow: hidden;">
+            <div id="modalProductoImg" style="width:100%; height:200px; background-size:cover; background-position:center; display:none;"></div>
+            <div style="padding: 20px;">
+                <h3 id="modalProductoNombre" style="text-align:left; border:none; margin-bottom:5px;">Nombre Producto</h3>
+                <p id="modalProductoDesc" style="color:#7f8c8d; font-size:0.9rem; margin:0 0 15px 0;">Descripción...</p>
+                <div id="contenedorPersonalizacionesModal"></div>
+                <div style="margin-top:20px; padding-top:15px; border-top:2px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span style="display:block; font-size:0.8rem; color:#7f8c8d; font-weight:bold;">Subtotal</span>
+                        <span id="modalProductoPrecioTotal" style="font-size:1.4rem; font-weight:bold; color:#e67e22;">$0.00</span>
+                    </div>
+                    <div class="controles-cantidad" style="padding:8px;">
+                        <button class="btn-qty" onclick="cambiarCantModal(-1)">-</button>
+                        <span id="modalProductoCant" class="cantidad-num">1</span>
+                        <button class="btn-qty" onclick="cambiarCantModal(1)">+</button>
+                    </div>
+                </div>
+                <button id="btnAgregarAlCarritoModal" class="btn-pedir" style="margin-top: 20px;">Agregar al Pedido</button>
+                <button onclick="cerrarModales()" style="background:none; border:none; margin-top:15px; color:#7f8c8d; width: 100%; font-weight: bold; cursor: pointer;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: VER CUENTA -->
     <div id="modalCuenta" class="modal">
         <div class="modal-content">
             <h3 style="color: #9b59b6;">🧾 Cuenta de la Mesa #<span id="cuentaNumMesa"></span></h3>
             <p style="text-align: center; color: #7f8c8d; font-size: 0.9rem; margin-top: 0;">Aquí están todos los pedidos registrados en tu mesa que aún no han sido cobrados.</p>
-            
             <div id="contenidoCuentaLista" style="max-height: 40vh; overflow-y: auto; margin-bottom: 15px; border-top: 1px solid #eee; padding-top: 10px;">
                 <p style="text-align: center;">Buscando pedidos...</p>
             </div>
-            
             <div style="font-size: 1.5rem; font-weight: bold; text-align: right; color: #2c3e50; border-top: 2px solid #eee; padding-top: 10px; margin-bottom: 15px;">
                 Total a Pagar: <span id="totalCuenta" style="color: #c0392b;">$0.00</span>
             </div>
-
             <button class="btn-pedir" onclick="pedirLaCuenta()" style="background: #9b59b6;">💳 Solicitar la Cuenta</button>
             <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%; font-weight: bold; cursor: pointer;">Cerrar Pantalla</button>
         </div>
+    </div>
     </div>
 
     <script type="module">
@@ -184,6 +217,10 @@
         let infoNegocioGlobal = null;
         let fechaInicioTurno = new Date(); fechaInicioTurno.setHours(0, 0, 0, 0); 
         let productosMenuGlobal = [];
+        let personalizacionesGlobales = [];
+        let productoActualModal = null;
+        let cantActualModal = 1;
+        let opcionesSeleccionadasModal = {};
         
         let clienteNombre = "";
         let clienteMesa = "";
@@ -229,13 +266,29 @@
 
             verificarSiEstaCerrado(data);
 
-            const querySnapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
-            productosMenuGlobal = [];
-            querySnapshot.forEach((doc) => {
-                const p = doc.data(); if (p.disponible === false) return; 
-                productosMenuGlobal.push(p);
-            });
-            renderizarProductosMenu();
+            // 3. CARGAR PRODUCTOS Y CATEGORÍAS
+            try {
+                const snapProds = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
+                productosMenuGlobal = [];
+                snapProds.forEach((doc) => {
+                    const p = doc.data(); if (p.disponible === false) return; 
+                    p.id = doc.id;
+                    productosMenuGlobal.push(p);
+                });
+
+                personalizacionesGlobales = [];
+                try {
+                    const snapPers = await getDocs(collection(db, "restaurantes", idRestaurante, "personalizaciones"));
+                    snapPers.forEach((doc) => {
+                        personalizacionesGlobales.push({ id: doc.id, ...doc.data() });
+                    });
+                } catch(e) { console.warn("No hay personalizaciones."); }
+
+                renderizarProductosMenu();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('listaMenu').innerHTML = '<p style="text-align:center; padding:20px; color:#e74c3c;">Error al cargar el menú.</p>';
+            }
         }
 
         function renderizarProductosMenu() {
@@ -243,7 +296,6 @@
             const navCategorias = document.getElementById('navCategorias'); navCategorias.innerHTML = "";
             const categorias = {};
 
-            // Solo mostramos productos disponibles para MESA
             productosMenuGlobal
                 .filter(p => !p.opcionesServicio || p.opcionesServicio.mesa !== false)
                 .forEach(p => {
@@ -257,32 +309,136 @@
                 
                 categorias[nombreCat].forEach(p => {
                     let htmlImagen = p.imagen && p.imagen !== "" ? `<div class="producto-img" style="background-image: url('${p.imagen}');"></div>` : "";
-                    const idHTML = p.nombre.replace(/[^a-zA-Z0-9]/g, '');
-                    const variantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0
-                        ? `<div style="display:grid; gap:6px; margin-top:8px;">${p.variantesPrecio.map(v => { const nombreVar = `${p.nombre} - ${v.nombre}`; const idVar = nombreVar.replace(/[^a-zA-Z0-9]/g, ''); return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:#f8f9fa; border-radius:8px; padding:6px 8px;"><small style="color:#2c3e50; font-weight:bold;">${v.nombre}: $${Number(v.precio || 0).toFixed(2)}</small><div class="controles-cantidad" style="transform:scale(0.78); margin:0;"><button class="btn-qty" onclick="modificarItem('${nombreVar}', ${Number(v.precio || 0)}, -1, '${idVar}')">-</button><span class="cantidad-num" id="qty-${idVar}">0</span><button class="btn-qty" onclick="modificarItem('${nombreVar}', ${Number(v.precio || 0)}, 1, '${idVar}')">+</button></div></div>`; }).join('')}</div>`
-                        : "";
-                    
-                    let precioBaseInfo = "";
-                    if (Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0) {
-                        const precios = [p.precio, ...p.variantesPrecio.map(v => v.precio)].map(Number).filter(v => !isNaN(v));
-                        precioBaseInfo = `Desde $${Math.min(...precios).toFixed(2)}`;
-                    } else {
-                        precioBaseInfo = `$${Number(p.precio || 0).toFixed(2)}`;
-                    }
+                    const idHTML = p.id;
+                    const tieneVariantes = Array.isArray(p.variantesPrecio) && p.variantesPrecio.length > 0;
+                    const tienePers = Array.isArray(p.personalizacionesIds) && p.personalizacionesIds.length > 0;
+                    const nombreEscapado = p.nombre.replace(/'/g, "\\'");
 
-                    contenedor.innerHTML += `
-                        <div class="producto-card">${htmlImagen}
-                            <div class="producto-contenido">
-                                <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">${precioBaseInfo}</span>${variantes}</div>
-                                <div class="controles-cantidad">
-                                    <button class="btn-qty" onclick="modificarItem('${p.nombre}', ${p.precio}, -1, '${idHTML}')">-</button>
-                                    <span class="cantidad-num" id="qty-${idHTML}">0</span>
-                                    <button class="btn-qty" onclick="modificarItem('${p.nombre}', ${p.precio}, 1, '${idHTML}')">+</button>
+                    if (tieneVariantes || tienePers) {
+                        contenedor.innerHTML += `
+                            <div class="producto-card" onclick="window.abrirModalProducto('${p.id}')">
+                                ${htmlImagen}
+                                <div class="producto-contenido">
+                                    <div class="info">
+                                        <h3>${p.nombre}</h3>
+                                        <p>${p.descripcion}</p>
+                                        <span class="precio">${precioProductoTexto(p)}</span>
+                                        ${tienePers ? `<small style="color:#27ae60; font-weight:bold;">✨ Personalizable</small>` : ''}
+                                    </div>
+                                    <button class="btn-qty" style="width:auto; padding:0 15px; border-radius:20px; background:#e67e22; color:white; font-size:0.9rem;">Ver opciones</button>
                                 </div>
-                            </div>
-                        </div>`;
+                            </div>`;
+                    } else {
+                        contenedor.innerHTML += `
+                            <div class="producto-card">
+                                ${htmlImagen}
+                                <div class="producto-contenido">
+                                    <div class="info"><h3>${p.nombre}</h3><p>${p.descripcion}</p><span class="precio">${precioProductoTexto(p)}</span></div>
+                                    <div class="controles-cantidad">
+                                        <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${p.precio}, -1, '${idHTML}')">-</button>
+                                        <span class="cantidad-num" id="qty-${idHTML}">${carrito[p.nombre]?.cantidad || 0}</span>
+                                        <button class="btn-qty" onclick="modificarItem('${nombreEscapado}', ${p.precio}, 1, '${idHTML}')">+</button>
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
                 });
             }
+        }
+
+        function precioProductoTexto(p) {
+            if (p.variantesPrecio && p.variantesPrecio.length > 0) {
+                const precios = [p.precio, ...p.variantesPrecio.map(v => v.precio)].map(Number);
+                return `Desde $${Math.min(...precios).toFixed(2)}`;
+            }
+            return `$${Number(p.precio || 0).toFixed(2)}`;
+        }
+
+        window.abrirModalProducto = function(prodId) {
+            const p = productosMenuGlobal.find(item => item.id === prodId);
+            if(!p) return;
+            productoActualModal = p;
+            cantActualModal = 1;
+            opcionesSeleccionadasModal = {};
+            document.getElementById('modalProductoNombre').innerText = p.nombre;
+            document.getElementById('modalProductoDesc').innerText = p.descripcion;
+            document.getElementById('modalProductoCant').innerText = '1';
+            const imgEl = document.getElementById('modalProductoImg');
+            if(p.imagen) { imgEl.style.backgroundImage = `url('${p.imagen}')`; imgEl.style.display = 'block'; }
+            else { imgEl.style.display = 'none'; }
+            const contPers = document.getElementById('contenedorPersonalizacionesModal');
+            contPers.innerHTML = '';
+            if(p.variantesPrecio && p.variantesPrecio.length > 0) {
+                let htmlVar = `<div class="pers-seccion"><span class="pers-titulo">Opción:</span><div class="pers-opciones-lista">
+                    <div class="pers-opcion seleccionada" onclick="seleccionarVariante(this, 'Base', ${p.precio})"><div class="pers-opcion-info"><input type="radio" name="variante" checked> <span>Base</span></div><span class="pers-opcion-precio">$${p.precio.toFixed(2)}</span></div>
+                    ${p.variantesPrecio.map(v => `<div class="pers-opcion" onclick="seleccionarVariante(this, '${v.nombre}', ${v.precio})"><div class="pers-opcion-info"><input type="radio" name="variante"> <span>${v.nombre}</span></div><span class="pers-opcion-precio">$${v.precio.toFixed(2)}</span></div>`).join('')}
+                </div></div>`;
+                contPers.innerHTML += htmlVar;
+                opcionesSeleccionadasModal.variante = { nombre: 'Base', precio: p.precio };
+            } else { opcionesSeleccionadasModal.variante = { nombre: 'Base', precio: p.precio }; }
+            if(p.personalizacionesIds && p.personalizacionesIds.length > 0) {
+                p.personalizacionesIds.forEach(persId => {
+                    const pers = personalizacionesGlobales.find(pe => pe.id === persId);
+                    if(!pers) return;
+                    let htmlPers = `<div class="pers-seccion" data-pers-id="${pers.id}" data-min="${pers.min}" data-max="${pers.max}"><span class="pers-titulo">${pers.nombre}</span><span class="pers-instrucciones">(Mín ${pers.min}, Máx ${pers.max})</span><div class="pers-opciones-lista">
+                        ${pers.opciones.map((opt, idx) => `<div class="pers-opcion" onclick="toggleOpcionPers(this, '${pers.id}', ${idx}, ${opt.precio}, '${opt.nombre}')"><div class="pers-opcion-info"><input type="${pers.max === 1 ? 'radio' : 'checkbox'}"> <span>${opt.nombre}</span></div>${opt.precio > 0 ? `<span class="pers-opcion-precio">+$${opt.precio.toFixed(2)}</span>` : ''}</div>`).join('')}
+                    </div></div>`;
+                    contPers.innerHTML += htmlPers;
+                });
+            }
+            actualizarPrecioModal();
+            document.getElementById('btnAgregarAlCarritoModal').onclick = () => agregarAlCarritoDesdeModal();
+            document.getElementById('modalProducto').style.display = 'block';
+        };
+
+        window.seleccionarVariante = function(el, nombre, precio) {
+            el.parentElement.querySelectorAll('.pers-opcion').forEach(opt => { opt.classList.remove('seleccionada'); opt.querySelector('input').checked = false; });
+            el.classList.add('seleccionada'); el.querySelector('input').checked = true;
+            opcionesSeleccionadasModal.variante = { nombre, precio }; actualizarPrecioModal();
+        };
+
+        window.toggleOpcionPers = function(el, persId, optIdx, precio, nombre) {
+            const seccion = el.closest('.pers-seccion'); const max = parseInt(seccion.dataset.max);
+            if(!opcionesSeleccionadasModal[persId]) opcionesSeleccionadasModal[persId] = [];
+            const index = opcionesSeleccionadasModal[persId].findIndex(o => o.idx === optIdx);
+            if (index > -1) { opcionesSeleccionadasModal[persId].splice(index, 1); el.classList.remove('seleccionada'); el.querySelector('input').checked = false; }
+            else {
+                if(max === 1) { seccion.querySelectorAll('.pers-opcion').forEach(opt => { opt.classList.remove('seleccionada'); opt.querySelector('input').checked = false; }); opcionesSeleccionadasModal[persId] = [{ idx: optIdx, precio, nombre }]; el.classList.add('seleccionada'); el.querySelector('input').checked = true; }
+                else if(opcionesSeleccionadasModal[persId].length < max) { opcionesSeleccionadasModal[persId].push({ idx: optIdx, precio, nombre }); el.classList.add('seleccionada'); el.querySelector('input').checked = true; }
+                else { alert(`Máximo ${max} opciones.`); }
+            }
+            actualizarPrecioModal();
+        };
+
+        function actualizarPrecioModal() {
+            let total = opcionesSeleccionadasModal.variante.precio;
+            for (let key in opcionesSeleccionadasModal) { if(key !== 'variante') opcionesSeleccionadasModal[key].forEach(opt => total += opt.precio); }
+            document.getElementById('modalProductoPrecioTotal').innerText = `$${(total * cantActualModal).toFixed(2)}`;
+        }
+
+        window.cambiarCantModal = function(cambio) {
+            cantActualModal += cambio; if(cantActualModal < 1) cantActualModal = 1;
+            document.getElementById('modalProductoCant').innerText = cantActualModal; actualizarPrecioModal();
+        };
+
+        function agregarAlCarritoDesdeModal() {
+            const p = productoActualModal;
+            const secciones = document.querySelectorAll('.pers-seccion[data-pers-id]');
+            for(let sec of secciones) {
+                const id = sec.dataset.persId; const min = parseInt(sec.dataset.min);
+                if((opcionesSeleccionadasModal[id]?.length || 0) < min) { alert(`Elige al menos ${min} opciones en ${sec.querySelector('.pers-titulo').innerText}`); return; }
+            }
+            let extrasTxt = ""; let subtotalUnitario = opcionesSeleccionadasModal.variante.precio;
+            for (let key in opcionesSeleccionadasModal) { if(key !== 'variante') opcionesSeleccionadasModal[key].forEach(opt => { extrasTxt += `, ${opt.nombre}`; subtotalUnitario += opt.precio; }); }
+            let nombreFinal = p.nombre;
+            if(opcionesSeleccionadasModal.variante.nombre !== 'Base') nombreFinal += ` (${opcionesSeleccionadasModal.variante.nombre})`;
+            if(extrasTxt) nombreFinal += ` [${extrasTxt.substring(2)}]`;
+            if(!carrito[nombreFinal]) carrito[nombreFinal] = { precio: subtotalUnitario, cantidad: 0 };
+            carrito[nombreFinal].cantidad += cantActualModal;
+            cerrarModales();
+            totalGeneral = 0; for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
+            document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
+            renderizarProductosMenu();
         }
 
         window.guardarDatosMesa = async function() {
@@ -336,6 +492,7 @@
         window.cerrarModales = function() {
             document.getElementById('modalCarrito').style.display = 'none';
             document.getElementById('modalCuenta').style.display = 'none';
+            document.getElementById('modalProducto').style.display = 'none';
         }
 
         window.abrirCarrito = function() {
