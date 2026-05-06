@@ -1,3 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caja POS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     ROOT VARIABLES — FAST FOOD POS PALETTE
+  ============================================================ */
+  :root {
+    --bg-root:        #0b0e14;
+    --bg-panel:       #111520;
+    --bg-card:        #181d2a;
+    --bg-input:       #0d1017;
+    --border:         #252d3d;
+    --border-bright:  #2e3a50;
+
+    --accent:         #f5a623;       /* amber — primary action */
+    --accent-dim:     #c47f0f;
+    --green:          #16c784;       /* cobrar / success */
+    --green-dim:      #0da066;
+    --red:            #e53e3e;       /* cancel / end turn */
+    --red-dim:        #b91c1c;
+    --blue:           #3b82f6;       /* transfer */
+
+    --text-primary:   #e8edf5;
+    --text-secondary: #8899b0;
+    --text-muted:     #4a5568;
+
+    --keypad-bg:      #151b27;
+    --keypad-btn:     #1e2638;
+    --keypad-hover:   #2a3349;
+    --keypad-active:  #f5a623;
+
+    --radius:         8px;
+    --radius-lg:      14px;
+    --font-ui:        'Barlow Condensed', sans-serif;
+    --font-mono:      'Share Tech Mono', monospace;
+    --font-label:     'Rajdhani', sans-serif;
+
+    --shadow-glow:    0 0 20px rgba(245,166,35,0.12);
+    --shadow-panel:   0 4px 24px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-root);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    /* subtle scanline texture */
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.012) 2px,
+        rgba(255,255,255,0.012) 4px
+      );
+  }
+
+  /* ============================================================
+     VISTA WRAPPER
+  ============================================================ */
+  .vista { width: 100%; min-height: 100vh; padding: 0; }
+
+  /* ============================================================
+     POS CONTAINER
+  ============================================================ */
+  .pos-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ============================================================
+     STATUS BAR — TOP RIBBON
+  ============================================================ */
+  .pos-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 64px;
+    background: var(--bg-panel);
+    border-bottom: 2px solid var(--accent);
+    box-shadow: 0 2px 16px rgba(245,166,35,0.18);
+    flex-shrink: 0;
+    gap: 16px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .pos-status-bar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(245,166,35,0.06) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  /* Cashier Info */
+  .pos-cashier-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 180px;
+  }
+
+  .status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    border: 2px solid var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(100,116,139,0.2);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+  }
+
+  .status-indicator.active {
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(22,199,132,0.25), 0 0 12px rgba(22,199,132,0.5);
+    animation: pulse-green 2s infinite;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(22,199,132,0.25), 0 0 12px rgba(22,199,132,0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(22,199,132,0.1),  0 0 20px rgba(22,199,132,0.6); }
+  }
+
+  /* Clock */
+  .pos-clock {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(245,166,35,0.4);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  /* Action Buttons */
+  .pos-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .pos-btn {
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 9px 18px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn-turno {
+    background: linear-gradient(135deg, #16c784, #0da066);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(22,199,132,0.35);
+  }
+  .btn-turno:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(22,199,132,0.5); }
+
+  .btn-turno-off {
+    background: linear-gradient(135deg, #e53e3e, #b91c1c);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(229,62,62,0.35);
+  }
+  .btn-turno-off:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(229,62,62,0.5); }
+
+  .btn-corte {
+    background: var(--bg-card);
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    box-shadow: 0 0 12px rgba(245,166,35,0.12);
+  }
+  .btn-corte:hover { background: rgba(245,166,35,0.1); transform: translateY(-1px); }
+
+  /* ============================================================
+     MAIN LAYOUT
+  ============================================================ */
+  .pos-main-layout {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* ============================================================
+     LEFT PANEL — PENDING ORDERS
+  ============================================================ */
+  .pos-left-panel {
+    background: var(--bg-card);
+    border-right: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-bright);
+  }
+
+  .panel-header h3 {
+    font-family: var(--font-ui);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+
+  .panel-header p {
+    font-family: var(--font-label);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-top: 3px !important;
+  }
+
+  .badge-count {
+    background: var(--accent);
+    color: #000;
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px rgba(245,166,35,0.4);
+    flex-shrink: 0;
+  }
+
+  /* Search bar */
+  #posSearchOrder {
+    width: 100%;
+    padding: 11px 16px;
+    background: var(--bg-input);
+    border: 1.5px solid var(--border-bright);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: var(--font-label);
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #posSearchOrder::placeholder { color: var(--text-muted); }
+  #posSearchOrder:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,166,35,0.1); }
+
+  /* Override the inline style wrapper for search */
+  .pos-left-panel > div[style*="padding: 12px"] {
+    padding: 12px 16px !important;
+    background: var(--bg-panel) !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  /* Scroll area */
+  .pos-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-bright) transparent;
+  }
+  .pos-scroll-area::-webkit-scrollbar { width: 4px; }
+  .pos-scroll-area::-webkit-scrollbar-track { background: transparent; }
+  .pos-scroll-area::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 4px; }
+
+  .pos-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 180px;
+    color: var(--text-muted);
+    font-family: var(--font-label);
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    margin: 12px;
+    text-align: center;
+    padding: 20px;
+  }
+
+  /* ============================================================
+     RIGHT PANEL — COBRO / TICKET
+  ============================================================ */
+  .pos-right-panel {
+    background: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 2px solid var(--border);
+    transition: opacity 0.3s ease;
+    position: relative;
+  }
+
+  .pos-right-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--green), var(--blue));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .pos-right-panel:not([style*="opacity: 0.5"])::before { opacity: 1; }
+
+  /* ---- TICKET HEADER ---- */
+  .ticket-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-bright);
+  }
+
+  .ticket-header h3 {
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  #txtFolioTicket {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(245,166,35,0.4);
+    letter-spacing: 1px;
+  }
+
+  /* ---- TICKET BODY ---- */
+  .ticket-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-bright) transparent;
+  }
+
+  .ticket-items {
+    padding: 12px 16px;
+    min-height: 80px;
+  }
+
+  /* Individual line items (added via JS) */
+  .ticket-items > * {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-label);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+  }
+
+  /* ---- TICKET SUMMARY ---- */
+  .ticket-summary {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-bright);
+    background: var(--bg-card);
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-family: var(--font-label);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+  }
+
+  .summary-row.total {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 2px solid var(--border-bright);
+    font-family: var(--font-ui);
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+
+  .summary-row.total span:last-child {
+    font-family: var(--font-mono);
+    font-size: 1.7rem;
+    color: var(--accent);
+    text-shadow: 0 0 16px rgba(245,166,35,0.4);
+  }
+
+  /* ---- PAYMENT SECTION ---- */
+  .pos-payment-section {
+    padding: 16px;
+    background: var(--bg-card);
+    border-top: 2px solid var(--border-bright);
+    flex-shrink: 0;
+  }
+
+  .pos-payment-section > label {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* Payment method grid */
+  .payment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .pay-method-btn {
+    background: var(--bg-input);
+    border: 2px solid var(--border-bright);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    padding: 12px 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+  }
+
+  .pay-method-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(245,166,35,0.06);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(245,166,35,0.15);
+  }
+
+  .pay-method-btn.active {
+    border-color: var(--accent);
+    background: rgba(245,166,35,0.12);
+    color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.15), 0 4px 16px rgba(245,166,35,0.2);
+  }
+
+  /* ---- CASH SUB-PANEL ---- */
+  .cobro-subpanel {
+    margin-bottom: 12px;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .received-input-wrap > label {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .pos-amount-display {
+    background: var(--bg-input);
+    border: 2px solid var(--border-bright);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    text-align: right;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .pos-amount-display:focus-within,
+  .pos-amount-display:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.1);
+  }
+
+  /* Numeric Keypad */
+  .pos-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .pos-keypad button {
+    background: var(--keypad-btn);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    font-weight: 700;
+    padding: 14px 8px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    letter-spacing: 1px;
+  }
+
+  .pos-keypad button:hover {
+    background: var(--keypad-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: scale(0.97);
+  }
+
+  .pos-keypad button:active {
+    background: var(--accent);
+    color: #000;
+    transform: scale(0.94);
+    box-shadow: 0 0 16px rgba(245,166,35,0.5);
+  }
+
+  .pos-keypad .btn-clear {
+    background: rgba(229,62,62,0.12);
+    border-color: rgba(229,62,62,0.4);
+    color: #e53e3e;
+    font-size: 0.78rem;
+    letter-spacing: 1.5px;
+  }
+
+  .pos-keypad .btn-clear:hover {
+    background: rgba(229,62,62,0.2);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .pos-keypad .btn-clear:active {
+    background: var(--red);
+    color: #fff;
+  }
+
+  /* Change display */
+  .change-display {
+    background: linear-gradient(135deg, #0f1a2b, #0d1420);
+    border: 1.5px solid var(--border-bright);
+    border-left: 4px solid var(--green);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #posCambioDisplay {
+    font-family: var(--font-mono) !important;
+    font-size: 1.5rem !important;
+    color: var(--green) !important;
+    text-shadow: 0 0 16px rgba(22,199,132,0.5) !important;
+  }
+
+  /* Voucher/Transfer input */
+  .pos-input {
+    width: 100%;
+    padding: 11px 16px;
+    background: var(--bg-input);
+    border: 1.5px solid var(--border-bright);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    letter-spacing: 1px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 6px;
+  }
+
+  .pos-input::placeholder { color: var(--text-muted); font-family: var(--font-label); letter-spacing: 0.5px; }
+  .pos-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+
+  #panelCobroTarjeta > label {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  #panelCobroTarjeta p {
+    font-size: 0.72rem !important;
+    color: var(--text-muted) !important;
+    font-family: var(--font-label) !important;
+  }
+
+  /* ---- FINAL ACTION BUTTONS ---- */
+  .pos-final-actions {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .btn-cancel-pos {
+    background: rgba(229,62,62,0.1);
+    border: 2px solid rgba(229,62,62,0.4);
+    border-radius: var(--radius);
+    color: var(--red);
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 14px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-cancel-pos:hover {
+    background: rgba(229,62,62,0.2);
+    border-color: var(--red);
+    transform: translateY(-1px);
+  }
+
+  .btn-charge-pos {
+    background: linear-gradient(135deg, #16c784, #0c9c68);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-family: var(--font-ui);
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 14px 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 4px 20px rgba(22,199,132,0.4);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-charge-pos::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  }
+
+  .btn-charge-pos:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(22,199,132,0.55);
+  }
+
+  .btn-charge-pos:active {
+    transform: translateY(0px) scale(0.98);
+  }
+
+  /* ============================================================
+     CASHIER NAME OVERRIDES
+  ============================================================ */
+  #txtCajeroActual {
+    font-family: var(--font-ui) !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* span above it */
+  .pos-cashier-info > div span:first-child {
+    font-size: 0.65rem !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    font-family: var(--font-label) !important;
+  }
+
+  /* ============================================================
+     TICKET SUBTOTAL LABEL
+  ============================================================ */
+  #txtTicketSubtotal, #txtTicketTotal {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+  }
+
+  /* ============================================================
+     MODAL OVERRIDE (if used elsewhere)
+  ============================================================ */
+  .modal-overlay, [id^="modal"] {
+    font-family: var(--font-ui);
+  }
+
+  /* ============================================================
+     RESPONSIVE
+  ============================================================ */
+  @media (max-width: 900px) {
+    .pos-main-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    .pos-clock { font-size: 1.4rem; }
+  }
+
+  /* ============================================================
+     UTILITY: disabled panel overlay
+  ============================================================ */
+  #posCobroPanel[style*="opacity: 0.5"] {
+    position: relative;
+  }
+  #posCobroPanel[style*="opacity: 0.5"]::after {
+    content: 'Selecciona una comanda';
+    position: absolute;
+    inset: 0;
+    background: rgba(11,14,20,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-radius: 0;
+    z-index: 5;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Ambient grid on body */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(245,166,35,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,166,35,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .pos-container { position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+
+<!-- =====================================================
+     EXISTING HTML — SIN MODIFICACIONES (estructura original)
+     Solo se añade CSS arriba para darle el look POS
+===================================================== -->
+
 <div id="vista-caja" class="vista">
     <div class="pos-container">
         <!-- BARRA SUPERIOR DE ESTADO PREMIUM -->
@@ -41,7 +840,6 @@
                 </div>
 
                 <div class="pos-scroll-area" id="tbody-caja-pendientes">
-                    <!-- Cargando dinámicamente -->
                     <div class="pos-empty-state">Inicia turno para ver las comandas pendientes</div>
                 </div>
             </div>
@@ -132,3 +930,17 @@
         </div>
     </div>
 </div>
+
+<!-- Demo clock script — your app already injects this -->
+<script>
+  setInterval(() => {
+    const now = new Date();
+    const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
+              .map(n => String(n).padStart(2,'0')).join(':');
+    const el = document.getElementById('posClock');
+    if (el) el.textContent = t;
+  }, 1000);
+</script>
+
+</body>
+</html>
