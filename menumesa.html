@@ -38,6 +38,13 @@
 
     * { box-sizing: border-box; }
 
+    /* Página standalone: el body necesita fondo oscuro para no mostrar bordes blancos */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0b0e14;
+    }
+
     #menumesa-root {
       font-family: var(--font-label);
       margin: 0;
@@ -45,10 +52,12 @@
       color: var(--text-primary);
       padding-bottom: 120px;
       scroll-behavior: smooth;
+      min-height: 100vh;
+      width: 100%;
     }
 
     /* ambient grid */
-    body::before {
+    #menumesa-root::before {
       content: '';
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background-image:

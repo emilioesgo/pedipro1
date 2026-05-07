@@ -52,7 +52,10 @@
     background: var(--bg-root);
     color: var(--text-primary);
     font-family: var(--font-ui);
-    min-height: 100%;
+    min-height: 100vh;
+    /* Cancelar padding: 32px del .main-content del dashboard */
+    margin: -32px;
+    width: calc(100% + 64px);
     /* subtle scanline texture */
     background-image:
       repeating-linear-gradient(
@@ -62,6 +65,14 @@
         rgba(255,255,255,0.012) 2px,
         rgba(255,255,255,0.012) 4px
       );
+  }
+
+  /* Ajuste móvil: .main-content usa padding: 18px 14px 28px */
+  @media (max-width: 860px) {
+    #vista-caja {
+      margin: -18px -14px -28px;
+      width: calc(100% + 28px);
+    }
   }
 
   /* ============================================================
