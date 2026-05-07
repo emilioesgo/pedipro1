@@ -12,7 +12,7 @@
     /* ============================================================
        ROOT VARS — DARK POS THEME (mismo sistema que caja.html)
     ============================================================ */
-    :root {
+    #menumesa-root {
       --bg-root:        #0b0e14;
       --bg-panel:       #111520;
       --bg-card:        #181d2a;
@@ -38,7 +38,7 @@
 
     * { box-sizing: border-box; }
 
-    body {
+    #menumesa-root {
       font-family: var(--font-label);
       margin: 0;
       background: var(--bg-root);
@@ -494,7 +494,7 @@
     </style>
 </head>
 <body>
-
+    <div id="menumesa-root"></div>
     <!-- CABECERA CON PORTADA Y LOGO -->
     <header id="headerRestaurante" class="header-portada">
         <div class="header-overlay"></div>
@@ -1131,5 +1131,6 @@
 
         cargarMenu();
     </script>
+    </div>
 </body>
 </html>
