@@ -46,13 +46,13 @@
     --shadow-panel:   0 4px 24px rgba(0,0,0,0.5);
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  #vista-caja * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
+  #vista-caja {
     background: var(--bg-root);
     color: var(--text-primary);
     font-family: var(--font-ui);
-    min-height: 100vh;
+    min-height: 100%;
     /* subtle scanline texture */
     background-image:
       repeating-linear-gradient(
@@ -75,8 +75,20 @@
   .pos-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100vh - 64px);
     overflow: hidden;
+  }
+
+  /* En móvil dentro del dashboard, permite scroll en lugar de cortar */
+  @media (max-width: 900px) {
+    .pos-container {
+      height: auto;
+      min-height: 0;
+      overflow: visible;
+    }
+    #vista-caja {
+      overflow-y: auto;
+    }
   }
 
   /* ============================================================
@@ -351,7 +363,7 @@
     font-weight: 700;
     letter-spacing: 2.5px;
     text-transform: uppercase;
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
 
   #txtFolioTicket {
@@ -401,7 +413,7 @@
     font-size: 0.95rem;
     font-weight: 500;
     letter-spacing: 0.4px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
 
   .summary-row.total {
@@ -748,12 +760,17 @@
   @media (max-width: 900px) {
     .pos-main-layout {
       grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto auto;
+      overflow: visible;
     }
 
     .pos-left-panel {
-      max-height: 45vh;
-      overflow-y: auto;
+      max-height: none;
+      overflow: visible;
+    }
+
+    .pos-right-panel {
+      min-height: 600px;
     }
 
     .pos-clock {
@@ -785,7 +802,7 @@
     }
 
     .pos-left-panel {
-      max-height: 40vh;
+      max-height: none;
     }
 
     .pos-status-bar {
@@ -856,7 +873,7 @@
   /* ---- MÓVIL PEQUEÑO (máx. 480px) ---- */
   @media (max-width: 480px) {
     .pos-left-panel {
-      max-height: 35vh;
+      max-height: none;
     }
 
     .pos-clock {
@@ -941,10 +958,10 @@
     backdrop-filter: blur(2px);
   }
 
-  /* Ambient grid on body */
-  body::before {
+  /* Ambient grid scoped to pos-container */
+  .pos-container::before {
     content: '';
-    position: fixed;
+    position: absolute;
     inset: 0;
     background-image:
       linear-gradient(rgba(245,166,35,0.02) 1px, transparent 1px),
