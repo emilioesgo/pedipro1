@@ -1421,60 +1421,100 @@
             if(sec) { if(activo) sec.classList.add('visible'); else sec.classList.remove('visible'); }
         };
 
+        let zonasEnvioActuales = [];
+        let zonaEnvioEditando = null;
+
+        function mostrarFormularioZonaEnvio(zona = null, indice = null) {
+            const form = document.getElementById('formZonaEnvio');
+            const inputNombre = document.getElementById('inputZonaEnvioNombre');
+            const inputPrecio = document.getElementById('inputZonaEnvioPrecio');
+            const titulo = document.getElementById('tituloFormZonaEnvio');
+            const btnGuardar = document.getElementById('btnGuardarZonasEnvio');
+            if (!form || !inputNombre || !inputPrecio) return;
+
+            zonaEnvioEditando = Number.isInteger(indice) ? indice : null;
+            if (titulo) titulo.innerText = zonaEnvioEditando === null ? 'Agregar zona' : 'Editar zona';
+            if (btnGuardar) btnGuardar.innerText = zonaEnvioEditando === null ? 'Guardar zona' : 'Guardar cambio';
+            inputNombre.value = zona?.zona || '';
+            inputPrecio.value = zona?.precio ?? '';
+            form.classList.add('visible');
+            inputNombre.focus();
+        }
+
+        function ocultarFormularioZonaEnvio() {
+            const form = document.getElementById('formZonaEnvio');
+            const inputNombre = document.getElementById('inputZonaEnvioNombre');
+            const inputPrecio = document.getElementById('inputZonaEnvioPrecio');
+            const btnGuardar = document.getElementById('btnGuardarZonasEnvio');
+            if (form) form.classList.remove('visible');
+            if (inputNombre) inputNombre.value = '';
+            if (inputPrecio) inputPrecio.value = '';
+            if (btnGuardar) btnGuardar.innerText = 'Guardar Zonas';
+            zonaEnvioEditando = null;
+        }
+
+        async function guardarZonasEnvioEnBD(zonasEnvio) {
+            await updateDoc(doc(db, "restaurantes", idRestaurante), { zonasEnvio });
+            window.restauranteInfo = { ...window.restauranteInfo, zonasEnvio };
+            window.renderizarZonasEnvio(zonasEnvio);
+        }
+
         window.renderizarZonasEnvio = function(zonas = []) {
             const lista = document.getElementById('listaZonasEnvio');
             if (!lista) return;
             const zonasValidas = Array.isArray(zonas) ? zonas : [];
+            zonasEnvioActuales = zonasValidas
+                .filter(zona => zona && zona.zona && !isNaN(Number(zona.precio)))
+                .map(zona => ({ zona: zona.zona, precio: Number(zona.precio) }));
+            ocultarFormularioZonaEnvio();
             lista.innerHTML = '';
-            if (zonasValidas.length === 0) {
+            if (zonasEnvioActuales.length === 0) {
                 lista.innerHTML = '<p class="cfg-input-hint" style="margin:0 0 12px;">Aun no tienes zonas. Agrega al menos una para cobrar envio a domicilio.</p>';
                 return;
             }
-            zonasValidas.forEach(zona => window.agregarZonaEnvio(zona.zona || '', zona.precio ?? ''));
-        };
-
-        window.agregarZonaEnvio = function(nombre = '', precio = '') {
-            const lista = document.getElementById('listaZonasEnvio');
-            if (!lista) return;
-            if (lista.querySelector('.cfg-input-hint')) lista.innerHTML = '';
-            const row = document.createElement('div');
-            row.className = 'cfg-zona-row';
-            const inputZona = document.createElement('input');
-            inputZona.type = 'text';
-            inputZona.className = 'cfg-input zona-envio-nombre';
-            inputZona.placeholder = 'Zona o colonia';
-            inputZona.value = nombre;
-
-            const inputPrecio = document.createElement('input');
-            inputPrecio.type = 'number';
-            inputPrecio.className = 'cfg-input zona-envio-precio';
-            inputPrecio.min = '0';
-            inputPrecio.step = '0.01';
-            inputPrecio.placeholder = 'Precio';
-            inputPrecio.value = precio;
-
-            const btnEliminar = document.createElement('button');
-            btnEliminar.type = 'button';
-            btnEliminar.className = 'cfg-zona-remove';
-            btnEliminar.innerText = 'Eliminar';
-            btnEliminar.onclick = () => {
-                row.remove();
-                if (!document.querySelector('#listaZonasEnvio .cfg-zona-row')) window.renderizarZonasEnvio([]);
-            };
-
-            row.append(inputZona, inputPrecio, btnEliminar);
-            lista.appendChild(row);
-        };
-
-        function obtenerZonasEnvioFormulario() {
-            const zonas = [];
-            document.querySelectorAll('#listaZonasEnvio .cfg-zona-row').forEach(row => {
-                const zona = row.querySelector('.zona-envio-nombre')?.value.trim();
-                const precio = parseFloat(row.querySelector('.zona-envio-precio')?.value);
-                if (zona && !isNaN(precio)) zonas.push({ zona, precio });
+            zonasEnvioActuales.forEach((zona, indice) => {
+                lista.innerHTML += `
+                    <div class="cfg-zona-card">
+                        <div class="cfg-zona-info">
+                            <strong>${escaparHtml(zona.zona)}</strong>
+                            <span>$${Number(zona.precio || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="cfg-zona-actions">
+                            <button type="button" class="cfg-zona-edit" onclick="window.editarZonaEnvio(${indice})">Editar</button>
+                            <button type="button" class="cfg-zona-remove" onclick="window.eliminarZonaEnvio(${indice})">Eliminar</button>
+                        </div>
+                    </div>
+                `;
             });
-            return zonas;
-        }
+        };
+
+        window.agregarZonaEnvio = function() {
+            mostrarFormularioZonaEnvio();
+        };
+
+        window.editarZonaEnvio = function(indice) {
+            const zona = zonasEnvioActuales[indice];
+            if (!zona) return;
+            mostrarFormularioZonaEnvio(zona, indice);
+        };
+
+        window.cancelarZonaEnvio = function() {
+            ocultarFormularioZonaEnvio();
+        };
+
+        window.eliminarZonaEnvio = async function(indice) {
+            const zona = zonasEnvioActuales[indice];
+            if (!zona) return;
+            if (!confirm(`Eliminar la zona "${zona.zona}"?`)) return;
+            const zonasActualizadas = zonasEnvioActuales.filter((_, i) => i !== indice);
+            try {
+                await guardarZonasEnvioEnBD(zonasActualizadas);
+                alert("Zona eliminada.");
+            } catch (error) {
+                console.error(error);
+                alert("Error al eliminar zona de envio.");
+            }
+        };
 
         window.guardarImagenes = async function() {
             const btn = document.getElementById('btnGuardarImagenes');
@@ -1562,21 +1602,30 @@
             const btn = document.getElementById('btnGuardarZonasEnvio');
             btn.innerText = "Guardando...";
             btn.disabled = true;
-            const zonasEnvio = obtenerZonasEnvioFormulario();
+            const form = document.getElementById('formZonaEnvio');
+            const formVisible = form && form.classList.contains('visible');
+            const nombre = document.getElementById('inputZonaEnvioNombre')?.value.trim();
+            const precio = parseFloat(document.getElementById('inputZonaEnvioPrecio')?.value);
+            let zonasEnvio = [...zonasEnvioActuales];
 
-            const filas = document.querySelectorAll('#listaZonasEnvio .cfg-zona-row');
-            if (filas.length > 0 && zonasEnvio.length !== filas.length) {
-                alert("Revisa las zonas: cada fila debe tener nombre y precio.");
+            if (formVisible) {
+                if (!nombre || isNaN(precio) || precio < 0) {
+                    alert("Ingresa el nombre de la zona y un precio valido.");
                 btn.innerText = "💾 Guardar Zonas";
-                btn.disabled = false;
-                return;
+                    btn.disabled = false;
+                    return;
+                }
+                const zonaGuardada = { zona: nombre, precio };
+                if (zonaEnvioEditando === null) {
+                    zonasEnvio.push(zonaGuardada);
+                } else {
+                    zonasEnvio[zonaEnvioEditando] = zonaGuardada;
+                }
             }
 
             try {
-                await updateDoc(doc(db, "restaurantes", idRestaurante), { zonasEnvio });
-                window.restauranteInfo = { ...window.restauranteInfo, zonasEnvio };
-                window.renderizarZonasEnvio(zonasEnvio);
-                alert("Zonas de envio guardadas.");
+                await guardarZonasEnvioEnBD(zonasEnvio);
+                alert(formVisible ? "Zona guardada." : "Zonas de envio guardadas.");
             } catch (error) {
                 console.error(error);
                 alert("Error al guardar zonas de envio.");

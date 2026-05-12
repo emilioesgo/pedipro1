@@ -194,6 +194,72 @@
                     background: #f8fafc;
                 }
                 .cfg-zona-row:last-child { margin-bottom: 0; }
+                .cfg-zona-form {
+                    display: none;
+                    margin-top: 14px;
+                    padding: 14px;
+                    border: 1px solid #bfdbfe;
+                    border-radius: 12px;
+                    background: #eff6ff;
+                }
+                .cfg-zona-form.visible { display: block; }
+                .cfg-zona-form-title {
+                    margin: 0 0 10px;
+                    color: #1e3a8a;
+                    font-size: 0.9rem;
+                    font-weight: 800;
+                }
+                .cfg-zona-form-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 10px;
+                    margin-top: 12px;
+                    flex-wrap: wrap;
+                }
+                .cfg-zona-card {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) auto;
+                    gap: 12px;
+                    align-items: center;
+                    padding: 14px;
+                    margin-bottom: 10px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                    background: #fff;
+                    box-shadow: 0 4px 12px rgba(15,23,42,0.04);
+                }
+                .cfg-zona-card:last-child { margin-bottom: 0; }
+                .cfg-zona-info strong {
+                    display: block;
+                    color: #0f172a;
+                    font-size: 0.95rem;
+                    overflow-wrap: anywhere;
+                }
+                .cfg-zona-info span {
+                    display: inline-block;
+                    margin-top: 4px;
+                    color: #16a34a;
+                    font-size: 0.88rem;
+                    font-weight: 800;
+                }
+                .cfg-zona-actions {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                    justify-content: flex-end;
+                }
+                .cfg-zona-edit {
+                    min-height: 38px;
+                    padding: 8px 12px;
+                    border: 1px solid #bfdbfe;
+                    border-radius: 8px;
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                    font: inherit;
+                    font-weight: 800;
+                    cursor: pointer;
+                }
+                .cfg-zona-edit:hover { background: #dbeafe; }
                 .cfg-zona-remove {
                     min-height: 40px;
                     padding: 8px 12px;
@@ -229,6 +295,9 @@
                     .cfg-nav-item.activo { border-bottom-color: #3b82f6; }
                     .cfg-body { padding: 16px; }
                     .cfg-zona-row { grid-template-columns: 1fr; }
+                    .cfg-zona-card { grid-template-columns: 1fr; }
+                    .cfg-zona-actions { justify-content: stretch; }
+                    .cfg-zona-actions button { flex: 1; }
                 }
             </style>
 
@@ -411,6 +480,14 @@
                                 <div class="cfg-section-body">
                                     <div id="listaZonasEnvio">
                                         <!-- JS -->
+                                    </div>
+                                    <div id="formZonaEnvio" class="cfg-zona-form">
+                                        <p class="cfg-zona-form-title" id="tituloFormZonaEnvio">Agregar zona</p>
+                                        <div class="cfg-zona-row" style="margin-bottom:0;">
+                                            <input type="text" id="inputZonaEnvioNombre" class="cfg-input" placeholder="Zona o colonia">
+                                            <input type="number" id="inputZonaEnvioPrecio" class="cfg-input" min="0" step="0.01" placeholder="Precio">
+                                            <button type="button" class="cfg-zona-remove" onclick="window.cancelarZonaEnvio()">Cancelar</button>
+                                        </div>
                                     </div>
                                     <button type="button" class="cfg-btn cfg-btn-purple" onclick="window.agregarZonaEnvio()" style="margin-top:12px;">
                                         + Agregar zona
