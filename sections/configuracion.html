@@ -182,6 +182,31 @@
                 .cfg-btn-purple  { background: #7c3aed; color: white; }
                 .cfg-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+                .cfg-zona-row {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1.4fr) minmax(110px, 0.6fr) auto;
+                    gap: 10px;
+                    align-items: center;
+                    padding: 12px;
+                    margin-bottom: 10px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 10px;
+                    background: #f8fafc;
+                }
+                .cfg-zona-row:last-child { margin-bottom: 0; }
+                .cfg-zona-remove {
+                    min-height: 40px;
+                    padding: 8px 12px;
+                    border: 1px solid #fecaca;
+                    border-radius: 8px;
+                    background: #fef2f2;
+                    color: #dc2626;
+                    font: inherit;
+                    font-weight: 800;
+                    cursor: pointer;
+                }
+                .cfg-zona-remove:hover { background: #fee2e2; }
+
                 /* Horario table */
                 .cfg-horario-table { width: 100%; border-collapse: collapse; }
                 .cfg-horario-table th {
@@ -203,6 +228,7 @@
                     .cfg-nav-item { border-left: 0; border-bottom: 3px solid transparent; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; }
                     .cfg-nav-item.activo { border-bottom-color: #3b82f6; }
                     .cfg-body { padding: 16px; }
+                    .cfg-zona-row { grid-template-columns: 1fr; }
                 }
             </style>
 
@@ -219,6 +245,9 @@
                     </div>
                     <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-pagos', this)" id="cfgnav-pagos">
                         <span class="cfg-nav-icon">💳</span> Formas de Pago
+                    </div>
+                    <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-envios', this)" id="cfgnav-envios">
+                        <span class="cfg-nav-icon">$</span> Envios
                     </div>
                     <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-horarios', this)" id="cfgnav-horarios">
                         <span class="cfg-nav-icon">🕒</span> Horarios
@@ -372,6 +401,30 @@
                             </div>
                         </div>
 
+                        <!-- ===== PANEL: ENVIOS ===== -->
+                        <div class="cfg-panel" id="panel-envios">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>$</span>
+                                    <div><h4>Zonas de envio a domicilio</h4><p>El cliente elegira su zona al pedir a domicilio y el costo se sumara al total</p></div>
+                                </div>
+                                <div class="cfg-section-body">
+                                    <div id="listaZonasEnvio">
+                                        <!-- JS -->
+                                    </div>
+                                    <button type="button" class="cfg-btn cfg-btn-purple" onclick="window.agregarZonaEnvio()" style="margin-top:12px;">
+                                        + Agregar zona
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="cfg-action-bar">
+                                <button class="cfg-btn cfg-btn-success" id="btnGuardarZonasEnvio" onclick="window.guardarZonasEnvio()">
+                                    Guardar Zonas
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- ===== PANEL: HORARIOS ===== -->
                         <div class="cfg-panel" id="panel-horarios">
                             <div class="cfg-section">
@@ -407,4 +460,3 @@
 
 
         </div>
-

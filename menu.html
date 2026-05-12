@@ -550,6 +550,8 @@
                 <!-- Aquí se inyectan los productos del carrito -->
             </div>
             
+            <div id="resumenEnvioCarrito" style="display:none; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:10px; margin-bottom:12px; font-size:0.9rem; color:#2c3e50;"></div>
+
             <div style="font-size: 1.3rem; font-weight: bold; text-align: right; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
                 Total: <span id="totalCarritoModal" style="color: #27ae60;">$0.00</span>
             </div>
@@ -579,6 +581,9 @@
                 
                 <div id="seccionDireccion">
                     <textarea id="domDireccion" class="form-input" rows="2" placeholder="Calle, cruzamientos, colonia y referencias..."></textarea>
+                    <select id="domZonaEnvio" class="form-input" onchange="actualizarCostoEnvio()" style="margin-top: 10px; font-weight: bold; color: #2c3e50;">
+                        <option value="" disabled selected>Selecciona tu zona de envio</option>
+                    </select>
                     <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Adjuntar mi ubicación (GPS)</button>
                 </div>
 
@@ -685,6 +690,8 @@
         let fechaInicioTurno = new Date(); fechaInicioTurno.setHours(0, 0, 0, 0); 
         let productosMenuGlobal = [];
         let personalizacionesGlobales = [];
+        let zonasEnvioGlobal = [];
+        let costoEnvioSeleccionado = 0;
         let productoActualModal = null;
         let cantActualModal = 1;
         let opcionesSeleccionadasModal = {};
@@ -738,6 +745,7 @@
             }
 
             renderizarFormasPago(data.formasPago);
+            renderizarZonasEnvioMenu(data.zonasEnvio);
             document.getElementById('switchPickup').checked = true;
             sincronizarTipoPedido('pickup');
 
@@ -784,6 +792,63 @@
                 return `Desde $${Math.min(...precios).toFixed(2)}`;
             }
             return `$${Number(producto.precio || 0).toFixed(2)}`;
+        }
+
+        function subtotalCarrito() {
+            let subtotal = 0;
+            for (let prod in carrito) subtotal += (carrito[prod].precio * carrito[prod].cantidad);
+            return subtotal;
+        }
+
+        function zonaEnvioSeleccionada() {
+            const select = document.getElementById('domZonaEnvio');
+            if (!select || select.value === '') return null;
+            return zonasEnvioGlobal[Number(select.value)] || null;
+        }
+
+        window.actualizarCostoEnvio = function() {
+            const tipo = document.getElementById('tipoPedidoTop')?.value;
+            const zona = tipo === 'domicilio' ? zonaEnvioSeleccionada() : null;
+            costoEnvioSeleccionado = zona ? Number(zona.precio || 0) : 0;
+            actualizarTotalesCarrito();
+        };
+
+        function actualizarTotalesCarrito() {
+            const subtotal = subtotalCarrito();
+            totalGeneral = subtotal + costoEnvioSeleccionado;
+
+            const totalVenta = document.getElementById('totalVenta');
+            const totalModal = document.getElementById('totalCarritoModal');
+            if (totalVenta) totalVenta.innerText = `$${totalGeneral.toFixed(2)}`;
+            if (totalModal) totalModal.innerText = `$${totalGeneral.toFixed(2)}`;
+
+            const resumenEnvio = document.getElementById('resumenEnvioCarrito');
+            if (resumenEnvio) {
+                const zona = zonaEnvioSeleccionada();
+                if (document.getElementById('tipoPedidoTop')?.value === 'domicilio' && zona) {
+                    resumenEnvio.style.display = 'block';
+                    resumenEnvio.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; gap:10px;"><span>Subtotal productos</span><strong>$${subtotal.toFixed(2)}</strong></div>
+                        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:4px;"><span>Envio (${zona.zona})</span><strong>$${costoEnvioSeleccionado.toFixed(2)}</strong></div>
+                    `;
+                } else {
+                    resumenEnvio.style.display = 'none';
+                    resumenEnvio.innerHTML = '';
+                }
+            }
+        }
+
+        function renderizarZonasEnvioMenu(zonas = []) {
+            zonasEnvioGlobal = Array.isArray(zonas) ? zonas.filter(z => z && z.zona && !isNaN(Number(z.precio))) : [];
+            const select = document.getElementById('domZonaEnvio');
+            if (!select) return;
+            select.innerHTML = '<option value="" disabled selected>Selecciona tu zona de envio</option>';
+            zonasEnvioGlobal.forEach((zona, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = `${zona.zona} - $${Number(zona.precio || 0).toFixed(2)}`;
+                select.appendChild(option);
+            });
         }
 
         function renderizarProductosMenu() {
@@ -1042,9 +1107,7 @@
             
             // Cerrar y actualizar UI
             cerrarModales();
-            totalGeneral = 0; 
-            for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
-            document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
+            actualizarTotalesCarrito();
             renderizarProductosMenu(); // Refrescar chips de cantidad
         }
 
@@ -1059,10 +1122,7 @@
             const numEl = document.getElementById(`qty-${idHTML}`);
             if(numEl) numEl.innerText = carrito[nombre] ? carrito[nombre].cantidad : 0;
             
-            totalGeneral = 0; 
-            for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
-            document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
-            document.getElementById('totalCarritoModal').innerText = `$${totalGeneral.toFixed(2)}`;
+            actualizarTotalesCarrito();
 
             // Si el modal del carrito está abierto, re-renderizarlo
             if(document.getElementById('modalCarrito').style.display === 'block') {
@@ -1135,11 +1195,13 @@
                     </div>
                 `;
             }
+            actualizarTotalesCarrito();
         }
 
         window.pasarADatosDeEnvio = function() {
             document.getElementById('modalCarrito').style.display = 'none';
             document.getElementById('modalDomicilio').style.display = 'block';
+            window.actualizarCostoEnvio();
         }
 
         window.volverAlCarrito = function() {
@@ -1161,6 +1223,11 @@
 
             if (tipo === 'pickup') secDir.style.display = 'none';
             if (tipo === 'domicilio') secDir.style.display = 'block';
+            if (tipo === 'pickup') {
+                const zonaSelect = document.getElementById('domZonaEnvio');
+                if (zonaSelect) zonaSelect.value = '';
+            }
+            window.actualizarCostoEnvio();
 
             let huboAjuste = false;
             Object.keys(carrito).forEach(nombre => {
@@ -1172,10 +1239,7 @@
             });
             if (productosMenuGlobal.length > 0) renderizarProductosMenu();
             if (huboAjuste) {
-                totalGeneral = 0;
-                for (let prod in carrito) totalGeneral += (carrito[prod].precio * carrito[prod].cantidad);
-                document.getElementById('totalVenta').innerText = `$${totalGeneral.toFixed(2)}`;
-                document.getElementById('totalCarritoModal').innerText = `$${totalGeneral.toFixed(2)}`;
+                actualizarTotalesCarrito();
                 alert("Algunos productos se quitaron porque no están disponibles para esta opción de servicio.");
             }
         }
@@ -1200,9 +1264,16 @@
             if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.metodoPago) return alert("Por favor llena Tu Nombre, Teléfono y Método de Pago.");
             if(tipo === 'domicilio') { 
                 datosEnvio.direccion = document.getElementById('domDireccion').value; 
-                if(!datosEnvio.direccion) return alert("Por favor escribe tu dirección para el envío."); 
+                if(!datosEnvio.direccion) return alert("Por favor escribe tu direccion para el envio."); 
+                const zona = zonaEnvioSeleccionada();
+                if (zonasEnvioGlobal.length > 0 && !zona) return alert("Por favor selecciona tu zona de envio.");
+                datosEnvio.zonaEnvio = zona ? zona.zona : "";
+                datosEnvio.costoEnvio = zona ? Number(zona.precio || 0) : 0;
+                window.actualizarCostoEnvio();
             } else { 
-                datosEnvio.direccion = "Pick Up (Pasa a recoger al local)"; datosEnvio.mapsLink = ""; 
+                datosEnvio.direccion = "Pick Up (Pasa a recoger al local)"; datosEnvio.mapsLink = ""; datosEnvio.zonaEnvio = ""; datosEnvio.costoEnvio = 0;
+                costoEnvioSeleccionado = 0;
+                actualizarTotalesCarrito();
             }
             
             const arrayItems = Object.keys(carrito).map(nombre => ({ nombre: nombre, precio: carrito[nombre].precio, cantidad: carrito[nombre].cantidad }));
@@ -1234,12 +1305,13 @@
                 if(tipo === 'pickup') mensaje += `🥡 *PICK UP (Paso a recoger)*%0A`; else mensaje += `🛵 *SERVICIO A DOMICILIO*%0A`;
                 mensaje += `--------------------------%0A`;
                 arrayItems.forEach(item => { mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toFixed(2)})%0A`; });
+                if(tipo === 'domicilio' && datosEnvio.costoEnvio > 0) mensaje += `Envio (${datosEnvio.zonaEnvio}): $${datosEnvio.costoEnvio.toFixed(2)}%0A`;
                 mensaje += `--------------------------%0A*TOTAL A PAGAR: $${totalGeneral.toFixed(2)}*%0A%0A`;
 
                 if(comentariosExtra !== "") mensaje += `📝 *NOTAS/COMENTARIOS:* ${comentariosExtra}%0A%0A`;
 
                 mensaje += `*DATOS DEL CLIENTE:*%0A👤 Nombre: ${datosEnvio.nombre}%0A📞 Tel: ${datosEnvio.telefono}%0A💳 Método: ${datosEnvio.metodoPago}%0A`;
-                if(tipo === 'domicilio') { mensaje += `🏠 Dir: ${datosEnvio.direccion}%0A`; if(datosEnvio.mapsLink !== "") mensaje += `🗺️ GPS: ${datosEnvio.mapsLink}%0A`; }
+                if(tipo === 'domicilio') { mensaje += `🏠 Dir: ${datosEnvio.direccion}%0A`; if(datosEnvio.zonaEnvio) mensaje += `📍 Zona: ${datosEnvio.zonaEnvio}%0A`; if(datosEnvio.mapsLink !== "") mensaje += `🗺️ GPS: ${datosEnvio.mapsLink}%0A`; }
 
                 // -- ENVÍO A WHATSAPP --
                 const url = `https://api.whatsapp.com/send?phone=${numWhatsApp}&text=${mensaje}`; 

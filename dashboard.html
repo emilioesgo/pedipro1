@@ -286,6 +286,7 @@
                     if(fp.transClabe) document.getElementById('transClabe').value = fp.transClabe;
                     if(fp.transNumTarjeta) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta;
                 }
+                window.renderizarZonasEnvio(window.restauranteInfo.zonasEnvio);
                 renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
         }
@@ -921,6 +922,7 @@
                     if(document.getElementById('transNumTarjeta') && fp.transNumTarjeta) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta;
                 }
 
+                window.renderizarZonasEnvio(window.restauranteInfo.zonasEnvio);
                 renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
             window.cargarInicioDashboard();
@@ -1194,6 +1196,7 @@
             'panel-imagenes': { icon: '🖼️', title: 'Identidad Visual',  desc: 'Logo y portada que se muestran en el menú de tus clientes' },
             'panel-link':     { icon: '🔗', title: 'Link del Menú',     desc: 'URL personalizada para compartir con tus clientes' },
             'panel-pagos':    { icon: '💳', title: 'Formas de Pago',    desc: 'Métodos que aparecerán disponibles en el menú digital' },
+            'panel-envios':   { icon: '$', title: 'Envios',             desc: 'Zonas y costos para pedidos a domicilio' },
             'panel-horarios': { icon: '🕒', title: 'Horarios',          desc: 'Días y horas en que tu menú digital estará activo' },
         };
 
@@ -1236,6 +1239,61 @@
             const sec = document.getElementById('seccionDatosTransferencia');
             if(sec) { if(activo) sec.classList.add('visible'); else sec.classList.remove('visible'); }
         };
+
+        window.renderizarZonasEnvio = function(zonas = []) {
+            const lista = document.getElementById('listaZonasEnvio');
+            if (!lista) return;
+            const zonasValidas = Array.isArray(zonas) ? zonas : [];
+            lista.innerHTML = '';
+            if (zonasValidas.length === 0) {
+                lista.innerHTML = '<p class="cfg-input-hint" style="margin:0 0 12px;">Aun no tienes zonas. Agrega al menos una para cobrar envio a domicilio.</p>';
+                return;
+            }
+            zonasValidas.forEach(zona => window.agregarZonaEnvio(zona.zona || '', zona.precio ?? ''));
+        };
+
+        window.agregarZonaEnvio = function(nombre = '', precio = '') {
+            const lista = document.getElementById('listaZonasEnvio');
+            if (!lista) return;
+            if (lista.querySelector('.cfg-input-hint')) lista.innerHTML = '';
+            const row = document.createElement('div');
+            row.className = 'cfg-zona-row';
+            const inputZona = document.createElement('input');
+            inputZona.type = 'text';
+            inputZona.className = 'cfg-input zona-envio-nombre';
+            inputZona.placeholder = 'Zona o colonia';
+            inputZona.value = nombre;
+
+            const inputPrecio = document.createElement('input');
+            inputPrecio.type = 'number';
+            inputPrecio.className = 'cfg-input zona-envio-precio';
+            inputPrecio.min = '0';
+            inputPrecio.step = '0.01';
+            inputPrecio.placeholder = 'Precio';
+            inputPrecio.value = precio;
+
+            const btnEliminar = document.createElement('button');
+            btnEliminar.type = 'button';
+            btnEliminar.className = 'cfg-zona-remove';
+            btnEliminar.innerText = 'Eliminar';
+            btnEliminar.onclick = () => {
+                row.remove();
+                if (!document.querySelector('#listaZonasEnvio .cfg-zona-row')) window.renderizarZonasEnvio([]);
+            };
+
+            row.append(inputZona, inputPrecio, btnEliminar);
+            lista.appendChild(row);
+        };
+
+        function obtenerZonasEnvioFormulario() {
+            const zonas = [];
+            document.querySelectorAll('#listaZonasEnvio .cfg-zona-row').forEach(row => {
+                const zona = row.querySelector('.zona-envio-nombre')?.value.trim();
+                const precio = parseFloat(row.querySelector('.zona-envio-precio')?.value);
+                if (zona && !isNaN(precio)) zonas.push({ zona, precio });
+            });
+            return zonas;
+        }
 
         window.guardarImagenes = async function() {
             const btn = document.getElementById('btnGuardarImagenes');
@@ -1319,6 +1377,34 @@
             finally { btn.innerText = "💾 Guardar Formas de Pago"; btn.disabled = false; }
         };
 
+        window.guardarZonasEnvio = async function() {
+            const btn = document.getElementById('btnGuardarZonasEnvio');
+            btn.innerText = "Guardando...";
+            btn.disabled = true;
+            const zonasEnvio = obtenerZonasEnvioFormulario();
+
+            const filas = document.querySelectorAll('#listaZonasEnvio .cfg-zona-row');
+            if (filas.length > 0 && zonasEnvio.length !== filas.length) {
+                alert("Revisa las zonas: cada fila debe tener nombre y precio.");
+                btn.innerText = "💾 Guardar Zonas";
+                btn.disabled = false;
+                return;
+            }
+
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante), { zonasEnvio });
+                window.restauranteInfo = { ...window.restauranteInfo, zonasEnvio };
+                window.renderizarZonasEnvio(zonasEnvio);
+                alert("Zonas de envio guardadas.");
+            } catch (error) {
+                console.error(error);
+                alert("Error al guardar zonas de envio.");
+            } finally {
+                btn.innerText = "💾 Guardar Zonas";
+                btn.disabled = false;
+            }
+        };
+
         function obtenerHoraCierreHoy() {
             const hoy = new Date();
             const nombreDia = hoy.toLocaleDateString('es-ES', { weekday: 'long' });
@@ -1396,7 +1482,7 @@
 
         window.verDetallePedido = function(idPedido) {
             const ped = window.pedidosGlobales.find(p => p.id === idPedido); if(!ped) return;
-            let infoHtml = ped.tipoOrigen === 'mesa' ? `<p><strong>📍 Tipo:</strong> Mesa #${ped.numeroMesa}</p>` : `<p><strong>🛵 Tipo:</strong> Domicilio/Pick Up</p><p><strong>👤 Cliente:</strong> ${ped.clienteEnvio?.nombre}</p><p><strong>📞 Tel:</strong> ${ped.clienteEnvio?.telefono}</p><p><strong>🏠 Dir:</strong> ${ped.clienteEnvio?.direccion}</p>`;
+            let infoHtml = ped.tipoOrigen === 'mesa' ? `<p><strong>📍 Tipo:</strong> Mesa #${ped.numeroMesa}</p>` : `<p><strong>🛵 Tipo:</strong> Domicilio/Pick Up</p><p><strong>👤 Cliente:</strong> ${ped.clienteEnvio?.nombre}</p><p><strong>📞 Tel:</strong> ${ped.clienteEnvio?.telefono}</p><p><strong>🏠 Dir:</strong> ${ped.clienteEnvio?.direccion}</p>${ped.clienteEnvio?.zonaEnvio ? `<p><strong>📍 Zona:</strong> ${ped.clienteEnvio.zonaEnvio}</p><p><strong>🛵 Envio:</strong> $${Number(ped.clienteEnvio.costoEnvio || 0).toFixed(2)}</p>` : ''}`;
             if (ped.comentarios) infoHtml += `<p><strong>📝 Notas:</strong> <span style="color: #e67e22;">${ped.comentarios}</span></p>`;
             let itemsHtml = ''; ped.items.forEach(i => { itemsHtml += `<li style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ddd; padding-bottom: 5px;"><span><strong>${i.cantidad}x</strong> ${i.nombre}</span><span style="color: #7f8c8d;">$${(i.precio * i.cantidad).toFixed(2)}</span></li>`; });
             
