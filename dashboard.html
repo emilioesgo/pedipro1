@@ -27,13 +27,13 @@
         <p id="saludoDuenio" style="text-align: center; margin-top: 0;">Cargando...</p>
         <hr style="border-color: #34495e; margin-bottom: 20px;">
         <nav>
-            <div class="nav-item activo" onclick="cambiarVista('vista-inicio', this)">🏠 Inicio</div>
-            <div class="nav-item" id="navPedidos" onclick="cambiarVista('vista-pedidos', this)">📋 Pedidos y Mesas <span id="badgePedidosNuevos" class="pedido-nav-badge" style="display:none;">0</span></div>
-            <div class="nav-item" onclick="cambiarVista('vista-menu', this)">🍔 Mi Menú</div>
-            <div class="nav-item" onclick="cambiarVista('vista-caja', this)">💰 Caja</div>
-            <div class="nav-item" onclick="cambiarVista('vista-disponibilidad', this)">✅ Disponibilidad</div>
-            <div class="nav-item" onclick="cambiarVista('vista-qr', this)">📲 Menú Digital</div>
-            <div class="nav-item" onclick="cambiarVista('vista-configuracion', this)">⚙️ Configuración</div>
+            <div class="nav-item activo" data-vista="vista-inicio" onclick="cambiarVista('vista-inicio', this)">🏠 Inicio</div>
+            <div class="nav-item" id="navPedidos" data-vista="vista-pedidos" onclick="cambiarVista('vista-pedidos', this)">📋 Pedidos y Mesas <span id="badgePedidosNuevos" class="pedido-nav-badge" style="display:none;">0</span></div>
+            <div class="nav-item" data-vista="vista-menu" onclick="cambiarVista('vista-menu', this)">🍔 Mi Menú</div>
+            <div class="nav-item" data-vista="vista-caja" onclick="cambiarVista('vista-caja', this)">💰 Caja</div>
+            <div class="nav-item" data-vista="vista-disponibilidad" onclick="cambiarVista('vista-disponibilidad', this)">✅ Disponibilidad</div>
+            <div class="nav-item" data-vista="vista-qr" onclick="cambiarVista('vista-qr', this)">📲 Menú Digital</div>
+            <div class="nav-item" data-vista="vista-configuracion" onclick="cambiarVista('vista-configuracion', this)">⚙️ Configuración</div>
             <div id="btnInstallPWA" class="nav-item" style="display:none; background: #2563eb; color: white;" onclick="instalarPWA()">📲 Instalar App</div>
             <hr style="border-color: #34495e; margin: 20px 0;">
             <div class="nav-item" onclick="cerrarSesion()" style="color: #e74c3c;">🚪 Cerrar Sesión</div>
@@ -269,8 +269,38 @@
             if (boton) boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
         }
 
+        function usuarioPuedeAcceder(idVista) {
+            const permisos = permisosPorRol[rolSesion] || permisosPorRol.administrador;
+            return permisos.includes(idVista);
+        }
+
+        function primeraVistaPermitida() {
+            return (permisosPorRol[rolSesion] || permisosPorRol.administrador)[0] || 'vista-inicio';
+        }
+
+        function aplicarPermisosUsuario(redirigir = false) {
+            document.querySelectorAll('.nav-item[data-vista]').forEach(item => {
+                const vista = item.dataset.vista;
+                item.style.display = usuarioPuedeAcceder(vista) ? '' : 'none';
+            });
+
+            const vistaActiva = document.querySelector('.vista.activa');
+            if (redirigir && vistaActiva && !usuarioPuedeAcceder(vistaActiva.id)) {
+                const vistaDestino = primeraVistaPermitida();
+                const navDestino = document.querySelector(`.nav-item[data-vista="${vistaDestino}"]`);
+                cambiarVista(vistaDestino, navDestino);
+            }
+        }
+
         async function cambiarVista(idVista, elementoNav) {
             await window.dashboardSectionsReady;
+            if (!usuarioPuedeAcceder(idVista)) {
+                const vistaDestino = primeraVistaPermitida();
+                const navDestino = document.querySelector(`.nav-item[data-vista="${vistaDestino}"]`);
+                if (vistaDestino !== idVista) return cambiarVista(vistaDestino, navDestino);
+                alert("No tienes permiso para abrir esta seccion.");
+                return;
+            }
             document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
             const vista = document.getElementById(idVista);
             if (vista) vista.classList.add('activa');
@@ -405,10 +435,19 @@
             }
         }
 
-        function guardarSesionRestaurante(id) {
+        function guardarSesionRestaurante(id, usuario = null) {
             if (!id) return;
+            let usuarioSesion = usuario;
+            if (!usuarioSesion) {
+                try {
+                    usuarioSesion = JSON.parse(localStorage.getItem(SESION_RESTAURANTE_KEY) || 'null')?.usuario || null;
+                } catch (error) {
+                    usuarioSesion = null;
+                }
+            }
             localStorage.setItem(SESION_RESTAURANTE_KEY, JSON.stringify({
                 id,
+                usuario: usuarioSesion || { rol: 'administrador', nombre: 'Administrador' },
                 ultimoUso: Date.now()
             }));
             localStorage.removeItem(SESION_CERRADA_KEY);
@@ -434,9 +473,23 @@
         const idDesdeUrl = urlParams.get('id');
         const bloqueoPorCierreManual = localStorage.getItem(SESION_CERRADA_KEY) === 'true' && idDesdeUrl;
         const idRestaurante = (sesionRestauranteExpirada || bloqueoPorCierreManual) ? null : (idDesdeUrl || (sesionGuardada ? sesionGuardada.id : null));
+        const usuarioSesion = sesionGuardada?.usuario || { rol: 'administrador', nombre: 'Administrador' };
+        const rolSesion = usuarioSesion.rol || 'administrador';
+        const permisosPorRol = {
+            administrador: ['vista-inicio', 'vista-pedidos', 'vista-menu', 'vista-caja', 'vista-disponibilidad', 'vista-qr', 'vista-configuracion'],
+            cajero: ['vista-pedidos', 'vista-caja', 'vista-disponibilidad'],
+            mesero: ['vista-pedidos', 'vista-disponibilidad'],
+            cocinero: ['vista-pedidos', 'vista-disponibilidad']
+        };
+        const etiquetasRol = {
+            administrador: 'Administrador',
+            cajero: 'Cajera/o',
+            mesero: 'Mesero/a',
+            cocinero: 'Cocinero/a'
+        };
 
         if (idRestaurante) {
-            guardarSesionRestaurante(idRestaurante);
+            guardarSesionRestaurante(idRestaurante, usuarioSesion);
             if (!urlParams.get('id')) {
                 window.history.replaceState({}, '', `dashboard.html?id=${idRestaurante}`);
             }
@@ -508,6 +561,14 @@
         const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
         await window.dashboardSectionsReady;
+        aplicarPermisosUsuario();
+
+        async function encriptarContrasena(mensaje) {
+            const msgBuffer = new TextEncoder().encode(mensaje);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         function renderizarTablaHorarios(horariosGuardados) {
             const tbody = document.getElementById('tbodyHorarios');
@@ -1378,6 +1439,7 @@
             'panel-link':     { icon: '🔗', title: 'Link del Menú',     desc: 'URL personalizada para compartir con tus clientes' },
             'panel-pagos':    { icon: '💳', title: 'Formas de Pago',    desc: 'Métodos que aparecerán disponibles en el menú digital' },
             'panel-envios':   { icon: '$', title: 'Envios',             desc: 'Zonas y costos para pedidos a domicilio' },
+            'panel-roles':    { icon: '👥', title: 'Roles y Permisos',  desc: 'Usuarios del equipo y acceso por area de trabajo' },
             'panel-horarios': { icon: '🕒', title: 'Horarios',          desc: 'Días y horas en que tu menú digital estará activo' },
         };
 
@@ -1396,6 +1458,7 @@
                 if(titleEl) titleEl.innerText = meta.title;
                 if(descEl) descEl.innerText = meta.desc;
             }
+            if (panelId === 'panel-roles' && window.cargarRolesPersonal) window.cargarRolesPersonal();
         };
 
         window.previewImg = function(input, wrapId, imgId) {
@@ -1513,6 +1576,125 @@
             } catch (error) {
                 console.error(error);
                 alert("Error al eliminar zona de envio.");
+            }
+        };
+
+        let rolesPersonalActuales = [];
+
+        function esAdministrador() {
+            return rolSesion === 'administrador';
+        }
+
+        function limpiarFormularioRol() {
+            ['rolNombre', 'rolApellido', 'rolCorreo', 'rolClave'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.value = '';
+            });
+            const selectRol = document.getElementById('rolTipo');
+            if (selectRol) selectRol.value = 'cajero';
+        }
+
+        window.mostrarFormularioRol = function() {
+            if (!esAdministrador()) return alert("Solo el administrador puede agregar roles.");
+            const form = document.getElementById('formRolPersonal');
+            if (!form) return;
+            limpiarFormularioRol();
+            form.classList.add('visible');
+            document.getElementById('rolNombre')?.focus();
+        };
+
+        window.cancelarFormularioRol = function() {
+            const form = document.getElementById('formRolPersonal');
+            if (form) form.classList.remove('visible');
+            limpiarFormularioRol();
+        };
+
+        window.renderizarRolesPersonal = function(roles = []) {
+            const lista = document.getElementById('listaRolesPersonal');
+            if (!lista) return;
+            rolesPersonalActuales = Array.isArray(roles) ? roles : [];
+            lista.innerHTML = '';
+            if (rolesPersonalActuales.length === 0) {
+                lista.innerHTML = '<p class="cfg-input-hint" style="margin:0 0 12px;">Aun no has agregado usuarios con rol.</p>';
+                return;
+            }
+            rolesPersonalActuales.forEach((usuario) => {
+                lista.innerHTML += `
+                    <div class="cfg-role-card">
+                        <div class="cfg-role-info">
+                            <strong>${escaparHtml(`${usuario.nombre || ''} ${usuario.apellido || ''}`.trim() || 'Usuario')}</strong>
+                            <span>${escaparHtml(usuario.correo || '')}</span>
+                            <span class="cfg-role-badge">${escaparHtml(etiquetasRol[usuario.rol] || usuario.rol || 'Rol')}</span>
+                        </div>
+                        <button type="button" class="cfg-zona-remove" onclick="window.eliminarRolPersonal('${usuario.id}')">Eliminar</button>
+                    </div>
+                `;
+            });
+        };
+
+        window.cargarRolesPersonal = async function() {
+            if (!esAdministrador()) return;
+            const lista = document.getElementById('listaRolesPersonal');
+            if (lista) lista.innerHTML = '<p class="cfg-input-hint" style="margin:0 0 12px;">Cargando roles...</p>';
+            try {
+                const qRoles = query(collection(db, "usuariosRoles"), where("restauranteId", "==", idRestaurante));
+                const snapshotRoles = await getDocs(qRoles);
+                const roles = [];
+                snapshotRoles.forEach(docSnap => roles.push({ id: docSnap.id, ...docSnap.data() }));
+                roles.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+                window.renderizarRolesPersonal(roles);
+            } catch (error) {
+                console.error(error);
+                if (lista) lista.innerHTML = '<p class="cfg-input-hint" style="margin:0 0 12px;">No se pudieron cargar los roles.</p>';
+            }
+        };
+
+        window.guardarRolPersonal = async function() {
+            if (!esAdministrador()) return alert("Solo el administrador puede guardar roles.");
+            const nombre = document.getElementById('rolNombre')?.value.trim();
+            const apellido = document.getElementById('rolApellido')?.value.trim();
+            const correo = document.getElementById('rolCorreo')?.value.trim().toLowerCase();
+            const clave = document.getElementById('rolClave')?.value;
+            const rol = document.getElementById('rolTipo')?.value;
+
+            if (!nombre || !apellido || !correo || !clave || !rol) {
+                alert("Completa nombre, apellido, correo, contraseña y rol.");
+                return;
+            }
+
+            try {
+                const claveEncriptada = await encriptarContrasena(clave);
+                await addDoc(collection(db, "usuariosRoles"), {
+                    restauranteId: idRestaurante,
+                    nombre,
+                    apellido,
+                    correo,
+                    clave: claveEncriptada,
+                    rol,
+                    activo: true,
+                    fecha: new Date()
+                });
+                window.cancelarFormularioRol();
+                await window.cargarRolesPersonal();
+                alert("Rol guardado.");
+            } catch (error) {
+                console.error(error);
+                alert("Error al guardar rol.");
+            }
+        };
+
+        window.eliminarRolPersonal = async function(idRol) {
+            if (!esAdministrador()) return alert("Solo el administrador puede eliminar roles.");
+            const usuario = rolesPersonalActuales.find(item => item.id === idRol);
+            if (!usuario) return;
+            if (!confirm(`Eliminar a ${usuario.nombre} ${usuario.apellido}?`)) return;
+            try {
+                await deleteDoc(doc(db, "usuariosRoles", idRol));
+                await window.cargarRolesPersonal();
+                alert("Rol eliminado.");
+            } catch (error) {
+                console.error(error);
+                alert("Error al eliminar rol.");
             }
         };
 
@@ -2908,6 +3090,8 @@
             promptInstalacion = null;
             actualizarBotonInstalacion();
         });
+
+        aplicarPermisosUsuario(true);
     </script>
 </body>
 </html>

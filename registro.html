@@ -74,10 +74,11 @@
         const SESION_RESTAURANTE_KEY = 'pediproSesionRestaurante';
         const SESION_CERRADA_KEY = 'pediproSesionCerrada';
 
-        function guardarSesionRestaurante(id) {
+        function guardarSesionRestaurante(id, usuario = null) {
             if (!id) return;
             localStorage.setItem(SESION_RESTAURANTE_KEY, JSON.stringify({
                 id,
+                usuario: usuario || { rol: 'administrador', nombre: 'Administrador' },
                 ultimoUso: Date.now()
             }));
             localStorage.removeItem(SESION_CERRADA_KEY);
@@ -98,7 +99,7 @@
             const nombre = document.getElementById('nombreNegocio').value;
             const codigoPais = document.getElementById('codigoPais').value;
             const numeroLocal = document.getElementById('telefonoWhatsApp').value;
-            const correo = document.getElementById('correo').value;
+            const correo = document.getElementById('correo').value.trim().toLowerCase();
             const claveViva = document.getElementById('clave').value;
 
             // Validación de campos vacíos
@@ -128,7 +129,7 @@
                 });
 
                 document.getElementById('textoExito').style.display = "block";
-                guardarSesionRestaurante(docRef.id);
+                guardarSesionRestaurante(docRef.id, { rol: 'administrador', nombre: 'Administrador' });
                 
                 setTimeout(() => {
                     window.location.href = "dashboard.html?id=" + docRef.id;

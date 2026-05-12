@@ -260,6 +260,59 @@
                     cursor: pointer;
                 }
                 .cfg-zona-edit:hover { background: #dbeafe; }
+                .cfg-role-form {
+                    display: none;
+                    margin-top: 14px;
+                    padding: 16px;
+                    border: 1px solid #bfdbfe;
+                    border-radius: 12px;
+                    background: #eff6ff;
+                }
+                .cfg-role-form.visible { display: block; }
+                .cfg-role-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 12px;
+                }
+                .cfg-role-card {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) auto;
+                    gap: 12px;
+                    align-items: center;
+                    padding: 14px;
+                    margin-bottom: 10px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                    background: white;
+                    box-shadow: 0 4px 12px rgba(15,23,42,0.04);
+                }
+                .cfg-role-card:last-child { margin-bottom: 0; }
+                .cfg-role-info strong {
+                    display: block;
+                    color: #0f172a;
+                    font-size: 0.95rem;
+                    overflow-wrap: anywhere;
+                }
+                .cfg-role-info span {
+                    display: block;
+                    color: #64748b;
+                    font-size: 0.82rem;
+                    margin-top: 3px;
+                    overflow-wrap: anywhere;
+                }
+                .cfg-role-badge {
+                    display: inline-block;
+                    width: fit-content;
+                    margin-top: 7px;
+                    padding: 4px 9px;
+                    border-radius: 999px;
+                    background: #eef2ff;
+                    color: #3730a3;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                }
                 .cfg-zona-remove {
                     min-height: 40px;
                     padding: 8px 12px;
@@ -298,6 +351,8 @@
                     .cfg-zona-card { grid-template-columns: 1fr; }
                     .cfg-zona-actions { justify-content: stretch; }
                     .cfg-zona-actions button { flex: 1; }
+                    .cfg-role-grid { grid-template-columns: 1fr; }
+                    .cfg-role-card { grid-template-columns: 1fr; }
                 }
             </style>
 
@@ -317,6 +372,9 @@
                     </div>
                     <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-envios', this)" id="cfgnav-envios">
                         <span class="cfg-nav-icon">$</span> Envios
+                    </div>
+                    <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-roles', this)" id="cfgnav-roles">
+                        <span class="cfg-nav-icon">👥</span> Roles y Permisos
                     </div>
                     <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-horarios', this)" id="cfgnav-horarios">
                         <span class="cfg-nav-icon">🕒</span> Horarios
@@ -499,6 +557,45 @@
                                 <button class="cfg-btn cfg-btn-success" id="btnGuardarZonasEnvio" onclick="window.guardarZonasEnvio()">
                                     Guardar Zonas
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- ===== PANEL: ROLES ===== -->
+                        <div class="cfg-panel" id="panel-roles">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>👥</span>
+                                    <div><h4>Roles y permisos</h4><p>Agrega usuarios del equipo y limita las secciones que pueden abrir</p></div>
+                                </div>
+                                <div class="cfg-section-body">
+                                    <div id="listaRolesPersonal">
+                                        <!-- JS -->
+                                    </div>
+
+                                    <div id="formRolPersonal" class="cfg-role-form">
+                                        <p class="cfg-zona-form-title">Agregar rol</p>
+                                        <div class="cfg-role-grid">
+                                            <input type="text" id="rolNombre" class="cfg-input" placeholder="Nombre">
+                                            <input type="text" id="rolApellido" class="cfg-input" placeholder="Apellido">
+                                            <input type="email" id="rolCorreo" class="cfg-input" placeholder="Correo">
+                                            <input type="password" id="rolClave" class="cfg-input" placeholder="Contraseña">
+                                            <select id="rolTipo" class="cfg-input">
+                                                <option value="cajero">Cajera/o</option>
+                                                <option value="mesero">Mesero/a</option>
+                                                <option value="cocinero">Cocinero/a</option>
+                                                <option value="administrador">Administrador</option>
+                                            </select>
+                                        </div>
+                                        <div class="cfg-zona-form-actions">
+                                            <button type="button" class="cfg-zona-remove" onclick="window.cancelarFormularioRol()">Cancelar</button>
+                                            <button type="button" class="cfg-btn cfg-btn-success" onclick="window.guardarRolPersonal()">Guardar rol</button>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="cfg-btn cfg-btn-purple" onclick="window.mostrarFormularioRol()" style="margin-top:12px;">
+                                        + Agregar rol
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

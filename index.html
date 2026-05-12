@@ -114,10 +114,11 @@
             }
         }
 
-        function guardarSesionRestaurante(id) {
+        function guardarSesionRestaurante(id, usuario = null) {
             if (!id) return;
             localStorage.setItem(SESION_RESTAURANTE_KEY, JSON.stringify({
                 id,
+                usuario: usuario || { rol: 'administrador', nombre: 'Administrador' },
                 ultimoUso: Date.now()
             }));
             localStorage.removeItem(SESION_CERRADA_KEY);
@@ -143,7 +144,7 @@
 
         // Lógica de Inicio de Sesión de Alta Seguridad
         document.getElementById('btnEntrar').addEventListener('click', async () => {
-            const correo = document.getElementById('loginCorreo').value;
+            const correo = document.getElementById('loginCorreo').value.trim().toLowerCase();
             const claveViva = document.getElementById('loginClave').value;
             const btn = document.getElementById('btnEntrar');
 
@@ -165,15 +166,40 @@
                 
                 const querySnapshot = await getDocs(q);
 
-                if (querySnapshot.empty) {
+                if (false && !querySnapshot.empty) {
                     alert("Correo o contraseña incorrectos.");
                     btn.innerText = "Acceder";
                     btn.disabled = false;
-                } else {
-                    // Acceso concedido
+                }
+                if (!querySnapshot.empty) {
+                    // Acceso concedido como administrador
                     querySnapshot.forEach((doc) => {
-                        guardarSesionRestaurante(doc.id);
+                        guardarSesionRestaurante(doc.id, { rol: 'administrador', nombre: 'Administrador' });
                         window.location.href = `dashboard.html?id=${doc.id}`;
+                    });
+                    return;
+                }
+
+                const qPersonal = query(
+                    collection(db, "usuariosRoles"),
+                    where("correo", "==", correo),
+                    where("clave", "==", claveIngresadaHash),
+                    where("activo", "==", true)
+                );
+
+                const personalSnapshot = await getDocs(qPersonal);
+                if (personalSnapshot.empty) {
+                    // Acceso concedido como administrador
+                    personalSnapshot.forEach((docPersonal) => {
+                        const usuario = docPersonal.data();
+                        guardarSesionRestaurante(usuario.restauranteId, {
+                            id: docPersonal.id,
+                            rol: usuario.rol,
+                            nombre: usuario.nombre,
+                            apellido: usuario.apellido,
+                            correo: usuario.correo
+                        });
+                        window.location.href = `dashboard.html?id=${usuario.restauranteId}`;
                     });
                 }
             } catch (error) {
