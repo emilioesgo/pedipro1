@@ -499,7 +499,7 @@
                 limpiarTurnoCaja();
                 aplicarTurnoCaja("");
             }
-        }
+        };
 
         ['click', 'keydown', 'touchstart', 'input'].forEach((evento) => {
             window.addEventListener(evento, refrescarSesionPorUso, { passive: true });
