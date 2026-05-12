@@ -11,15 +11,18 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="assets/dashboard.css">
+    <link rel="stylesheet" href="assets/dashboard.css?v=2">
 
 </head>
 <body>
 
     <div class="sidebar">
-        <div style="text-align: center; margin-bottom: 15px;">
-            <img src="assets/icon.png" alt="PediPro Logo" style="width: 80px; height: auto;">
-            <h2 style="color: #e67e22; margin: 5px 0 0; font-size: 1.4rem; font-weight: 800;">PediPro</h2>
+        <div class="sidebar-brand">
+            <div class="sidebar-logo-block">
+                <img src="assets/icon.png" alt="PediPro Logo" style="width: 80px; height: auto;">
+                <h2 style="color: #e67e22; margin: 5px 0 0; font-size: 1.4rem; font-weight: 800;">PediPro</h2>
+            </div>
+            <button type="button" class="sidebar-menu-toggle" aria-label="Abrir menú" aria-expanded="false" onclick="toggleMenuMovil()">☰</button>
         </div>
         <p id="saludoDuenio" style="text-align: center; margin-top: 0;">Cargando...</p>
         <hr style="border-color: #34495e; margin-bottom: 20px;">
@@ -33,7 +36,7 @@
             <div class="nav-item" onclick="cambiarVista('vista-configuracion', this)">⚙️ Configuración</div>
             <div id="btnInstallPWA" class="nav-item" style="display:none; background: #2563eb; color: white;" onclick="instalarPWA()">📲 Instalar App</div>
             <hr style="border-color: #34495e; margin: 20px 0;">
-            <div class="nav-item" onclick="window.location.href='index.html'" style="color: #e74c3c;">🚪 Cerrar Sesión</div>
+            <div class="nav-item" onclick="cerrarSesion()" style="color: #e74c3c;">🚪 Cerrar Sesión</div>
         </nav>
     </div>
 
@@ -239,6 +242,15 @@
         window.dashboardSectionsReady = cargarSeccionesDashboard();
 
         // Lógica Global de UI
+        function toggleMenuMovil(forzarAbierto) {
+            const sidebar = document.querySelector('.sidebar');
+            const boton = document.querySelector('.sidebar-menu-toggle');
+            if (!sidebar) return;
+            const abrir = typeof forzarAbierto === 'boolean' ? forzarAbierto : !sidebar.classList.contains('menu-abierto');
+            sidebar.classList.toggle('menu-abierto', abrir);
+            if (boton) boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+        }
+
         async function cambiarVista(idVista, elementoNav) {
             await window.dashboardSectionsReady;
             document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
@@ -246,6 +258,7 @@
             if (vista) vista.classList.add('activa');
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('activo'));
             if(elementoNav) elementoNav.classList.add('activo');
+            if (window.innerWidth <= 860) toggleMenuMovil(false);
             
             if(idVista === 'vista-pedidos') { 
                 document.getElementById('titulo-tabla-info').innerHTML = '✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).';
@@ -348,8 +361,63 @@
         const db = getFirestore(app);
         const storage = getStorage(app); 
 
+        const SESION_RESTAURANTE_KEY = 'pediproSesionRestaurante';
+        const SESION_CERRADA_KEY = 'pediproSesionCerrada';
+        const SESION_MAX_INACTIVIDAD_MS = 15 * 24 * 60 * 60 * 1000;
+        let sesionRestauranteExpirada = false;
+
+        function leerSesionRestaurante() {
+            try {
+                const sesion = JSON.parse(localStorage.getItem(SESION_RESTAURANTE_KEY) || 'null');
+                if (!sesion || !sesion.id || !sesion.ultimoUso) return null;
+                if (Date.now() - sesion.ultimoUso > SESION_MAX_INACTIVIDAD_MS) {
+                    localStorage.removeItem(SESION_RESTAURANTE_KEY);
+                    sesionRestauranteExpirada = true;
+                    return null;
+                }
+                return sesion;
+            } catch (error) {
+                localStorage.removeItem(SESION_RESTAURANTE_KEY);
+                return null;
+            }
+        }
+
+        function guardarSesionRestaurante(id) {
+            if (!id) return;
+            localStorage.setItem(SESION_RESTAURANTE_KEY, JSON.stringify({
+                id,
+                ultimoUso: Date.now()
+            }));
+            localStorage.removeItem(SESION_CERRADA_KEY);
+        }
+
+        let ultimaActualizacionSesion = 0;
+        function refrescarSesionPorUso() {
+            if (!idRestaurante) return;
+            const ahora = Date.now();
+            if (ahora - ultimaActualizacionSesion < 60 * 1000) return;
+            ultimaActualizacionSesion = ahora;
+            guardarSesionRestaurante(idRestaurante);
+        }
+
+        window.cerrarSesion = function() {
+            localStorage.removeItem(SESION_RESTAURANTE_KEY);
+            localStorage.setItem(SESION_CERRADA_KEY, 'true');
+            window.location.href = 'index.html';
+        };
+
         const urlParams = new URLSearchParams(window.location.search);
-        const idRestaurante = urlParams.get('id');
+        const sesionGuardada = leerSesionRestaurante();
+        const idDesdeUrl = urlParams.get('id');
+        const bloqueoPorCierreManual = localStorage.getItem(SESION_CERRADA_KEY) === 'true' && idDesdeUrl;
+        const idRestaurante = (sesionRestauranteExpirada || bloqueoPorCierreManual) ? null : (idDesdeUrl || (sesionGuardada ? sesionGuardada.id : null));
+
+        if (idRestaurante) {
+            guardarSesionRestaurante(idRestaurante);
+            if (!urlParams.get('id')) {
+                window.history.replaceState({}, '', `dashboard.html?id=${idRestaurante}`);
+            }
+        }
 
         window.pedidosGlobales = [];
         window.restauranteInfo = {}; 
@@ -365,6 +433,10 @@
         let categoriasDetectadasMenu = [];
 
         if (!idRestaurante) { window.location.href = "index.html"; }
+
+        ['click', 'keydown', 'touchstart', 'input'].forEach((evento) => {
+            window.addEventListener(evento, refrescarSesionPorUso, { passive: true });
+        });
 
         const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -2002,8 +2074,13 @@
                             <article class="menu-product-card">
                                 <div class="menu-product-image" ${imagen}>${p.imagen ? '' : 'Sin imagen'}</div>
                                 <div class="menu-product-body">
-                                    <small>${p.categoria || 'Otros'}</small>
-                                    <h3>${p.nombre || 'Producto'}</h3>
+                                    <div class="menu-product-heading">
+                                        <div>
+                                            <small>${p.categoria || 'Otros'}</small>
+                                            <h3>${p.nombre || 'Producto'}</h3>
+                                        </div>
+                                        <button type="button" class="btn-product-delete" onclick="window.eliminarProductoMenu('${p.id}')">Eliminar</button>
+                                    </div>
                                     <p>${p.descripcion || 'Sin descripción'}</p>
                                     <strong>$${Number(p.precio || 0).toFixed(2)}</strong>
                                     <div class="menu-product-tags">${tagPers}${variantes}${tagsServicios}</div>
@@ -2023,6 +2100,25 @@
         }
 
         // ====== LÓGICA DE PERSONALIZACIONES ======
+
+        window.eliminarProductoMenu = async function(productoId) {
+            if (!productoId) return;
+            const confirmar = confirm("¿Seguro que quieres eliminar este producto?\n\nTambién dejará de aparecer en el menú de tus clientes.");
+            if (!confirmar) return;
+
+            try {
+                await deleteDoc(doc(db, "restaurantes", idRestaurante, "productos", productoId));
+                productosCache = [];
+                await window.cargarMiMenu();
+                if (document.getElementById('vista-disponibilidad')?.classList.contains('activa')) {
+                    window.cargarDisponibilidad();
+                }
+                alert("Producto eliminado.");
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el producto.");
+            }
+        }
 
         async function obtenerPersonalizaciones() {
             const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "personalizaciones"));
@@ -2229,11 +2325,30 @@
             .catch(err => console.error('Error Service Worker:', err));
         }
 
+        const APP_INSTALADA_KEY = 'pediproAppInstalada';
         let promptInstalacion;
+
+        function appEstaInstalada() {
+            return window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true
+                || localStorage.getItem(APP_INSTALADA_KEY) === 'true';
+        }
+
+        function actualizarBotonInstalacion() {
+            const btnInstall = document.getElementById('btnInstallPWA');
+            if (!btnInstall) return;
+            btnInstall.style.display = promptInstalacion && !appEstaInstalada() ? 'flex' : 'none';
+        }
+
+        actualizarBotonInstalacion();
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
+            if (!window.matchMedia('(display-mode: standalone)').matches && window.navigator.standalone !== true) {
+                localStorage.removeItem(APP_INSTALADA_KEY);
+            }
             promptInstalacion = e;
-            document.getElementById('btnInstallPWA').style.display = 'flex';
+            actualizarBotonInstalacion();
         });
 
         window.instalarPWA = async function() {
@@ -2241,14 +2356,17 @@
                 promptInstalacion.prompt();
                 const { outcome } = await promptInstalacion.userChoice;
                 if (outcome === 'accepted') {
-                    document.getElementById('btnInstallPWA').style.display = 'none';
+                    localStorage.setItem(APP_INSTALADA_KEY, 'true');
                 }
                 promptInstalacion = null;
+                actualizarBotonInstalacion();
             }
         };
 
         window.addEventListener('appinstalled', () => {
-            document.getElementById('btnInstallPWA').style.display = 'none';
+            localStorage.setItem(APP_INSTALADA_KEY, 'true');
+            promptInstalacion = null;
+            actualizarBotonInstalacion();
         });
     </script>
 </body>

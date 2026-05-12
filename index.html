@@ -95,6 +95,40 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        const SESION_RESTAURANTE_KEY = 'pediproSesionRestaurante';
+        const SESION_CERRADA_KEY = 'pediproSesionCerrada';
+        const SESION_MAX_INACTIVIDAD_MS = 15 * 24 * 60 * 60 * 1000;
+
+        function leerSesionRestaurante() {
+            try {
+                const sesion = JSON.parse(localStorage.getItem(SESION_RESTAURANTE_KEY) || 'null');
+                if (!sesion || !sesion.id || !sesion.ultimoUso) return null;
+                if (Date.now() - sesion.ultimoUso > SESION_MAX_INACTIVIDAD_MS) {
+                    localStorage.removeItem(SESION_RESTAURANTE_KEY);
+                    return null;
+                }
+                return sesion;
+            } catch (error) {
+                localStorage.removeItem(SESION_RESTAURANTE_KEY);
+                return null;
+            }
+        }
+
+        function guardarSesionRestaurante(id) {
+            if (!id) return;
+            localStorage.setItem(SESION_RESTAURANTE_KEY, JSON.stringify({
+                id,
+                ultimoUso: Date.now()
+            }));
+            localStorage.removeItem(SESION_CERRADA_KEY);
+        }
+
+        const sesionActiva = leerSesionRestaurante();
+        if (sesionActiva) {
+            guardarSesionRestaurante(sesionActiva.id);
+            window.location.href = `dashboard.html?id=${sesionActiva.id}`;
+        }
+
         // --- FUNCIÓN PARA ENCRIPTAR (Debe ser idéntica a la del registro) ---
         async function encriptarContrasena(mensaje) {
             const msgBuffer = new TextEncoder().encode(mensaje);
@@ -138,6 +172,7 @@
                 } else {
                     // Acceso concedido
                     querySnapshot.forEach((doc) => {
+                        guardarSesionRestaurante(doc.id);
                         window.location.href = `dashboard.html?id=${doc.id}`;
                     });
                 }

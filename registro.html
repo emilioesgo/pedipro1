@@ -71,6 +71,18 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        const SESION_RESTAURANTE_KEY = 'pediproSesionRestaurante';
+        const SESION_CERRADA_KEY = 'pediproSesionCerrada';
+
+        function guardarSesionRestaurante(id) {
+            if (!id) return;
+            localStorage.setItem(SESION_RESTAURANTE_KEY, JSON.stringify({
+                id,
+                ultimoUso: Date.now()
+            }));
+            localStorage.removeItem(SESION_CERRADA_KEY);
+        }
+
         // --- FUNCIÓN PARA ENCRIPTAR LA CONTRASEÑA (SHA-256) ---
         async function encriptarContrasena(mensaje) {
             const msgBuffer = new TextEncoder().encode(mensaje);
@@ -116,6 +128,7 @@
                 });
 
                 document.getElementById('textoExito').style.display = "block";
+                guardarSesionRestaurante(docRef.id);
                 
                 setTimeout(() => {
                     window.location.href = "dashboard.html?id=" + docRef.id;
