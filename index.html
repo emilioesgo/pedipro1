@@ -116,17 +116,29 @@
 
         function guardarSesionRestaurante(id, usuario = null) {
             if (!id) return;
+            let usuarioSesion = usuario;
+            if (!usuarioSesion) {
+                try {
+                    usuarioSesion = JSON.parse(localStorage.getItem(SESION_RESTAURANTE_KEY) || 'null')?.usuario || null;
+                } catch (error) {
+                    usuarioSesion = null;
+                }
+            }
             localStorage.setItem(SESION_RESTAURANTE_KEY, JSON.stringify({
                 id,
-                usuario: usuario || { rol: 'administrador', nombre: 'Administrador' },
+                usuario: usuarioSesion || { rol: 'administrador', nombre: 'Administrador' },
                 ultimoUso: Date.now()
             }));
             localStorage.removeItem(SESION_CERRADA_KEY);
         }
 
+        if (localStorage.getItem(SESION_CERRADA_KEY) === 'true') {
+            localStorage.removeItem(SESION_RESTAURANTE_KEY);
+        }
+
         const sesionActiva = leerSesionRestaurante();
         if (sesionActiva) {
-            guardarSesionRestaurante(sesionActiva.id);
+            guardarSesionRestaurante(sesionActiva.id, sesionActiva.usuario);
             window.location.href = `dashboard.html?id=${sesionActiva.id}`;
         }
 
@@ -188,8 +200,7 @@
                 );
 
                 const personalSnapshot = await getDocs(qPersonal);
-                if (personalSnapshot.empty) {
-                    // Acceso concedido como administrador
+                if (!personalSnapshot.empty) {
                     personalSnapshot.forEach((docPersonal) => {
                         const usuario = docPersonal.data();
                         guardarSesionRestaurante(usuario.restauranteId, {
@@ -201,6 +212,10 @@
                         });
                         window.location.href = `dashboard.html?id=${usuario.restauranteId}`;
                     });
+                } else {
+                    alert("Correo o contraseÃ±a incorrectos.");
+                    btn.innerText = "Acceder";
+                    btn.disabled = false;
                 }
             } catch (error) {
                 console.error(error);

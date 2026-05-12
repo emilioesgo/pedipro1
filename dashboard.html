@@ -462,7 +462,9 @@
         }
 
         let ultimaActualizacionSesion = 0;
+        let cerrandoSesion = false;
         function refrescarSesionPorUso() {
+            if (cerrandoSesion) return;
             if (!idRestaurante) return;
             const ahora = Date.now();
             if (ahora - ultimaActualizacionSesion < 60 * 1000) return;
@@ -471,9 +473,10 @@
         }
 
         window.cerrarSesion = function() {
+            cerrandoSesion = true;
             localStorage.removeItem(SESION_RESTAURANTE_KEY);
             localStorage.setItem(SESION_CERRADA_KEY, 'true');
-            window.location.href = 'index.html';
+            window.location.replace('index.html');
         };
 
         const urlParams = new URLSearchParams(window.location.search);
