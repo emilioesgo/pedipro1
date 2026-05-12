@@ -1297,7 +1297,8 @@
                 // Guardar en Firebase
                 await addDoc(collection(db, "restaurantes", idRestaurante, "pedidos"), {
                     numeroComanda: comandaId, consecutivoDiario: nuevoConsecutivo, items: arrayItems, total: totalGeneral,
-                    tipoOrigen: tipo, clienteEnvio: datosEnvio, fecha: new Date(), estado: 'pendiente', comentarios: comentariosExtra
+                    tipoOrigen: tipo, clienteEnvio: datosEnvio, fecha: new Date(), estado: 'pendiente', comentarios: comentariosExtra,
+                    creadoDesde: 'menu.html'
                 });
 
                 // Crear Mensaje de WhatsApp

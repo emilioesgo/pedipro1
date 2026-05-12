@@ -1,6 +1,13 @@
         <div id="vista-pedidos" class="vista">
             <div class="card">
                 <h2>Control de Pedidos y Mesas</h2>
+                <div id="notificacionPedidoNuevo" class="pedido-alerta-nuevo" style="display:none;">
+                    <div>
+                        <strong id="notificacionPedidoTitulo">Nuevo pedido recibido</strong>
+                        <span id="notificacionPedidoTexto">Revisa la bandeja de pedidos activos.</span>
+                    </div>
+                    <button type="button" onclick="window.ocultarNotificacionPedidoNuevo()">Entendido</button>
+                </div>
                 <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn-add" style="background: #2c3e50; width: auto;" onclick="filtrarPestana('tabla')">📊 Pedidos Activos</button>
                     <button class="btn-add" style="background: #e67e22; width: auto;" onclick="filtrarPestana('comandas')">👨‍🍳 Comandas</button>

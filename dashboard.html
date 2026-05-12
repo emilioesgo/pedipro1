@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="assets/dashboard.css?v=2">
+    <link rel="stylesheet" href="assets/dashboard.css?v=3">
 
 </head>
 <body>
@@ -28,7 +28,7 @@
         <hr style="border-color: #34495e; margin-bottom: 20px;">
         <nav>
             <div class="nav-item activo" onclick="cambiarVista('vista-inicio', this)">🏠 Inicio</div>
-            <div class="nav-item" onclick="cambiarVista('vista-pedidos', this)">📋 Pedidos y Mesas</div>
+            <div class="nav-item" id="navPedidos" onclick="cambiarVista('vista-pedidos', this)">📋 Pedidos y Mesas <span id="badgePedidosNuevos" class="pedido-nav-badge" style="display:none;">0</span></div>
             <div class="nav-item" onclick="cambiarVista('vista-menu', this)">🍔 Mi Menú</div>
             <div class="nav-item" onclick="cambiarVista('vista-caja', this)">💰 Caja</div>
             <div class="nav-item" onclick="cambiarVista('vista-disponibilidad', this)">✅ Disponibilidad</div>
@@ -262,6 +262,8 @@
             
             if(idVista === 'vista-pedidos') { 
                 document.getElementById('titulo-tabla-info').innerHTML = '✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).';
+                pedidosNuevosPendientes = 0;
+                actualizarBadgePedidos();
                 window.cargarPedidos(); 
             }
             if(idVista === 'vista-inicio' && window.cargarInicioDashboard) { window.cargarInicioDashboard(); }
@@ -432,6 +434,8 @@
         let fechaInicioReferencia = new Date();
         let graficasInicio = {};
         let categoriasDetectadasMenu = [];
+        let pedidosSnapshotInicializado = false;
+        let pedidosNuevosPendientes = 0;
 
         if (!idRestaurante) { window.location.href = "index.html"; }
 
@@ -471,6 +475,67 @@
             document.getElementById('displayLink').innerText = urlMenu;
             document.getElementById("qrcode").innerHTML = ""; 
             new QRCode(document.getElementById("qrcode"), { text: urlMenu, width: 150, height: 150 });
+        }
+
+        function pedidoCreadoDesdeMenu(pedido) {
+            return pedido?.creadoDesde === 'menu.html' || ((pedido?.tipoOrigen === 'pickup' || pedido?.tipoOrigen === 'domicilio') && pedido?.clienteEnvio);
+        }
+
+        function reproducirAvisoPedido() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.001, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+            } catch (error) {
+                console.warn('No se pudo reproducir el aviso de pedido.', error);
+            }
+        }
+
+        function actualizarBadgePedidos() {
+            const badge = document.getElementById('badgePedidosNuevos');
+            if (!badge) return;
+            if (pedidosNuevosPendientes > 0) {
+                badge.innerText = pedidosNuevosPendientes > 9 ? '9+' : String(pedidosNuevosPendientes);
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        window.ocultarNotificacionPedidoNuevo = function() {
+            const alerta = document.getElementById('notificacionPedidoNuevo');
+            if (alerta) alerta.style.display = 'none';
+            pedidosNuevosPendientes = 0;
+            actualizarBadgePedidos();
+        };
+
+        function mostrarNotificacionPedidoNuevo(pedido) {
+            pedidosNuevosPendientes += 1;
+            actualizarBadgePedidos();
+
+            const alerta = document.getElementById('notificacionPedidoNuevo');
+            const titulo = document.getElementById('notificacionPedidoTitulo');
+            const texto = document.getElementById('notificacionPedidoTexto');
+            const numero = pedido?.numeroComanda ? `#${pedido.numeroComanda}` : 'nuevo';
+            const cliente = pedido?.clienteEnvio?.nombre || (pedido?.numeroMesa ? `Mesa ${pedido.numeroMesa}` : 'Cliente');
+            const total = Number(pedido?.total || 0).toFixed(2);
+
+            if (titulo) titulo.innerText = `Nuevo pedido ${numero}`;
+            if (texto) texto.innerText = `${cliente} - Total $${total}. Revisa Pedidos Activos.`;
+            if (alerta) alerta.style.display = 'flex';
+
+            reproducirAvisoPedido();
         }
 
         function moneda(valor) {
@@ -927,7 +992,17 @@
             }
             window.cargarInicioDashboard();
 
-            onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), () => {
+            onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), (snapshot) => {
+                if (pedidosSnapshotInicializado) {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type !== 'added') return;
+                        const pedidoNuevo = { id: change.doc.id, ...change.doc.data() };
+                        if (pedidoCreadoDesdeMenu(pedidoNuevo) && (!pedidoNuevo.fecha || esPedidoDeHoy(pedidoNuevo.fecha))) {
+                            mostrarNotificacionPedidoNuevo(pedidoNuevo);
+                        }
+                    });
+                }
+                pedidosSnapshotInicializado = true;
                 if(document.getElementById('titulo-tabla-info').innerHTML.includes('turno actual')) window.cargarPedidos();
                 // Actualizar bandeja de caja en tiempo real si la vista está activa
                 if(document.getElementById('vista-caja').classList.contains('activa')) window.cargarCaja();
