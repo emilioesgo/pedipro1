@@ -269,13 +269,21 @@
             if (boton) boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
         }
 
+        window.permisosPorRol = window.permisosPorRol || {
+            administrador: ['vista-inicio', 'vista-pedidos', 'vista-menu', 'vista-caja', 'vista-disponibilidad', 'vista-qr', 'vista-configuracion'],
+            cajero: ['vista-pedidos', 'vista-caja', 'vista-disponibilidad'],
+            mesero: ['vista-pedidos', 'vista-disponibilidad'],
+            cocinero: ['vista-pedidos', 'vista-disponibilidad']
+        };
+        window.rolSesion = window.rolSesion || 'administrador';
+
         function usuarioPuedeAcceder(idVista) {
-            const permisos = permisosPorRol[rolSesion] || permisosPorRol.administrador;
+            const permisos = window.permisosPorRol[window.rolSesion] || window.permisosPorRol.administrador;
             return permisos.includes(idVista);
         }
 
         function primeraVistaPermitida() {
-            return (permisosPorRol[rolSesion] || permisosPorRol.administrador)[0] || 'vista-inicio';
+            return (window.permisosPorRol[window.rolSesion] || window.permisosPorRol.administrador)[0] || 'vista-inicio';
         }
 
         function aplicarPermisosUsuario(redirigir = false) {
@@ -487,6 +495,8 @@
             mesero: 'Mesero/a',
             cocinero: 'Cocinero/a'
         };
+        window.permisosPorRol = permisosPorRol;
+        window.rolSesion = rolSesion;
 
         if (idRestaurante) {
             guardarSesionRestaurante(idRestaurante, usuarioSesion);
