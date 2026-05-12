@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="assets/dashboard.css?v=3">
+    <link rel="stylesheet" href="assets/dashboard.css?v=4">
 
 </head>
 <body>
@@ -52,6 +52,24 @@
             <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 10px;">Detalles del Pedido</h3>
             <div id="detalleContenido" style="font-size: 0.95rem; color: #333; line-height: 1.5;"></div>
             <button class="btn-add" style="margin-top: 20px; background: #95a5a6;" onclick="document.getElementById('modalDetallePedido').style.display='none'">Cerrar Detalles</button>
+        </div>
+    </div>
+
+    <div id="modalComandaDetalle" class="modal">
+        <div class="modal-content modal-comanda-detalle">
+            <div class="comanda-detalle-header">
+                <div>
+                    <span id="detalleComandaTipo" class="badge-tipo badge-online">Comanda</span>
+                    <h2 id="detalleComandaTitulo">Comanda</h2>
+                    <p id="detalleComandaCliente"></p>
+                </div>
+                <button type="button" class="btn-icon-close" onclick="document.getElementById('modalComandaDetalle').style.display='none'">×</button>
+            </div>
+            <div id="detalleComandaContenido"></div>
+            <div class="comanda-detalle-actions">
+                <button type="button" class="btn-add btn-comanda-print" onclick="window.imprimirComandaActual()">Imprimir Comanda</button>
+                <button type="button" class="btn-add btn-comanda-complete" id="btnCompletarComandaDetalle">Completar Comanda</button>
+            </div>
         </div>
     </div>
 
@@ -262,8 +280,7 @@
             
             if(idVista === 'vista-pedidos') { 
                 document.getElementById('titulo-tabla-info').innerHTML = '✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).';
-                pedidosNuevosPendientes = 0;
-                actualizarBadgePedidos();
+                if (window.limpiarNotificacionesPedidos) window.limpiarNotificacionesPedidos();
                 window.cargarPedidos(); 
             }
             if(idVista === 'vista-inicio' && window.cargarInicioDashboard) { window.cargarInicioDashboard(); }
@@ -289,7 +306,7 @@
                     if(fp.transNumTarjeta) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta;
                 }
                 window.renderizarZonasEnvio(window.restauranteInfo.zonasEnvio);
-                renderizarTablaHorarios(window.restauranteInfo.horarios);
+                if (window.renderizarTablaHorarios) window.renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
         }
 
@@ -436,6 +453,7 @@
         let categoriasDetectadasMenu = [];
         let pedidosSnapshotInicializado = false;
         let pedidosNuevosPendientes = 0;
+        let comandaDetalleActualId = null;
 
         if (!idRestaurante) { window.location.href = "index.html"; }
 
@@ -468,6 +486,7 @@
                 `;
             });
         }
+        window.renderizarTablaHorarios = renderizarTablaHorarios;
 
         function actualizarEnlaceUI(alias) {
             const targetUrl = alias ? alias : idRestaurante;
@@ -512,12 +531,17 @@
                 badge.style.display = 'none';
             }
         }
+        window.actualizarBadgePedidos = actualizarBadgePedidos;
+
+        window.limpiarNotificacionesPedidos = function() {
+            pedidosNuevosPendientes = 0;
+            actualizarBadgePedidos();
+        };
 
         window.ocultarNotificacionPedidoNuevo = function() {
             const alerta = document.getElementById('notificacionPedidoNuevo');
             if (alerta) alerta.style.display = 'none';
-            pedidosNuevosPendientes = 0;
-            actualizarBadgePedidos();
+            window.limpiarNotificacionesPedidos();
         };
 
         function mostrarNotificacionPedidoNuevo(pedido) {
@@ -1013,6 +1037,9 @@
             });
         }
         cargarDatos();
+        setInterval(() => {
+            if (window.actualizarCronometrosComandas) window.actualizarCronometrosComandas();
+        }, 1000);
 
         // --------------------------------------------------------
         // SISTEMA DE CAJA, TURNOS Y COBROS
@@ -1533,7 +1560,154 @@
             renderizarHTMLPedidos(ordenesHistoricas, true); 
         }
 
-        function renderizarHTMLPedidos(ordenes, esModoHistorial) {
+        function escaparHtml(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, caracter => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[caracter]));
+        }
+
+        function fechaPedidoComoDate(pedido) {
+            if (!pedido || !pedido.fecha) return new Date();
+            if (typeof pedido.fecha.toDate === 'function') return pedido.fecha.toDate();
+            const fecha = new Date(pedido.fecha);
+            return isNaN(fecha.getTime()) ? new Date() : fecha;
+        }
+
+        function formatearDuracion(ms) {
+            const totalSegundos = Math.max(0, Math.floor(ms / 1000));
+            const horas = Math.floor(totalSegundos / 3600);
+            const minutos = Math.floor((totalSegundos % 3600) / 60);
+            const segundos = totalSegundos % 60;
+            return [horas, minutos, segundos].map(num => String(num).padStart(2, '0')).join(':');
+        }
+
+        function textoClienteComanda(pedido) {
+            if (pedido.tipoOrigen === 'mesa') return `Mesa #${pedido.numeroMesa || 'S/N'}`;
+            return pedido.clienteEnvio?.nombre || 'Cliente Web';
+        }
+
+        function textoTipoComanda(pedido) {
+            if (pedido.tipoOrigen === 'mesa') return 'En Mesa';
+            if (pedido.tipoOrigen === 'domicilio') return 'Domicilio';
+            if (pedido.tipoOrigen === 'pickup') return 'Pick Up';
+            return pedido.tipoOrigen || 'Pedido';
+        }
+
+        function detalleEntregaComanda(pedido) {
+            if (pedido.tipoOrigen === 'mesa') return `Mesa #${pedido.numeroMesa || 'S/N'}`;
+            const partes = [];
+            if (pedido.clienteEnvio?.telefono) partes.push(`Tel: ${pedido.clienteEnvio.telefono}`);
+            if (pedido.clienteEnvio?.direccion) partes.push(`Dir: ${pedido.clienteEnvio.direccion}`);
+            if (pedido.clienteEnvio?.zonaEnvio) partes.push(`Zona: ${pedido.clienteEnvio.zonaEnvio}`);
+            return partes.join(' | ') || 'Sin datos de entrega';
+        }
+
+        window.actualizarCronometrosComandas = function() {
+            document.querySelectorAll('[data-comanda-inicio]').forEach(el => {
+                const inicio = Number(el.dataset.comandaInicio);
+                const fin = Number(el.dataset.comandaFin || 0);
+                if (!inicio) return;
+                el.innerText = formatearDuracion((fin || Date.now()) - inicio);
+            });
+        };
+
+        function htmlItemsComanda(pedido, detallado = false) {
+            return (pedido.items || []).map(item => {
+                const cantidad = Number(item.cantidad || 0);
+                const precio = Number(item.precio || 0);
+                const nombre = escaparHtml(item.nombre || 'Producto');
+                if (!detallado) return `<li><strong>${cantidad}x</strong> ${nombre}</li>`;
+                return `<li><span><strong>${cantidad}x</strong> ${nombre}</span><strong>$${(cantidad * precio).toFixed(2)}</strong></li>`;
+            }).join('');
+        }
+
+        window.abrirDetalleComanda = function(idPedido) {
+            const ped = window.pedidosGlobales.find(p => p.id === idPedido);
+            if (!ped) return;
+            comandaDetalleActualId = idPedido;
+            const fechaInicio = fechaPedidoComoDate(ped);
+            const fechaFin = ped.fechaPreparado ? fechaPedidoComoDate({ fecha: ped.fechaPreparado }) : null;
+            const esMesa = ped.tipoOrigen === 'mesa';
+            const tipoBadge = document.getElementById('detalleComandaTipo');
+            tipoBadge.className = `badge-tipo ${esMesa ? 'badge-mesa' : 'badge-online'}`;
+            tipoBadge.innerText = textoTipoComanda(ped);
+            document.getElementById('detalleComandaTitulo').innerText = `Comanda ${ped.numeroComanda || 'S/N'}`;
+            document.getElementById('detalleComandaCliente').innerText = textoClienteComanda(ped);
+            document.getElementById('detalleComandaContenido').innerHTML = `
+                <div class="comanda-info-grid">
+                    <div class="comanda-info-box"><span>Tiempo en cocina</span><strong data-comanda-inicio="${fechaInicio.getTime()}" ${fechaFin ? `data-comanda-fin="${fechaFin.getTime()}"` : ''}>${formatearDuracion((fechaFin || new Date()) - fechaInicio)}</strong></div>
+                    <div class="comanda-info-box"><span>Llego</span><strong>${fechaInicio.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></div>
+                    <div class="comanda-info-box"><span>Entrega</span><strong>${escaparHtml(detalleEntregaComanda(ped))}</strong></div>
+                    <div class="comanda-info-box"><span>Pago</span><strong>${escaparHtml(ped.clienteEnvio?.metodoPago || ped.metodoPagoCobro || ped.estadoPago || 'Pendiente')}</strong></div>
+                </div>
+                ${ped.comentarios ? `<div class="comanda-notas">Notas: ${escaparHtml(ped.comentarios)}</div>` : ''}
+                <ul class="comanda-detalle-list">${htmlItemsComanda(ped, true)}</ul>
+                <div class="comanda-total-row"><span>Total</span><strong>$${Number(ped.total || 0).toFixed(2)}</strong></div>
+            `;
+            const btnCompletar = document.getElementById('btnCompletarComandaDetalle');
+            btnCompletar.onclick = () => window.completarComanda(idPedido);
+            btnCompletar.style.display = ped.estado === 'pendiente' ? 'inline-flex' : 'none';
+            document.getElementById('modalComandaDetalle').style.display = 'block';
+            window.actualizarCronometrosComandas();
+        };
+
+        window.imprimirComandaActual = function() {
+            if (comandaDetalleActualId) window.imprimirComanda(comandaDetalleActualId);
+        };
+
+        window.imprimirComanda = function(idPedido) {
+            const ped = window.pedidosGlobales.find(p => p.id === idPedido);
+            if (!ped) return;
+            const fechaInicio = fechaPedidoComoDate(ped);
+            const itemsTicket = (ped.items || []).map(item => {
+                const cantidad = Number(item.cantidad || 0);
+                const nombre = escaparHtml(item.nombre || 'Producto');
+                return `<div class="line"><span>${cantidad}x ${nombre}</span></div>`;
+            }).join('');
+            const html = `
+                <!doctype html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Comanda ${escaparHtml(ped.numeroComanda || 'S/N')}</title>
+                    <style>
+                        @page { size: 80mm auto; margin: 4mm; }
+                        body { width: 72mm; margin: 0; font-family: Arial, sans-serif; color: #000; font-size: 12px; }
+                        h1 { margin: 0 0 6px; text-align: center; font-size: 18px; }
+                        .center { text-align: center; }
+                        .meta { margin: 6px 0; padding: 6px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
+                        .line { padding: 6px 0; border-bottom: 1px dashed #000; font-size: 14px; font-weight: 700; }
+                        .notes { margin-top: 8px; padding: 6px; border: 1px solid #000; font-weight: 700; }
+                    </style>
+                </head>
+                <body>
+                    <h1>COMANDA</h1>
+                    <div class="center"><strong>${escaparHtml(ped.numeroComanda || 'S/N')}</strong></div>
+                    <div class="meta">
+                        <div><strong>Tipo:</strong> ${escaparHtml(textoTipoComanda(ped))}</div>
+                        <div><strong>Cliente:</strong> ${escaparHtml(textoClienteComanda(ped))}</div>
+                        <div><strong>Hora:</strong> ${fechaInicio.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <div><strong>Entrega:</strong> ${escaparHtml(detalleEntregaComanda(ped))}</div>
+                    </div>
+                    ${itemsTicket}
+                    ${ped.comentarios ? `<div class="notes">NOTAS: ${escaparHtml(ped.comentarios)}</div>` : ''}
+                </body>
+                </html>
+            `;
+            const ventana = window.open('', '_blank', 'width=360,height=620');
+            ventana.document.write(html);
+            ventana.document.close();
+            setTimeout(() => {
+                ventana.print();
+                setTimeout(() => ventana.close(), 500);
+            }, 250);
+        };
+
+        function renderizarHTMLPedidosLegacy(ordenes, esModoHistorial) {
             const tbody = document.getElementById('tbody-pedidos'); const contComandas = document.getElementById('lista-pedidos-comandas');
             tbody.innerHTML = ''; if(!esModoHistorial) contComandas.innerHTML = '';
             if(ordenes.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay pedidos.</td></tr>'; if(!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>'; return; }
@@ -1553,6 +1727,73 @@
                 }
             });
             if (!esModoHistorial && contComandas.innerHTML === '') contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">Cocina limpia. ✨</p>';
+        }
+
+        function renderizarHTMLPedidos(ordenes, esModoHistorial) {
+            const tbody = document.getElementById('tbody-pedidos');
+            const contComandas = document.getElementById('lista-pedidos-comandas');
+            tbody.innerHTML = '';
+            if (!esModoHistorial) contComandas.innerHTML = '';
+
+            if (ordenes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay pedidos.</td></tr>';
+                if (!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>';
+                return;
+            }
+
+            ordenes.forEach(ped => {
+                const numComanda = ped.numeroComanda || 'S/N';
+                const fechaObj = fechaPedidoComoDate(ped);
+                const fechaFormat = fechaObj.toLocaleDateString() + ' ' + fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const esMesa = ped.tipoOrigen === 'mesa';
+                const tipoStr = textoTipoComanda(ped);
+                const badgeClass = esMesa ? 'badge-mesa' : 'badge-online';
+                const clienteInfo = textoClienteComanda(ped);
+                const estadoPago = ped.estadoPago || 'Pendiente';
+                const colorPago = (estadoPago.toLowerCase() === 'pagado') ? '#27ae60' : '#e74c3c';
+                const badgePagoHtml = `<span style="background:${colorPago}; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; display:inline-block; text-align:center;">${escaparHtml(estadoPago)}</span>`;
+                let textoEstatus = '';
+                let colorEstatus = '';
+                switch(ped.estado) {
+                    case 'pendiente': textoEstatus = 'En Preparacion'; colorEstatus = '#e67e22'; break;
+                    case 'preparado': textoEstatus = 'Listo para entregar'; colorEstatus = '#3498db'; break;
+                    case 'entregado': textoEstatus = 'Entregado'; colorEstatus = '#27ae60'; break;
+                    case 'enviado': textoEstatus = 'Enviado'; colorEstatus = '#9b59b6'; break;
+                    default: textoEstatus = ped.estado || 'Desconocido'; colorEstatus = '#95a5a6';
+                }
+                const badgeEstatus = `<span style="background:${colorEstatus}; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; display:inline-block; text-align:center;">${escaparHtml(textoEstatus)}</span>`;
+
+                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${escaparHtml(numComanda)}</strong></td><td>${escaparHtml(clienteInfo)}</td><td><span class="badge-tipo ${badgeClass}">${escaparHtml(tipoStr)}</span></td><td>${fechaFormat}</td><td>${badgeEstatus}</td><td>${badgePagoHtml}</td><td><strong>$${Number(ped.total || 0).toFixed(2)}</strong></td></tr>`;
+
+                if (!esModoHistorial && ped.estado === 'pendiente') {
+                    const itemsHtml = htmlItemsComanda(ped, false);
+                    const comentariosHtml = ped.comentarios ? `<p style="margin:5px 0; font-size:0.9rem; color:#e67e22;"><strong>Notas:</strong> ${escaparHtml(ped.comentarios)}</p>` : '';
+                    contComandas.innerHTML += `
+                        <div class="pedido-card" style="border-left-color: ${esMesa ? '#27ae60' : '#2980b9'};" onclick="window.abrirDetalleComanda('${ped.id}')">
+                            <div class="comanda-card-head">
+                                <h4>${escaparHtml(numComanda)}</h4>
+                                <span class="badge-tipo ${badgeClass}">${escaparHtml(tipoStr)}</span>
+                            </div>
+                            <div class="comanda-card-meta">
+                                <span class="comanda-chip">Cliente: ${escaparHtml(clienteInfo)}</span>
+                                <span class="comanda-chip comanda-timer">Tiempo: <strong data-comanda-inicio="${fechaObj.getTime()}">${formatearDuracion(Date.now() - fechaObj.getTime())}</strong></span>
+                            </div>
+                            ${comentariosHtml}
+                            <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                            <ul class="comanda-items-mini">${itemsHtml}</ul>
+                            <div class="comanda-card-actions">
+                                <button class="btn-add btn-comanda-print" onclick="event.stopPropagation(); window.imprimirComanda('${ped.id}')">Imprimir</button>
+                                <button class="btn-add btn-comanda-complete" onclick="event.stopPropagation(); window.completarComanda('${ped.id}')">Completar</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (!esModoHistorial && contComandas.innerHTML === '') {
+                contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">Cocina limpia.</p>';
+            }
+            window.actualizarCronometrosComandas();
         }
 
         window.verDetallePedido = function(idPedido) {
@@ -1585,7 +1826,17 @@
                 window.cargarPedidos();
             } catch(e) { console.error(e); }
         }
-        window.completarComanda = async function(docId) { if(confirm("¿Orden preparada?")) { try { await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", docId), { estado: 'preparado' }); window.cargarPedidos(); } catch (error) { console.error(error); } } }
+        window.completarComanda = async function(docId) {
+            if(confirm("¿Orden preparada?")) {
+                try {
+                    await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", docId), { estado: 'preparado', fechaPreparado: new Date() });
+                    document.getElementById('modalComandaDetalle').style.display = 'none';
+                    window.cargarPedidos();
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        }
 
         window.abrirPOS = async function() {
             document.getElementById('modalPOS').style.display = 'block';
