@@ -863,6 +863,203 @@
     .ticket-summary .summary-row.total { font-size: 1.1rem; }
     #posCambioDisplay { font-size: 1.2rem !important; }
   }
+
+  /* ============================================================
+     AJUSTES DE CAJA: legibilidad y alto fluido
+  ============================================================ */
+  #vista-caja .pos-container,
+  #vista-caja .pos-main-layout,
+  #vista-caja .pos-left-panel,
+  #vista-caja .pos-right-panel,
+  #vista-caja .ticket-body {
+    min-height: 0;
+  }
+
+  #vista-caja .pos-left-panel,
+  #vista-caja .pos-right-panel {
+    min-width: 0;
+  }
+
+  #vista-caja .ticket-body {
+    background: #0f172a;
+  }
+
+  #vista-caja .ticket-items {
+    padding: 14px 16px;
+  }
+
+  #vista-caja .ticket-meta-card {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid var(--border-bright);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+  }
+
+  #vista-caja .ticket-meta-row {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    border-bottom: 0;
+    padding: 0;
+    color: var(--text-primary);
+    font-family: var(--font-label);
+    font-size: 0.92rem;
+    line-height: 1.3;
+  }
+
+  #vista-caja .ticket-meta-row strong {
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-size: 0.75rem;
+  }
+
+  #vista-caja .ticket-meta-row span {
+    color: #f8fafc;
+    overflow-wrap: anywhere;
+  }
+
+  #vista-caja .ticket-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(148,163,184,0.2);
+    font-family: var(--font-label);
+    font-size: 1rem;
+    line-height: 1.32;
+    color: #f8fafc;
+  }
+
+  #vista-caja .ticket-item-name {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    color: #f8fafc;
+  }
+
+  #vista-caja .ticket-item-name strong {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    margin-right: 5px;
+  }
+
+  #vista-caja .ticket-item-price {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  #vista-caja .ticket-extra-row .ticket-item-name {
+    color: var(--text-secondary);
+  }
+
+  #vista-caja .summary-row {
+    gap: 14px;
+  }
+
+  #vista-caja .summary-row span:first-child {
+    min-width: 0;
+  }
+
+  #vista-caja .summary-row span:last-child {
+    flex-shrink: 0;
+  }
+
+  #vista-caja .pos-cashier-info {
+    min-width: 0;
+  }
+
+  #vista-caja #txtCajeroActual {
+    display: block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 900px) {
+    #vista-caja {
+      margin: -18px -14px 0;
+      width: calc(100% + 28px);
+      min-height: auto;
+      overflow: visible;
+      padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    }
+
+    #vista-caja .pos-container {
+      height: auto;
+      min-height: auto;
+      overflow: visible;
+    }
+
+    #vista-caja .pos-main-layout {
+      display: flex;
+      flex-direction: column;
+      overflow: visible;
+    }
+
+    #vista-caja .pos-left-panel,
+    #vista-caja .pos-right-panel {
+      width: 100%;
+      max-height: none;
+      min-height: auto;
+      overflow: visible;
+      border-left: 0;
+      border-right: 0;
+    }
+
+    #vista-caja .pos-scroll-area,
+    #vista-caja .ticket-body {
+      flex: none;
+      max-height: none;
+      overflow: visible;
+    }
+
+    #vista-caja .pos-payment-section {
+      padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    }
+  }
+
+  @media (max-width: 560px) {
+    #vista-caja .ticket-header,
+    #vista-caja .ticket-summary,
+    #vista-caja .pos-payment-section,
+    #vista-caja .ticket-items {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    #vista-caja .ticket-meta-row {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+
+    #vista-caja .ticket-item-row {
+      font-size: 0.96rem;
+      gap: 8px;
+    }
+
+    #vista-caja .summary-row.total {
+      align-items: flex-end;
+    }
+
+    #vista-caja .summary-row.total span:last-child {
+      font-size: 1.35rem;
+    }
+
+    #vista-caja #txtCajeroActual {
+      max-width: 130px;
+    }
+  }
 </style>
 
 <div id="vista-caja" class="vista">

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pedipro-v4';
+const CACHE_NAME = 'pedipro-v5';
 const ASSETS = [
     './dashboard.html',
     './assets/dashboard.css?v=4',

@@ -286,7 +286,10 @@
             if(idVista === 'vista-inicio' && window.cargarInicioDashboard) { window.cargarInicioDashboard(); }
             if(idVista === 'vista-menu' && window.cargarMiMenu) { window.cargarMiMenu(); }
             if(idVista === 'vista-disponibilidad') { window.cargarDisponibilidad(); }
-            if(idVista === 'vista-caja') { window.cargarPedidos().then(() => window.cargarCaja()); }
+            if(idVista === 'vista-caja') {
+                if (window.restaurarTurnoCaja) window.restaurarTurnoCaja();
+                window.cargarPedidos().then(() => window.cargarCaja());
+            }
             if(idVista === 'vista-configuracion' && window.restauranteInfo) {
                 if(window.restauranteInfo.slug) {
                     document.getElementById('confSlug').value = window.restauranteInfo.slug;
@@ -456,6 +459,47 @@
         let comandaDetalleActualId = null;
 
         if (!idRestaurante) { window.location.href = "index.html"; }
+
+        function claveTurnoCaja() {
+            return `pediproTurnoCaja_${idRestaurante}`;
+        }
+
+        function aplicarTurnoCaja(nombre) {
+            cajeroActual = nombre || "";
+            const txtCajero = document.getElementById('txtCajeroActual');
+            const btnIniciar = document.getElementById('btnIniciarTurno');
+            const btnFinalizar = document.getElementById('btnFinalizarTurno');
+            const barra = document.querySelector('#vista-caja .pos-status-bar');
+            const indicador = document.getElementById('posStatusIndicator');
+            const turnoActivo = Boolean(cajeroActual);
+
+            if (txtCajero) txtCajero.innerText = turnoActivo ? cajeroActual : "Ninguno";
+            if (btnIniciar) btnIniciar.style.display = turnoActivo ? 'none' : 'inline-flex';
+            if (btnFinalizar) btnFinalizar.style.display = turnoActivo ? 'inline-flex' : 'none';
+            if (barra) barra.classList.toggle('active', turnoActivo);
+            if (indicador) indicador.classList.toggle('active', turnoActivo);
+        }
+
+        function guardarTurnoCaja(nombre) {
+            localStorage.setItem(claveTurnoCaja(), JSON.stringify({
+                cajero: nombre,
+                iniciadoEn: Date.now()
+            }));
+        }
+
+        function limpiarTurnoCaja() {
+            localStorage.removeItem(claveTurnoCaja());
+        }
+
+        window.restaurarTurnoCaja = function() {
+            try {
+                const turnoGuardado = JSON.parse(localStorage.getItem(claveTurnoCaja()) || 'null');
+                aplicarTurnoCaja(turnoGuardado && turnoGuardado.cajero ? turnoGuardado.cajero : "");
+            } catch (error) {
+                limpiarTurnoCaja();
+                aplicarTurnoCaja("");
+            }
+        }
 
         ['click', 'keydown', 'touchstart', 'input'].forEach((evento) => {
             window.addEventListener(evento, refrescarSesionPorUso, { passive: true });
@@ -1048,22 +1092,16 @@
         window.iniciarTurnoCaja = function() {
             let nombre = prompt("Ingresa el nombre del Cajero para iniciar turno:");
             if(nombre && nombre.trim() !== "") {
-                cajeroActual = nombre.trim();
-                document.getElementById('txtCajeroActual').innerText = cajeroActual;
-                document.getElementById('btnIniciarTurno').style.display = 'none';
-                document.getElementById('btnFinalizarTurno').style.display = 'inline-block';
-                document.querySelector('.pos-status-bar').classList.add('active');
+                guardarTurnoCaja(nombre.trim());
+                aplicarTurnoCaja(nombre.trim());
                 window.cargarCaja();
             }
         }
 
         window.finalizarTurnoCaja = function() {
             if(confirm("¿Estás seguro de finalizar tu turno en caja? Asegúrate de haber hecho el corte a ciegas primero.")) {
-                cajeroActual = "";
-                document.getElementById('txtCajeroActual').innerText = "Ninguno";
-                document.getElementById('btnIniciarTurno').style.display = 'inline-block';
-                document.getElementById('btnFinalizarTurno').style.display = 'none';
-                document.querySelector('.pos-status-bar').classList.remove('active');
+                limpiarTurnoCaja();
+                aplicarTurnoCaja("");
                 window.cancelarSeleccionCaja();
                 window.cargarCaja();
             }
@@ -1080,6 +1118,9 @@
         let montoRecibidoKeypad = "";
 
         window.cargarCaja = function() {
+            if (!cajeroActual && localStorage.getItem(claveTurnoCaja())) {
+                window.restaurarTurnoCaja();
+            }
             const container = document.getElementById('tbody-caja-pendientes');
             if(!container) return;
             container.innerHTML = '';
@@ -1136,19 +1177,57 @@
             panel.style.opacity = "1";
             panel.style.pointerEvents = "auto";
 
-            document.getElementById('txtFolioTicket').innerText = "#" + ped.numeroComanda;
-            document.getElementById('txtTicketSubtotal').innerText = "$" + ped.total.toFixed(2);
-            document.getElementById('txtTicketTotal').innerText = "$" + ped.total.toFixed(2);
+            const limpiar = typeof escaparHtml === 'function' ? escaparHtml : (valor) => String(valor ?? '').replace(/[&<>"']/g, (caracter) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[caracter]));
+            const itemsPedido = Array.isArray(ped.items) ? ped.items : [];
+            const totalPedido = Number(ped.total || 0);
+            const subtotalProductos = itemsPedido.reduce((suma, item) => suma + (Number(item.precio || 0) * Number(item.cantidad || 0)), 0);
+            const clienteEnvio = ped.clienteEnvio || {};
+            const costoEnvio = Number(clienteEnvio.costoEnvio || ped.costoEnvio || Math.max(0, totalPedido - subtotalProductos));
+            const nombreCliente = ped.tipoOrigen === 'mesa' ? `Mesa #${ped.numeroMesa || '-'}` : (clienteEnvio.nombre || 'Mostrador');
+            const detalleEntrega = ped.tipoOrigen === 'mesa'
+                ? `Mesa #${ped.numeroMesa || '-'}`
+                : [
+                    clienteEnvio.direccion,
+                    clienteEnvio.zonaEnvio ? `Zona: ${clienteEnvio.zonaEnvio}` : '',
+                    clienteEnvio.telefono ? `Tel: ${clienteEnvio.telefono}` : ''
+                ].filter(Boolean).join(' | ') || 'Sin direccion registrada';
+            const tipoPedido = ped.tipoOrigen === 'mesa' ? 'Mesa' : (ped.tipoOrigen === 'domicilio' ? 'Domicilio' : (ped.tipoOrigen === 'pickup' ? 'Pick Up' : 'Mostrador'));
 
-            let itemsHtml = "";
-            ped.items.forEach(i => {
+            document.getElementById('txtFolioTicket').innerText = "#" + ped.numeroComanda;
+            document.getElementById('txtTicketSubtotal').innerText = "$" + subtotalProductos.toFixed(2);
+            document.getElementById('txtTicketTotal').innerText = "$" + totalPedido.toFixed(2);
+
+            let itemsHtml = `
+                <div class="ticket-meta-card">
+                    <div class="ticket-meta-row"><strong>Cliente</strong><span>${limpiar(nombreCliente)}</span></div>
+                    <div class="ticket-meta-row"><strong>Servicio</strong><span>${limpiar(tipoPedido)}</span></div>
+                    <div class="ticket-meta-row"><strong>Entrega</strong><span>${limpiar(detalleEntrega)}</span></div>
+                </div>
+            `;
+            itemsPedido.forEach(i => {
+                const cantidad = Number(i.cantidad || 0);
+                const precio = Number(i.precio || 0);
                 itemsHtml += `
                     <div class="ticket-item-row">
-                        <span>${i.cantidad}x ${i.nombre}</span>
-                        <span>$${(i.precio * i.cantidad).toFixed(2)}</span>
+                        <span class="ticket-item-name"><strong>${cantidad}x</strong>${limpiar(i.nombre || 'Producto')}</span>
+                        <span class="ticket-item-price">$${(precio * cantidad).toFixed(2)}</span>
                     </div>
                 `;
             });
+            if(costoEnvio > 0.009) {
+                itemsHtml += `
+                    <div class="ticket-item-row ticket-extra-row">
+                        <span class="ticket-item-name"><strong>+</strong>Envio a domicilio</span>
+                        <span class="ticket-item-price">$${costoEnvio.toFixed(2)}</span>
+                    </div>
+                `;
+            }
             document.getElementById('ticketItemsList').innerHTML = itemsHtml;
 
             // Reset pago
