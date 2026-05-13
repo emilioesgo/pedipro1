@@ -1425,20 +1425,141 @@
             document.getElementById('panelCobroTarjeta').style.display = metodo === 'Tarjeta' ? 'block' : 'none';
         }
 
+        function actualizarDisplayMontoCaja() {
+            const num = parseFloat(montoRecibidoKeypad) || 0;
+            const recibidoEl = document.getElementById('posRecibidoDisplay');
+            const cambioEl = document.getElementById('posCambioDisplay');
+            if(recibidoEl) recibidoEl.innerText = num.toLocaleString('es-MX', { maximumFractionDigits: 2 });
+            
+            const total = pedidoSeleccionadoCaja ? Number(pedidoSeleccionadoCaja.total || 0) : 0;
+            const cambio = num - total;
+            if(cambioEl) cambioEl.innerText = "$" + (cambio >= 0 ? cambio.toFixed(2) : "0.00");
+        }
+
         window.tecladoPOS = function(val) {
             if(val === 'clear') {
                 montoRecibidoKeypad = "";
+            } else if(val === 'backspace') {
+                montoRecibidoKeypad = montoRecibidoKeypad.slice(0, -1);
+            } else if(val === '.' || val === ',') {
+                if(!montoRecibidoKeypad.includes('.')) {
+                    montoRecibidoKeypad = montoRecibidoKeypad ? `${montoRecibidoKeypad}.` : '0.';
+                }
             } else {
-                montoRecibidoKeypad += val;
+                const siguiente = `${montoRecibidoKeypad}${val}`;
+                if(/^\d{0,7}(\.\d{0,2})?$/.test(siguiente)) montoRecibidoKeypad = siguiente;
             }
-            
-            const num = parseFloat(montoRecibidoKeypad) || 0;
-            document.getElementById('posRecibidoDisplay').innerText = num.toLocaleString();
-            
-            const total = pedidoSeleccionadoCaja ? pedidoSeleccionadoCaja.total : 0;
-            const cambio = num - total;
-            document.getElementById('posCambioDisplay').innerText = "$" + (cambio >= 0 ? cambio.toFixed(2) : "0.00");
+            actualizarDisplayMontoCaja();
         }
+
+        document.addEventListener('keydown', (event) => {
+            const vistaCajaActiva = document.getElementById('vista-caja')?.classList.contains('activa');
+            const estaEscribiendo = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+            if(!vistaCajaActiva || estaEscribiendo || !pedidoSeleccionadoCaja || metodoPagoSeleccionado !== 'Efectivo') return;
+
+            if(/^\d$/.test(event.key)) {
+                event.preventDefault();
+                window.tecladoPOS(event.key);
+            } else if(event.key === '.' || event.key === ',') {
+                event.preventDefault();
+                window.tecladoPOS('.');
+            } else if(event.key === 'Backspace') {
+                event.preventDefault();
+                window.tecladoPOS('backspace');
+            } else if(event.key === 'Delete' || event.key === 'Escape') {
+                event.preventDefault();
+                window.tecladoPOS('clear');
+            } else if(event.key === 'Enter') {
+                event.preventDefault();
+                window.finalizarCobroPOS();
+            }
+        });
+
+        function obtenerDatosTicketCaja(ped) {
+            const items = Array.isArray(ped.items) ? ped.items : [];
+            const total = Number(ped.total || 0);
+            let subtotal = items.reduce((suma, item) => suma + (Number(item.precio || 0) * Number(item.cantidad || 0)), 0);
+            const clienteEnvio = ped.clienteEnvio || {};
+            let envio = Number(clienteEnvio.costoEnvio || ped.costoEnvio || 0);
+            if(!envio && subtotal > 0 && total > subtotal) envio = total - subtotal;
+            if(!subtotal && total > envio) subtotal = total - envio;
+            return { items, subtotal, envio, total };
+        }
+
+        window.imprimirTicketCaja = function(pedidoForzado = null) {
+            const ped = pedidoForzado && typeof pedidoForzado === 'object' ? pedidoForzado : pedidoSeleccionadoCaja;
+            if(!ped) return alert("Selecciona una comanda para imprimir el ticket.");
+
+            const datos = obtenerDatosTicketCaja(ped);
+            const ahora = new Date();
+            const nombreNegocio = window.restauranteInfo?.nombre || 'Mi negocio';
+            const numeroComanda = ped.numeroComanda || 'S/N';
+            const lineas = datos.items.map(item => {
+                const cantidad = Number(item.cantidad || 0);
+                const precio = Number(item.precio || 0);
+                const nombre = escaparHtml(item.nombre || 'Producto');
+                return `
+                    <div class="line">
+                        <span>${cantidad}x ${nombre}</span>
+                        <strong>$${(cantidad * precio).toFixed(2)}</strong>
+                    </div>
+                `;
+            }).join('');
+            const envioHtml = datos.envio > 0.009 ? `
+                <div class="total-row">
+                    <span>Envio</span>
+                    <strong>$${datos.envio.toFixed(2)}</strong>
+                </div>
+            ` : '';
+            const html = `
+                <!doctype html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Ticket ${escaparHtml(numeroComanda)}</title>
+                    <style>
+                        @page { size: 80mm auto; margin: 4mm; }
+                        body { width: 72mm; margin: 0; font-family: Arial, sans-serif; color: #000; font-size: 12px; }
+                        h1 { margin: 0; text-align: center; font-size: 18px; text-transform: uppercase; }
+                        .center { text-align: center; }
+                        .meta { margin: 8px 0; padding: 7px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
+                        .meta div { display: flex; justify-content: space-between; gap: 8px; margin: 2px 0; }
+                        .items { margin: 6px 0; }
+                        .line { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px dashed #000; }
+                        .line span { flex: 1; }
+                        .totals { margin-top: 8px; padding-top: 6px; border-top: 1px solid #000; }
+                        .total-row { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+                        .grand { margin-top: 5px; padding-top: 7px; border-top: 2px solid #000; font-size: 16px; font-weight: 700; }
+                        .foot { margin-top: 10px; text-align: center; font-size: 11px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escaparHtml(nombreNegocio)}</h1>
+                    <div class="center">Ticket de venta</div>
+                    <div class="meta">
+                        <div><span>Comanda</span><strong>${escaparHtml(numeroComanda)}</strong></div>
+                        <div><span>Fecha</span><strong>${ahora.toLocaleDateString('es-MX')}</strong></div>
+                        <div><span>Hora</span><strong>${ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</strong></div>
+                    </div>
+                    <div class="items">${lineas || '<div class="line"><span>Sin productos</span><strong>$0.00</strong></div>'}</div>
+                    <div class="totals">
+                        <div class="total-row"><span>Subtotal</span><strong>$${datos.subtotal.toFixed(2)}</strong></div>
+                        ${envioHtml}
+                        <div class="total-row grand"><span>Total</span><strong>$${datos.total.toFixed(2)}</strong></div>
+                    </div>
+                    <div class="foot">Gracias por su compra</div>
+                </body>
+                </html>
+            `;
+            const ventana = window.open('', '_blank', 'width=360,height=620');
+            if(!ventana) return alert("No se pudo abrir la ventana de impresion. Revisa el bloqueador de ventanas emergentes.");
+            ventana.document.write(html);
+            ventana.document.close();
+            setTimeout(() => {
+                ventana.print();
+                setTimeout(() => ventana.close(), 500);
+            }, 250);
+        };
 
         window.cancelarSeleccionCaja = function() {
             pedidoSeleccionadoCaja = null;
