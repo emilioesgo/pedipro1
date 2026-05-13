@@ -276,6 +276,30 @@
             cocinero: ['vista-pedidos', 'vista-disponibilidad']
         };
         window.rolSesion = window.rolSesion || 'administrador';
+        const ULTIMA_VISTA_DASHBOARD_KEY = 'pediproUltimaVistaDashboard';
+        const ULTIMA_PESTANA_PEDIDOS_KEY = 'pediproUltimaPestanaPedidos';
+
+        function claveDashboardLocal(base) {
+            return `${base}_${window.dashboardRestauranteId || 'global'}`;
+        }
+
+        function guardarUltimaVistaDashboard(idVista) {
+            if (!idVista) return;
+            localStorage.setItem(claveDashboardLocal(ULTIMA_VISTA_DASHBOARD_KEY), idVista);
+        }
+
+        function leerUltimaVistaDashboard() {
+            return localStorage.getItem(claveDashboardLocal(ULTIMA_VISTA_DASHBOARD_KEY));
+        }
+
+        function guardarUltimaPestanaPedidos(tipo) {
+            if (!tipo) return;
+            localStorage.setItem(claveDashboardLocal(ULTIMA_PESTANA_PEDIDOS_KEY), tipo);
+        }
+
+        function leerUltimaPestanaPedidos() {
+            return localStorage.getItem(claveDashboardLocal(ULTIMA_PESTANA_PEDIDOS_KEY)) || 'tabla';
+        }
 
         function usuarioPuedeAcceder(idVista) {
             const permisos = window.permisosPorRol[window.rolSesion] || window.permisosPorRol.administrador;
@@ -315,11 +339,21 @@
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('activo'));
             if(elementoNav) elementoNav.classList.add('activo');
             if (window.innerWidth <= 860) toggleMenuMovil(false);
+            guardarUltimaVistaDashboard(idVista);
             
             if(idVista === 'vista-pedidos') { 
                 document.getElementById('titulo-tabla-info').innerHTML = '✅ Mostrando pedidos del turno actual (Se limpian automáticamente 1 hr después del cierre).';
                 if (window.limpiarNotificacionesPedidos) window.limpiarNotificacionesPedidos();
-                window.cargarPedidos(); 
+                const ultimaPestana = leerUltimaPestanaPedidos();
+                if (ultimaPestana === 'comandas') {
+                    window.cargarPedidos().then(() => filtrarPestana('comandas'));
+                } else if (ultimaPestana === 'mesas') {
+                    filtrarPestana('mesas');
+                } else if (ultimaPestana === 'historial') {
+                    if (window.mostrarHistorialPedidos) window.mostrarHistorialPedidos();
+                } else {
+                    filtrarPestana('tabla');
+                }
             }
             if(idVista === 'vista-inicio' && window.cargarInicioDashboard) { window.cargarInicioDashboard(); }
             if(idVista === 'vista-menu' && window.cargarMiMenu) { window.cargarMiMenu(); }
@@ -356,6 +390,7 @@
         }
 
         function filtrarPestana(tipo) {
+            guardarUltimaPestanaPedidos(tipo);
             document.getElementById('lista-pedidos-tabla').style.display = 'none';
             document.getElementById('lista-pedidos-comandas').style.display = 'none';
             document.getElementById('lista-pedidos-mesas').style.display = 'none';
@@ -395,6 +430,13 @@
                 tablaPedidos.parentNode.insertBefore(filtros, tablaPedidos);
             }
         }
+
+        window.restaurarUltimaVistaDashboard = function() {
+            const vistaGuardada = leerUltimaVistaDashboard();
+            const vistaDestino = vistaGuardada && usuarioPuedeAcceder(vistaGuardada) ? vistaGuardada : primeraVistaPermitida();
+            const navDestino = document.querySelector(`.nav-item[data-vista="${vistaDestino}"]`);
+            return cambiarVista(vistaDestino, navDestino);
+        };
 
         // FUNCIONES DE ENLACE Y COMPARTIR
         function imprimirQR() {
@@ -512,6 +554,7 @@
         const idDesdeUrl = urlParams.get('id');
         const bloqueoPorCierreManual = localStorage.getItem(SESION_CERRADA_KEY) === 'true' && idDesdeUrl;
         const idRestaurante = (sesionRestauranteExpirada || bloqueoPorCierreManual) ? null : (idDesdeUrl || (sesionGuardada ? sesionGuardada.id : null));
+        window.dashboardRestauranteId = idRestaurante || 'global';
         const usuarioSesion = sesionGuardada?.usuario || { rol: 'administrador', nombre: 'Administrador' };
         const rolSesion = usuarioSesion.rol || 'administrador';
         const permisosPorRol = {
@@ -1992,6 +2035,8 @@
         }
 
         window.mostrarHistorialPedidos = function() {
+            guardarUltimaVistaDashboard('vista-pedidos');
+            guardarUltimaPestanaPedidos('historial');
             prepararUIHistorialPedidos();
             document.getElementById('lista-pedidos-tabla').style.display = 'block';
             document.getElementById('lista-pedidos-comandas').style.display = 'none';
@@ -2005,6 +2050,8 @@
         };
 
         window.cargarHistorialPedidos = async function(tipo = 'dia') {
+            guardarUltimaVistaDashboard('vista-pedidos');
+            guardarUltimaPestanaPedidos('historial');
             prepararUIHistorialPedidos();
             document.getElementById('lista-pedidos-tabla').style.display = 'block';
             document.getElementById('lista-pedidos-comandas').style.display = 'none';
@@ -3270,7 +3317,7 @@
             actualizarBotonInstalacion();
         });
 
-        aplicarPermisosUsuario(true);
+        window.restaurarUltimaVistaDashboard();
     </script>
 </body>
 </html>
