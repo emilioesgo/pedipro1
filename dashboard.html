@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="assets/dashboard.css?v=4">
+    <link rel="stylesheet" href="assets/dashboard.css?v=5">
 
 </head>
 <body>
@@ -2250,6 +2250,23 @@
         window.modoEdicionMesas = false;
         let objMesasDOM = {}; // Referencias DOM
 
+        function ajustarTamanoMapaMesas(contenedor, mesas) {
+            if (!contenedor) return;
+            const margen = 104;
+            const anchoBase = window.innerWidth <= 560 ? 640 : 0;
+            const altoBase = window.innerWidth <= 560 ? 480 : 600;
+            const anchoNecesario = mesas.reduce((max, mesa) => {
+                const x = Number(mesa.x || 0);
+                return Math.max(max, x + margen);
+            }, anchoBase);
+            const altoNecesario = mesas.reduce((max, mesa) => {
+                const y = Number(mesa.y || 0);
+                return Math.max(max, y + margen);
+            }, altoBase);
+            contenedor.style.setProperty('--mesa-map-width', `${Math.ceil(anchoNecesario)}px`);
+            contenedor.style.setProperty('--mesa-map-height', `${Math.ceil(altoNecesario)}px`);
+        }
+
         window.cargarMesas = async function() {
             const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "mesas")); 
             const contenedor = document.getElementById('mapaMesasContenedor'); 
@@ -2259,6 +2276,7 @@
             let mesas = []; 
             snapshot.forEach(docSnap => mesas.push({ id: docSnap.id, ...docSnap.data() })); 
             mesas.sort((a,b) => a.numero - b.numero);
+            ajustarTamanoMapaMesas(contenedor, mesas);
             
             mesas.forEach((mesa, idx) => { 
                 let claseEstado = 'mesa-libre'; let txtEstado = 'Libre'; 
