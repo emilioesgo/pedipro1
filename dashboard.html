@@ -214,6 +214,7 @@
                 Estado: <span id="opcionesMesaEstadoTexto" style="font-weight: bold;"></span>
             </p>
 
+            <div id="opcionesMesaPedidosActivos" style="margin-bottom: 15px;"></div>
             <div id="opcionesMesaPedidosListos" style="margin-bottom: 15px;"></div>
             
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -929,7 +930,10 @@
         };
 
         function pedidoCreadoDesdeMenu(pedido) {
-            return pedido?.creadoDesde === 'menu.html' || ((pedido?.tipoOrigen === 'pickup' || pedido?.tipoOrigen === 'domicilio') && pedido?.clienteEnvio);
+            return pedido?.creadoDesde === 'menu.html'
+                || pedido?.creadoDesde === 'menumesa.html'
+                || ((pedido?.tipoOrigen === 'pickup' || pedido?.tipoOrigen === 'domicilio') && pedido?.clienteEnvio)
+                || (pedido?.tipoOrigen === 'mesa' && pedido?.numeroMesa && pedido?.clienteEnvio?.telefono === 'En Mesa');
         }
 
         function reproducirAvisoPedido() {
@@ -2959,13 +2963,52 @@
             document.getElementById('opcionesMesaEstadoTexto').innerText = txtEstado;
             
             let pedidosListosHtml = '';
+            let pedidosActivosHtml = '';
             if (window.pedidosGlobales) {
+                const pedidosMesa = window.pedidosGlobales
+                    .filter(p => String(p.numeroMesa) === String(numero) && p.tipoOrigen === 'mesa')
+                    .filter(p => (p.estadoPago || '').toLowerCase() !== 'pagado')
+                    .sort((a, b) => fechaPedidoComoDate(b) - fechaPedidoComoDate(a));
+
+                if (pedidosMesa.length > 0) {
+                    pedidosActivosHtml = `
+                        <div style="background:#f8fafc; border:1px solid #dbe3ef; border-radius:8px; padding:12px;">
+                            <h4 style="margin:0 0 10px; color:#172033;">Pedidos activos de la mesa</h4>
+                            ${pedidosMesa.map(p => {
+                                const estadoPedido = p.estado === 'preparado' ? 'Listo' : (p.estado === 'entregado' ? 'Entregado' : 'En preparacion');
+                                const colorEstado = p.estado === 'preparado' ? '#2563eb' : (p.estado === 'entregado' ? '#16a34a' : '#e67e22');
+                                const items = Array.isArray(p.items) ? p.items : [];
+                                const itemsHtml = items.slice(0, 4).map(item => `<li style="display:flex; justify-content:space-between; gap:8px; padding:3px 0;"><span><strong>${Number(item.cantidad || 0)}x</strong> ${escaparHtml(item.nombre || 'Producto')}</span><span>$${(Number(item.precio || 0) * Number(item.cantidad || 0)).toFixed(2)}</span></li>`).join('');
+                                const extrasHtml = items.length > 4 ? `<li style="color:#64748b; padding:3px 0;">+${items.length - 4} productos mas</li>` : '';
+                                return `
+                                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid ${colorEstado}; border-radius:8px; padding:10px; margin-bottom:10px;">
+                                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:6px;">
+                                            <strong style="color:#172033;">${escaparHtml(p.numeroComanda || 'S/N')}</strong>
+                                            <span style="background:${colorEstado}; color:white; padding:3px 8px; border-radius:999px; font-size:0.75rem; font-weight:800;">${estadoPedido}</span>
+                                        </div>
+                                        ${p.clienteEnvio?.nombre ? `<div style="color:#64748b; font-size:0.86rem; margin-bottom:6px;">Cliente: ${escaparHtml(p.clienteEnvio.nombre)}</div>` : ''}
+                                        <ul style="list-style:none; padding:0; margin:0 0 8px; color:#334155; font-size:0.88rem;">${itemsHtml}${extrasHtml}</ul>
+                                        ${p.comentarios ? `<div style="background:#fff7ed; color:#9a3412; padding:6px 8px; border-radius:6px; font-size:0.84rem; margin-bottom:8px;">Notas: ${escaparHtml(p.comentarios)}</div>` : ''}
+                                        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                                            <strong style="color:#16a34a;">Total: $${Number(p.total || 0).toFixed(2)}</strong>
+                                            <button class="btn-add" style="background:#2563eb; width:auto; padding:7px 10px;" onclick="document.getElementById('modalOpcionesMesa').style.display='none'; window.verDetallePedido('${p.id}')">Ver detalle</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else {
+                    pedidosActivosHtml = '<div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:12px; text-align:center; color:#64748b; margin-bottom:10px;">No hay pedidos activos en esta mesa.</div>';
+                }
+
                 window.pedidosGlobales.forEach(p => {
                     if (p.numeroMesa == numero && p.estado === 'preparado') {
                         pedidosListosHtml += `<div style="background:#f8f9fa; padding:10px; border-radius:8px; border:1px solid #ddd; text-align:center;"><p style="margin:0 0 10px; font-weight:bold; color:#2c3e50;">Pedido #${p.numeroComanda} Listo</p><button class="btn-add" style="background:#e74c3c; width:100%;" onclick="window.entregarPedidoMesa('${p.id}', '${p.numeroMesa}')">🍽️ Entregado a Mesa</button></div>`;
                     }
                 });
             }
+            document.getElementById('opcionesMesaPedidosActivos').innerHTML = pedidosActivosHtml;
             document.getElementById('opcionesMesaPedidosListos').innerHTML = pedidosListosHtml;
 
             document.getElementById('modalOpcionesMesa').style.display = 'block';
