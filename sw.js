@@ -1,7 +1,7 @@
-const CACHE_NAME = 'pedipro-v7';
+const CACHE_NAME = 'pedipro-v8';
 const ASSETS = [
     './dashboard.html',
-    './assets/dashboard.css?v=6',
+    './assets/dashboard.css?v=7',
     './assets/icon.png'
 ];
 

@@ -633,6 +633,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         let idRestaurante = urlParams.get('id');
+        const mesaDesdeQR = urlParams.get('mesa');
 
         let carrito = {}; 
         let totalGeneral = 0;
@@ -646,6 +647,21 @@
         
         let clienteNombre = "";
         let clienteMesa = "";
+
+        function aplicarMesaDesdeQR() {
+            if (!mesaDesdeQR) return;
+            const inputMesa = document.getElementById('regMesa');
+            if (!inputMesa) return;
+            inputMesa.value = mesaDesdeQR;
+            inputMesa.readOnly = true;
+            inputMesa.style.background = '#f8fafc';
+            inputMesa.style.cursor = 'not-allowed';
+            if (!document.getElementById('mesaQRNota')) {
+                inputMesa.insertAdjacentHTML('afterend', `<p id="mesaQRNota" style="margin:6px 0 0;color:#16a34a;font-weight:700;font-size:0.85rem;">Mesa detectada desde el codigo QR.</p>`);
+            }
+        }
+
+        aplicarMesaDesdeQR();
 
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('navCategorias');

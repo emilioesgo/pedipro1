@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="assets/dashboard.css?v=6">
+    <link rel="stylesheet" href="assets/dashboard.css?v=7">
 
 </head>
 <body>
@@ -688,13 +688,245 @@
         }
         window.renderizarTablaHorarios = renderizarTablaHorarios;
 
+        let urlMenuDigitalActual = "";
+        let urlMenumesaBaseActual = "";
+        let qrMesasDigitales = [];
+
+        function textoSeguroQR(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, (caracter) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[caracter]));
+        }
+
+        function correctLevelAltoQR() {
+            return window.QRCode && window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.H : undefined;
+        }
+
+        function generarCodigoQR(elemento, url, tamano = 150) {
+            if (!elemento || !window.QRCode) return;
+            elemento.innerHTML = "";
+            new QRCode(elemento, {
+                text: url,
+                width: tamano,
+                height: tamano,
+                correctLevel: correctLevelAltoQR()
+            });
+        }
+
+        function aplicarLogoQR(selector, logoUrl) {
+            const logo = document.querySelector(selector);
+            if (!logo) return;
+            if (logoUrl) {
+                logo.src = logoUrl;
+                logo.style.display = 'block';
+            } else {
+                logo.removeAttribute('src');
+                logo.style.display = 'none';
+            }
+        }
+
         function actualizarEnlaceUI(alias) {
             const targetUrl = alias ? alias : idRestaurante;
-            const urlMenu = `https://emilioesgo.github.io/pedipro1/menu.html?id=${targetUrl}`;
-            document.getElementById('displayLink').innerText = urlMenu;
-            document.getElementById("qrcode").innerHTML = ""; 
-            new QRCode(document.getElementById("qrcode"), { text: urlMenu, width: 150, height: 150 });
+            urlMenuDigitalActual = `https://emilioesgo.github.io/pedipro1/menu.html?id=${targetUrl}`;
+            urlMenumesaBaseActual = `https://emilioesgo.github.io/pedipro1/menumesa.html?id=${targetUrl}`;
+            document.getElementById('displayLink').innerText = urlMenuDigitalActual;
+            generarCodigoQR(document.getElementById("qrcode"), urlMenuDigitalActual, 150);
+            aplicarLogoQR('#qrLogoOverlay', window.restauranteInfo?.logo);
+            window.cargarQRMesasDigitales();
         }
+
+        function urlMesaDigital(numeroMesa) {
+            const separador = urlMenumesaBaseActual.includes('?') ? '&' : '?';
+            return `${urlMenumesaBaseActual}${separador}mesa=${encodeURIComponent(numeroMesa)}`;
+        }
+
+        window.cargarQRMesasDigitales = async function() {
+            const contenedor = document.getElementById('qrsMesasContainer');
+            if (!contenedor || !idRestaurante) return;
+            if (!urlMenumesaBaseActual) {
+                const targetUrl = window.restauranteInfo?.slug || idRestaurante;
+                urlMenumesaBaseActual = `https://emilioesgo.github.io/pedipro1/menumesa.html?id=${targetUrl}`;
+            }
+            contenedor.innerHTML = '<div class="qr-empty-state">Cargando mesas...</div>';
+            try {
+                const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "mesas"));
+                qrMesasDigitales = [];
+                snapshot.forEach(docSnap => {
+                    const mesa = { id: docSnap.id, ...docSnap.data() };
+                    if (mesa.numero !== undefined && mesa.numero !== null && mesa.numero !== '') qrMesasDigitales.push(mesa);
+                });
+                qrMesasDigitales.sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0));
+
+                if (qrMesasDigitales.length === 0) {
+                    contenedor.innerHTML = '<div class="qr-empty-state">Aun no hay mesas registradas. Agrega mesas desde Pedidos y Mesas para crear sus QR.</div>';
+                    return;
+                }
+
+                contenedor.innerHTML = qrMesasDigitales.map((mesa) => {
+                    const numero = textoSeguroQR(mesa.numero);
+                    const url = urlMesaDigital(mesa.numero);
+                    const idQR = `qr-mesa-${String(mesa.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+                    return `
+                        <div class="qr-mesa-card" data-mesa="${numero}">
+                            <h3 class="qr-mesa-title">Mesa #${numero}</h3>
+                            <div class="qr-mesa-code qr-brand-frame">
+                                <div id="${idQR}" class="qr-mesa-render"></div>
+                                <img class="qr-logo-overlay" alt="Logo del negocio">
+                            </div>
+                            <p class="qr-mesa-link">${textoSeguroQR(url)}</p>
+                            <div class="qr-mesa-actions">
+                                <button type="button" onclick="copiarEnlaceMesa('${numero}')">Copiar</button>
+                                <button type="button" onclick="imprimirQRMesa('${numero}')">Imprimir</button>
+                                <button type="button" onclick="descargarQRMesa('${numero}')">Descargar</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                qrMesasDigitales.forEach((mesa) => {
+                    const idQR = `qr-mesa-${String(mesa.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+                    generarCodigoQR(document.getElementById(idQR), urlMesaDigital(mesa.numero), 128);
+                });
+                document.querySelectorAll('#qrsMesasContainer .qr-logo-overlay').forEach(logo => {
+                    if (window.restauranteInfo?.logo) {
+                        logo.src = window.restauranteInfo.logo;
+                        logo.style.display = 'block';
+                    } else {
+                        logo.style.display = 'none';
+                    }
+                });
+            } catch (error) {
+                console.error(error);
+                contenedor.innerHTML = '<div class="qr-empty-state">No se pudieron cargar los codigos QR de mesas.</div>';
+            }
+        };
+
+        function buscarMesaQR(numeroMesa) {
+            return qrMesasDigitales.find(mesa => String(mesa.numero) === String(numeroMesa));
+        }
+
+        function buscarCardQRMesa(numeroMesa) {
+            return Array.from(document.querySelectorAll('.qr-mesa-card'))
+                .find(card => String(card.dataset.mesa) === String(numeroMesa));
+        }
+
+        function obtenerSrcQR(qrContenedor) {
+            const img = qrContenedor?.querySelector('img');
+            if (img?.src) return img.src;
+            const canvas = qrContenedor?.querySelector('canvas');
+            if (canvas) return canvas.toDataURL("image/png");
+            return "";
+        }
+
+        window.copiarEnlaceMesa = function(numeroMesa) {
+            const url = urlMesaDigital(numeroMesa);
+            navigator.clipboard.writeText(url).then(() => {
+                alert(`Enlace de la Mesa #${numeroMesa} copiado.`);
+            }).catch(error => alert("Error al copiar: " + error));
+        };
+
+        window.imprimirQRMesa = function(numeroMesa) {
+            const url = urlMesaDigital(numeroMesa);
+            const logo = window.restauranteInfo?.logo || '';
+            const nombre = textoSeguroQR(window.restauranteInfo?.nombre || 'Menu de mesa');
+            const qrContenedor = buscarCardQRMesa(numeroMesa)?.querySelector('.qr-mesa-render');
+            const qrSrc = obtenerSrcQR(qrContenedor);
+            if (!qrSrc) return alert("Genera primero el codigo QR de la mesa.");
+            const logoHtml = logo ? `<img src="${logo}" style="position:absolute;left:50%;top:50%;width:72px;height:72px;transform:translate(-50%,-50%);object-fit:cover;border-radius:50%;background:#fff;padding:8px;box-shadow:0 2px 12px rgba(0,0,0,.22);">` : '';
+            const ventana = window.open('', '_blank');
+            ventana.document.write(`
+                <html><body style="text-align:center;padding:34px;font-family:Arial,sans-serif;color:#111;">
+                    <h1 style="margin:0 0 6px;">${nombre}</h1>
+                    <h2 style="margin:0 0 18px;">Mesa #${textoSeguroQR(numeroMesa)}</h2>
+                    <div style="position:relative;display:inline-block;padding:18px;background:#fff;border:1px solid #ddd;border-radius:12px;">
+                        <img src="${qrSrc}" style="width:300px;height:300px;display:block;">
+                        ${logoHtml}
+                    </div>
+                    <p style="margin-top:18px;">Escanea para ordenar desde tu mesa.</p>
+                    <p style="font-size:12px;word-break:break-all;color:#555;">${textoSeguroQR(url)}</p>
+                </body></html>
+            `);
+            ventana.document.close();
+            ventana.print();
+        };
+
+        async function cargarImagenParaCanvas(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        async function crearCanvasQRPersonalizado(qrContenedor, logoUrl) {
+            const canvas = document.createElement('canvas');
+            const size = 1000;
+            const qrSize = 800;
+            const margin = (size - qrSize) / 2;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+
+            const qrCanvas = qrContenedor.querySelector('canvas');
+            const qrImg = qrContenedor.querySelector('img');
+            if (qrCanvas) {
+                ctx.drawImage(qrCanvas, margin, margin, qrSize, qrSize);
+            } else if (qrImg?.src) {
+                const img = await cargarImagenParaCanvas(qrImg.src);
+                ctx.drawImage(img, margin, margin, qrSize, qrSize);
+            } else {
+                throw new Error('QR no disponible');
+            }
+
+            if (logoUrl) {
+                try {
+                    const logo = await cargarImagenParaCanvas(logoUrl);
+                    const logoSize = qrSize * 0.25;
+                    const centerX = size / 2;
+                    const centerY = size / 2;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, (logoSize / 2) + 18, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, logoSize / 2, 0, 2 * Math.PI);
+                    ctx.clip();
+                    ctx.drawImage(logo, centerX - logoSize / 2, centerY - logoSize / 2, logoSize, logoSize);
+                    ctx.restore();
+                } catch (error) {
+                    console.warn("No se pudo cargar el logo para el QR", error);
+                }
+            }
+
+            return canvas;
+        }
+
+        window.descargarQRMesa = async function(numeroMesa) {
+            const card = buscarCardQRMesa(numeroMesa);
+            const qrContenedor = card?.querySelector('.qr-mesa-render');
+            if (!qrContenedor) return alert("Genera primero el codigo QR de la mesa.");
+            try {
+                const canvas = await crearCanvasQRPersonalizado(qrContenedor, window.restauranteInfo?.logo);
+                const enlace = document.createElement('a');
+                enlace.href = canvas.toDataURL("image/png");
+                enlace.download = `QR_Mesa_${numeroMesa}_PediPro.png`;
+                document.body.appendChild(enlace);
+                enlace.click();
+                document.body.removeChild(enlace);
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo descargar el QR de la mesa.");
+            }
+        };
 
         function pedidoCreadoDesdeMenu(pedido) {
             return pedido?.creadoDesde === 'menu.html' || ((pedido?.tipoOrigen === 'pickup' || pedido?.tipoOrigen === 'domicilio') && pedido?.clienteEnvio);
@@ -1134,6 +1366,34 @@
             document.body.removeChild(enlace);
         };
 
+        window.imprimirQR = function() {
+            const qrSrc = obtenerSrcQR(document.getElementById('qrcode'));
+            if (!qrSrc) return alert("Genera primero el codigo QR.");
+            const logo = window.restauranteInfo?.logo || '';
+            const logoHtml = logo ? `<img src="${logo}" style="position:absolute;left:50%;top:50%;width:72px;height:72px;transform:translate(-50%,-50%);object-fit:cover;border-radius:50%;background:#fff;padding:8px;box-shadow:0 2px 12px rgba(0,0,0,.22);">` : '';
+            const ventana = window.open('', '_blank');
+            ventana.document.write(`<html><body style="text-align:center;padding:50px;font-family:sans-serif;"><h1>Escanea nuestro Menu</h1><div style="position:relative;display:inline-block;padding:18px;background:#fff;border:1px solid #ddd;border-radius:12px;"><img src="${qrSrc}" style="width:300px;height:300px;display:block;">${logoHtml}</div><p>Haz tu pedido rapido y facil.</p></body></html>`);
+            ventana.document.close();
+            ventana.print();
+        };
+
+        window.descargarQR = async function() {
+            const qrContenedor = document.getElementById('qrcode');
+            if (!qrContenedor) return alert("Genera primero el codigo QR.");
+            try {
+                const canvas = await crearCanvasQRPersonalizado(qrContenedor, window.restauranteInfo?.logo);
+                const enlace = document.createElement('a');
+                enlace.href = canvas.toDataURL("image/png");
+                enlace.download = 'Mi_Menu_QR_PediPro.png';
+                document.body.appendChild(enlace);
+                enlace.click();
+                document.body.removeChild(enlace);
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo descargar el QR.");
+            }
+        };
+
         window.cambiarPeriodoInicio = function(periodo, boton) {
             periodoInicioActual = periodo;
             document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('activo'));
@@ -1218,6 +1478,7 @@
                 window.renderizarZonasEnvio(window.restauranteInfo.zonasEnvio);
                 renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
+            if (!urlMenuDigitalActual) actualizarEnlaceUI(idRestaurante);
             window.cargarInicioDashboard();
 
             onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), (snapshot) => {
@@ -1256,6 +1517,7 @@
             });
             onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => { 
                 if(!window.modoEdicionMesas) window.cargarMesas(); 
+                if(document.getElementById('vista-qr')?.classList.contains('activa')) window.cargarQRMesasDigitales();
             });
         }
         cargarDatos();

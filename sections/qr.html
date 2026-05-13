@@ -1,15 +1,30 @@
-        <div id="vista-qr" class="vista">
-            <div class="card" style="text-align: center;">
-                <h2>Tu Menú Digital</h2>
-                <div class="qr-container"><div id="qrcode"></div></div>
-                <div class="link-box" id="displayLink">Cargando enlace...</div>
-                
-                <!-- NUEVOS BOTONES DE ACCIÓN PARA EL ENLACE -->
-                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn-add" style="background:#27ae60; width:auto;" onclick="copiarEnlace()">📋 Copiar Link</button>
-                    <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="compartirEnlace()">📤 Compartir</button>
-                    <button class="btn-add" style="background:#3498db; width:auto;" onclick="imprimirQR()">🖨️ Imprimir QR</button>
-                    <button class="btn-add" style="background:#e67e22; width:auto;" onclick="descargarQR()">💾 Descargar QR</button>
-                </div>
-            </div>
+<div id="vista-qr" class="vista">
+    <div class="card qr-main-card" style="text-align: center;">
+        <h2>Tu Menu Digital</h2>
+        <div class="qr-container qr-brand-frame">
+            <div id="qrcode"></div>
+            <img id="qrLogoOverlay" class="qr-logo-overlay" alt="Logo del negocio">
         </div>
+        <div class="link-box" id="displayLink">Cargando enlace...</div>
+        
+        <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-add" style="background:#27ae60; width:auto;" onclick="copiarEnlace()">Copiar Link</button>
+            <button class="btn-add" style="background:#8e44ad; width:auto;" onclick="compartirEnlace()">Compartir</button>
+            <button class="btn-add" style="background:#3498db; width:auto;" onclick="imprimirQR()">Imprimir QR</button>
+            <button class="btn-add" style="background:#e67e22; width:auto;" onclick="descargarQR()">Descargar QR</button>
+        </div>
+    </div>
+
+    <div class="card qr-mesas-card">
+        <div class="qr-section-header">
+            <div>
+                <h2>Codigos QR para Mesas</h2>
+                <p>Cada mesa abre el menu de mesa con su numero listo para ordenar.</p>
+            </div>
+            <button class="btn-add" style="background:#111827; width:auto;" onclick="cargarQRMesasDigitales()">Actualizar mesas</button>
+        </div>
+        <div id="qrsMesasContainer" class="qr-mesas-grid">
+            <div class="qr-empty-state">Cargando mesas...</div>
+        </div>
+    </div>
+</div>
