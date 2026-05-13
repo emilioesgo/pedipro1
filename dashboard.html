@@ -1221,6 +1221,20 @@
             window.cargarInicioDashboard();
 
             onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), (snapshot) => {
+                const ordenesActivasTiempoReal = [];
+                snapshot.forEach(docSnap => {
+                    const ped = { id: docSnap.id, ...docSnap.data() };
+                    try {
+                        if (!ped.fecha || esPedidoDeHoy(ped.fecha)) ordenesActivasTiempoReal.push(ped);
+                    } catch (error) {
+                        const fechaObj = fechaPedidoComoDate(ped);
+                        const hoyInicio = new Date();
+                        hoyInicio.setHours(0, 0, 0, 0);
+                        if (fechaObj >= hoyInicio) ordenesActivasTiempoReal.push(ped);
+                    }
+                });
+                ordenesActivasTiempoReal.sort((a, b) => fechaPedidoComoDate(b) - fechaPedidoComoDate(a));
+                window.pedidosGlobales = ordenesActivasTiempoReal;
                 if (pedidosSnapshotInicializado) {
                     snapshot.docChanges().forEach(change => {
                         if (change.type !== 'added') return;
@@ -1231,7 +1245,11 @@
                     });
                 }
                 pedidosSnapshotInicializado = true;
-                if(document.getElementById('titulo-tabla-info').innerHTML.includes('turno actual')) window.cargarPedidos();
+                const vistaPedidosActiva = document.getElementById('vista-pedidos')?.classList.contains('activa');
+                const historialVisible = document.getElementById('filtrosHistorialPedidos')?.style.display !== 'none';
+                if (vistaPedidosActiva && !historialVisible) {
+                    renderizarHTMLPedidos(ordenesActivasTiempoReal, false);
+                }
                 // Actualizar bandeja de caja en tiempo real si la vista está activa
                 if(document.getElementById('vista-caja').classList.contains('activa')) window.cargarCaja();
                 if(document.getElementById('vista-inicio').classList.contains('activa')) window.cargarInicioDashboard();
