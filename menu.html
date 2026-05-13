@@ -180,6 +180,23 @@
     }
     #switchDomicilio:checked ~ .switch-selector { left: 50%; }
 
+    .delivery-time-info {
+      margin-top: 12px;
+      padding: 10px 12px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(245,166,35,0.1);
+      border: 1px solid rgba(245,166,35,0.35);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 0.92rem;
+      font-weight: 750;
+      line-height: 1.35;
+    }
+    .delivery-time-info strong { color: var(--accent); }
+
     /* ---- SWITCH CONTAINER WRAPPER ---- */
     .switch-container + p, .container > div[style*="background: white"] {
       background: var(--bg-card) !important;
@@ -537,6 +554,7 @@
                 <label for="switchDomicilio" class="switch-label">🛵 Domicilio</label>
                 <div class="switch-selector"></div>
             </div>
+            <div id="tiempoServicioInfo" class="delivery-time-info"></div>
         </div>
 
         <div id="listaMenu"></div>
@@ -748,6 +766,7 @@
             renderizarZonasEnvioMenu(data.zonasEnvio);
             document.getElementById('switchPickup').checked = true;
             sincronizarTipoPedido('pickup');
+            renderizarTiempoServicio();
 
             // 2. LÓGICA DE HORARIOS AVANZADOS O SIMPLES
             verificarSiEstaCerrado(data);
@@ -836,6 +855,33 @@
                     resumenEnvio.innerHTML = '';
                 }
             }
+        }
+
+        function textoIntervaloTiempo(min, max) {
+            const minimo = Number(min || 0);
+            const maximo = Number(max || 0);
+            if (!minimo && !maximo) return '';
+            if (minimo && maximo && minimo !== maximo) return `${minimo} a ${maximo} min`;
+            return `${maximo || minimo} min`;
+        }
+
+        function renderizarTiempoServicio() {
+            const contenedor = document.getElementById('tiempoServicioInfo');
+            if (!contenedor || !infoNegocioGlobal) return;
+            const tipo = document.getElementById('tipoPedidoTop')?.value || 'pickup';
+            const tiempos = infoNegocioGlobal.tiemposEntrega || {};
+            const intervalo = tipo === 'domicilio'
+                ? textoIntervaloTiempo(tiempos.domicilioMin, tiempos.domicilioMax)
+                : textoIntervaloTiempo(tiempos.pickupMin, tiempos.pickupMax);
+            if (!intervalo) {
+                contenedor.style.display = 'none';
+                contenedor.innerHTML = '';
+                return;
+            }
+            contenedor.style.display = 'flex';
+            contenedor.innerHTML = tipo === 'domicilio'
+                ? `🛵 Entrega estimada: <strong>${intervalo}</strong>`
+                : `🥡 Listo para recoger: <strong>${intervalo}</strong>`;
         }
 
         function renderizarZonasEnvioMenu(zonas = []) {
@@ -1133,8 +1179,12 @@
 
         // FUNCIONES DE LOS ÍCONOS DE CABECERA
         window.abrirUbicacionNegocio = function() {
-            if(infoNegocioGlobal && infoNegocioGlobal.nombre) {
-                const queryStr = encodeURIComponent(infoNegocioGlobal.nombre);
+            if(infoNegocioGlobal && infoNegocioGlobal.ubicacionMaps) {
+                window.open(infoNegocioGlobal.ubicacionMaps, '_blank');
+                return;
+            }
+            if(infoNegocioGlobal && (infoNegocioGlobal.direccionLocal || infoNegocioGlobal.nombre)) {
+                const queryStr = encodeURIComponent(infoNegocioGlobal.direccionLocal || infoNegocioGlobal.nombre);
                 window.open(`https://www.google.com/maps/search/?api=1&query=${queryStr}`, '_blank');
             } else { alert("Ubicación no disponible."); }
         }
@@ -1227,6 +1277,7 @@
                 const zonaSelect = document.getElementById('domZonaEnvio');
                 if (zonaSelect) zonaSelect.value = '';
             }
+            renderizarTiempoServicio();
             window.actualizarCostoEnvio();
 
             let huboAjuste = false;

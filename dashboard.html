@@ -335,6 +335,10 @@
                 }
                 if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('prevLogoWrap').style.display = 'inline-block'; }
                 if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('prevPortadaWrap').style.display = 'inline-block'; }
+                if(document.getElementById('confDireccionLocal')) document.getElementById('confDireccionLocal').value = window.restauranteInfo.direccionLocal || '';
+                if(document.getElementById('confUbicacionMaps')) document.getElementById('confUbicacionMaps').value = window.restauranteInfo.ubicacionMaps || '';
+                if(document.getElementById('confWhatsapp')) document.getElementById('confWhatsapp').value = window.restauranteInfo.whatsapp || '';
+                if(window.cargarTiemposEntregaConfig) window.cargarTiemposEntregaConfig(window.restauranteInfo.tiemposEntrega);
                 const fp = window.restauranteInfo.formasPago || {};
                 document.getElementById('pagoEfectivo').checked = fp.efectivo !== false;
                 document.getElementById('pagoTarjeta').checked = fp.tarjeta !== false;
@@ -575,6 +579,16 @@
 
         await window.dashboardSectionsReady;
         aplicarPermisosUsuario();
+        const navDatosSucursal = document.getElementById('cfgnav-imagenes');
+        if (navDatosSucursal) navDatosSucursal.innerHTML = '<span class="cfg-nav-icon">🏪</span> Datos de la Sucursal';
+        const btnDatosSucursal = document.getElementById('btnGuardarImagenes');
+        if (btnDatosSucursal) btnDatosSucursal.innerText = 'Guardar Datos de Sucursal';
+        const cfgTitleInicial = document.getElementById('cfgTopbarTitle');
+        const cfgDescInicial = document.getElementById('cfgTopbarDesc');
+        const cfgIconInicial = document.getElementById('cfgTopbarIcon');
+        if (cfgTitleInicial) cfgTitleInicial.innerText = 'Datos de la Sucursal';
+        if (cfgDescInicial) cfgDescInicial.innerText = 'Información visible en el menú de tus clientes';
+        if (cfgIconInicial) cfgIconInicial.innerText = '🏪';
 
         async function encriptarContrasena(mensaje) {
             const msgBuffer = new TextEncoder().encode(mensaje);
@@ -1115,6 +1129,10 @@
                     const ptEl = document.getElementById('imgPrevPortada'); const ptWrap = document.getElementById('prevPortadaWrap');
                     if(ptEl) ptEl.src = window.restauranteInfo.portada; if(ptWrap) ptWrap.style.display = 'inline-block';
                 }
+                if(document.getElementById('confDireccionLocal')) document.getElementById('confDireccionLocal').value = window.restauranteInfo.direccionLocal || '';
+                if(document.getElementById('confUbicacionMaps')) document.getElementById('confUbicacionMaps').value = window.restauranteInfo.ubicacionMaps || '';
+                if(document.getElementById('confWhatsapp')) document.getElementById('confWhatsapp').value = window.restauranteInfo.whatsapp || '';
+                if(window.cargarTiemposEntregaConfig) window.cargarTiemposEntregaConfig(window.restauranteInfo.tiemposEntrega);
 
                 // Cargar formas de pago guardadas
                 const fp = window.restauranteInfo.formasPago || {};
@@ -1448,10 +1466,11 @@
         // --------------------------------------------------------
         // ===== FUNCIONES DEL PANEL DE CONFIGURACIÓN =====
         const cfgPanelMeta = {
-            'panel-imagenes': { icon: '🖼️', title: 'Identidad Visual',  desc: 'Logo y portada que se muestran en el menú de tus clientes' },
+            'panel-imagenes': { icon: '🏪', title: 'Datos de la Sucursal', desc: 'Información visible en el menú de tus clientes' },
             'panel-link':     { icon: '🔗', title: 'Link del Menú',     desc: 'URL personalizada para compartir con tus clientes' },
             'panel-pagos':    { icon: '💳', title: 'Formas de Pago',    desc: 'Métodos que aparecerán disponibles en el menú digital' },
             'panel-envios':   { icon: '$', title: 'Envios',             desc: 'Zonas y costos para pedidos a domicilio' },
+            'panel-tiempos':  { icon: '⏱', title: 'Tiempos de Entrega', desc: 'Intervalos para pedidos a domicilio y Pick Up' },
             'panel-roles':    { icon: '👥', title: 'Roles y Permisos',  desc: 'Usuarios del equipo y acceso por area de trabajo' },
             'panel-horarios': { icon: '🕒', title: 'Horarios',          desc: 'Días y horas en que tu menú digital estará activo' },
         };
@@ -1711,12 +1730,57 @@
             }
         };
 
+        window.cargarTiemposEntregaConfig = function(tiempos = {}) {
+            const t = tiempos || {};
+            if (document.getElementById('tiempoDomMin')) document.getElementById('tiempoDomMin').value = t.domicilioMin ?? '';
+            if (document.getElementById('tiempoDomMax')) document.getElementById('tiempoDomMax').value = t.domicilioMax ?? '';
+            if (document.getElementById('tiempoPickupMin')) document.getElementById('tiempoPickupMin').value = t.pickupMin ?? '';
+            if (document.getElementById('tiempoPickupMax')) document.getElementById('tiempoPickupMax').value = t.pickupMax ?? '';
+        };
+
+        window.guardarTiemposEntrega = async function() {
+            const btn = document.getElementById('btnGuardarTiemposEntrega');
+            if (btn) { btn.innerText = "Guardando..."; btn.disabled = true; }
+            const tiemposEntrega = {
+                domicilioMin: parseInt(document.getElementById('tiempoDomMin')?.value, 10) || 0,
+                domicilioMax: parseInt(document.getElementById('tiempoDomMax')?.value, 10) || 0,
+                pickupMin: parseInt(document.getElementById('tiempoPickupMin')?.value, 10) || 0,
+                pickupMax: parseInt(document.getElementById('tiempoPickupMax')?.value, 10) || 0
+            };
+            if ((tiemposEntrega.domicilioMax && tiemposEntrega.domicilioMin > tiemposEntrega.domicilioMax) ||
+                (tiemposEntrega.pickupMax && tiemposEntrega.pickupMin > tiemposEntrega.pickupMax)) {
+                alert("El tiempo minimo no puede ser mayor que el maximo.");
+                if (btn) { btn.innerText = "Guardar Tiempos"; btn.disabled = false; }
+                return;
+            }
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante), { tiemposEntrega });
+                window.restauranteInfo = { ...window.restauranteInfo, tiemposEntrega };
+                alert("Tiempos de entrega guardados.");
+            } catch (error) {
+                console.error(error);
+                alert("Error al guardar tiempos de entrega.");
+            } finally {
+                if (btn) { btn.innerText = "Guardar Tiempos"; btn.disabled = false; }
+            }
+        };
+
         window.guardarImagenes = async function() {
             const btn = document.getElementById('btnGuardarImagenes');
             btn.innerText = "Guardando..."; btn.disabled = true;
             const logoInput = document.getElementById('confLogo');
             const portadaInput = document.getElementById('confPortada');
-            let dataActualizada = {};
+            let dataActualizada = {
+                direccionLocal: document.getElementById('confDireccionLocal')?.value.trim() || '',
+                ubicacionMaps: document.getElementById('confUbicacionMaps')?.value.trim() || '',
+                whatsapp: (document.getElementById('confWhatsapp')?.value || '').replace(/\D/g, '')
+            };
+            if (!dataActualizada.whatsapp) {
+                alert("Ingresa el WhatsApp vinculado al menu.");
+                btn.innerText = "Guardar Datos de Sucursal";
+                btn.disabled = false;
+                return;
+            }
             try {
                 if (logoInput.files.length > 0) {
                     const logoBase64 = await comprimirImagen(logoInput.files[0]);
@@ -1732,13 +1796,11 @@
                     dataActualizada.portada = await getDownloadURL(portadaRef);
                     document.getElementById('imgPrevPortada').src = dataActualizada.portada; document.getElementById('imgPrevPortada').style.display = 'block';
                 }
-                if(Object.keys(dataActualizada).length > 0) {
-                    await updateDoc(doc(db, "restaurantes", idRestaurante), dataActualizada);
-                    window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada };
-                    alert("✅ Imágenes guardadas correctamente.");
-                } else { alert("Selecciona al menos una imagen para guardar."); }
-            } catch (error) { console.error(error); alert("Error al guardar imágenes."); }
-            finally { btn.innerText = "💾 Guardar Imágenes"; btn.disabled = false; }
+                await updateDoc(doc(db, "restaurantes", idRestaurante), dataActualizada);
+                window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada };
+                alert("Datos de sucursal guardados correctamente.");
+            } catch (error) { console.error(error); alert("Error al guardar datos de sucursal."); }
+            finally { btn.innerText = "Guardar Datos de Sucursal"; btn.disabled = false; }
         };
 
         window.guardarSlug = async function() {

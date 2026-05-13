@@ -373,6 +373,9 @@
                     <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-envios', this)" id="cfgnav-envios">
                         <span class="cfg-nav-icon">$</span> Envios
                     </div>
+                    <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-tiempos', this)" id="cfgnav-tiempos">
+                        <span class="cfg-nav-icon">⏱</span> Tiempos de Entrega
+                    </div>
                     <div class="cfg-nav-item" onclick="abrirPanelConfig('panel-roles', this)" id="cfgnav-roles">
                         <span class="cfg-nav-icon">👥</span> Roles y Permisos
                     </div>
@@ -397,6 +400,29 @@
 
                         <!-- ===== PANEL: IDENTIDAD VISUAL ===== -->
                         <div class="cfg-panel activo" id="panel-imagenes">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>📍</span>
+                                    <div><h4>Datos de la sucursal</h4><p>Dirección, ubicación de Google Maps y WhatsApp vinculado al menú</p></div>
+                                </div>
+                                <div class="cfg-section-body">
+                                    <div class="cfg-field">
+                                        <label class="cfg-label">Dirección del local</label>
+                                        <textarea id="confDireccionLocal" class="cfg-input" rows="2" placeholder="Calle, número, colonia, ciudad y referencias"></textarea>
+                                    </div>
+                                    <div class="cfg-field">
+                                        <label class="cfg-label">Ubicación en Google Maps</label>
+                                        <input type="url" id="confUbicacionMaps" class="cfg-input" placeholder="Pega aquí el link de Google Maps">
+                                        <span class="cfg-input-hint">Este enlace se abrirá cuando el cliente toque el botón Ubicación del menú.</span>
+                                    </div>
+                                    <div class="cfg-field">
+                                        <label class="cfg-label">WhatsApp vinculado al menú</label>
+                                        <input type="tel" id="confWhatsapp" class="cfg-input" placeholder="Ej: 529691234567">
+                                        <span class="cfg-input-hint">Incluye código de país, solo números. Este número recibirá los pedidos de menu.html.</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="cfg-section">
                                 <div class="cfg-section-head">
                                     <span>🏷️</span>
@@ -556,6 +582,51 @@
                             <div class="cfg-action-bar">
                                 <button class="cfg-btn cfg-btn-success" id="btnGuardarZonasEnvio" onclick="window.guardarZonasEnvio()">
                                     Guardar Zonas
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ===== PANEL: TIEMPOS DE ENTREGA ===== -->
+                        <div class="cfg-panel" id="panel-tiempos">
+                            <div class="cfg-section">
+                                <div class="cfg-section-head">
+                                    <span>⏱</span>
+                                    <div><h4>Tiempos de entrega</h4><p>Estos intervalos se mostrarán en el menú según el tipo de pedido que elija el cliente</p></div>
+                                </div>
+                                <div class="cfg-section-body">
+                                    <div class="cfg-section" style="margin-bottom:16px;">
+                                        <div class="cfg-section-head">
+                                            <span>🛵</span>
+                                            <div><h4>Pedidos a domicilio</h4><p>Tiempo estimado para entregar en la dirección del cliente</p></div>
+                                        </div>
+                                        <div class="cfg-section-body">
+                                            <div class="cfg-zona-row">
+                                                <input type="number" id="tiempoDomMin" class="cfg-input" min="0" step="1" placeholder="Mínimo (min)">
+                                                <input type="number" id="tiempoDomMax" class="cfg-input" min="0" step="1" placeholder="Máximo (min)">
+                                                <span class="cfg-input-hint">Minutos</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="cfg-section" style="margin-bottom:0;">
+                                        <div class="cfg-section-head">
+                                            <span>🥡</span>
+                                            <div><h4>Pedidos para recoger / Pick Up</h4><p>Tiempo estimado para que el pedido esté listo en sucursal</p></div>
+                                        </div>
+                                        <div class="cfg-section-body">
+                                            <div class="cfg-zona-row">
+                                                <input type="number" id="tiempoPickupMin" class="cfg-input" min="0" step="1" placeholder="Mínimo (min)">
+                                                <input type="number" id="tiempoPickupMax" class="cfg-input" min="0" step="1" placeholder="Máximo (min)">
+                                                <span class="cfg-input-hint">Minutos</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cfg-action-bar">
+                                <button class="cfg-btn cfg-btn-success" id="btnGuardarTiemposEntrega" onclick="window.guardarTiemposEntrega()">
+                                    Guardar Tiempos
                                 </button>
                             </div>
                         </div>
