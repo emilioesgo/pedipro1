@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="assets/dashboard.css?v=5">
+    <link rel="stylesheet" href="assets/dashboard.css?v=6">
 
 </head>
 <body>
@@ -359,6 +359,8 @@
             document.getElementById('lista-pedidos-tabla').style.display = 'none';
             document.getElementById('lista-pedidos-comandas').style.display = 'none';
             document.getElementById('lista-pedidos-mesas').style.display = 'none';
+            const filtrosHistorial = document.getElementById('filtrosHistorialPedidos');
+            if (filtrosHistorial) filtrosHistorial.style.display = 'none';
 
             if (tipo === 'tabla') {
                 document.getElementById('lista-pedidos-tabla').style.display = 'block';
@@ -369,6 +371,28 @@
             } else if (tipo === 'mesas') {
                 document.getElementById('lista-pedidos-mesas').style.display = 'block';
                 window.cargarMesas(); 
+            }
+        }
+
+        function prepararUIHistorialPedidos() {
+            const botonHistorial = document.querySelector('[onclick="window.cargarHistorial30Dias()"]');
+            if (botonHistorial) {
+                botonHistorial.textContent = 'Historial de pedidos';
+                botonHistorial.setAttribute('onclick', 'window.mostrarHistorialPedidos()');
+            }
+
+            const tablaPedidos = document.querySelector('#lista-pedidos-tabla .tabla-profesional');
+            if (tablaPedidos && !document.getElementById('filtrosHistorialPedidos')) {
+                const filtros = document.createElement('div');
+                filtros.id = 'filtrosHistorialPedidos';
+                filtros.className = 'historial-filtros';
+                filtros.style.display = 'none';
+                filtros.innerHTML = `
+                    <button type="button" onclick="window.cargarHistorialPedidos('dia')">Dia</button>
+                    <button type="button" onclick="window.cargarHistorialPedidos('semana')">Semana</button>
+                    <button type="button" onclick="window.cargarHistorialPedidos('mes')">Mes</button>
+                `;
+                tablaPedidos.parentNode.insertBefore(filtros, tablaPedidos);
             }
         }
 
@@ -579,6 +603,7 @@
 
         await window.dashboardSectionsReady;
         aplicarPermisosUsuario();
+        prepararUIHistorialPedidos();
         const navDatosSucursal = document.getElementById('cfgnav-imagenes');
         if (navDatosSucursal) navDatosSucursal.innerHTML = '<span class="cfg-nav-icon">🏪</span> Datos de la Sucursal';
         const btnDatosSucursal = document.getElementById('btnGuardarImagenes');
@@ -1944,6 +1969,67 @@
             document.getElementById('titulo-tabla-info').innerHTML = '📅 <strong>Historial 30 días</strong> (Limpieza automática aplicada).';
             renderizarHTMLPedidos(ordenesHistoricas, true); 
         }
+
+        function rangoHistorialPedidos(tipo) {
+            const inicio = new Date();
+            const fin = new Date();
+            if (tipo === 'dia') {
+                inicio.setHours(0, 0, 0, 0);
+                fin.setHours(23, 59, 59, 999);
+                return { inicio, fin, etiqueta: 'del dia' };
+            }
+            if (tipo === 'semana') {
+                const diaSemana = (inicio.getDay() + 6) % 7;
+                inicio.setDate(inicio.getDate() - diaSemana);
+                inicio.setHours(0, 0, 0, 0);
+                fin.setHours(23, 59, 59, 999);
+                return { inicio, fin, etiqueta: 'de la semana' };
+            }
+            inicio.setDate(1);
+            inicio.setHours(0, 0, 0, 0);
+            fin.setHours(23, 59, 59, 999);
+            return { inicio, fin, etiqueta: 'del mes' };
+        }
+
+        window.mostrarHistorialPedidos = function() {
+            prepararUIHistorialPedidos();
+            document.getElementById('lista-pedidos-tabla').style.display = 'block';
+            document.getElementById('lista-pedidos-comandas').style.display = 'none';
+            document.getElementById('lista-pedidos-mesas').style.display = 'none';
+            const filtros = document.getElementById('filtrosHistorialPedidos');
+            if (filtros) filtros.style.display = 'flex';
+            document.getElementById('titulo-tabla-info').innerHTML = 'Historial de pedidos: selecciona Dia, Semana o Mes para cargar la lista.';
+            document.getElementById('tbody-pedidos').innerHTML = '<tr><td colspan="7" style="text-align:center;">Selecciona un filtro para ver pedidos.</td></tr>';
+            const contComandas = document.getElementById('lista-pedidos-comandas');
+            if (contComandas) contComandas.innerHTML = '';
+        };
+
+        window.cargarHistorialPedidos = async function(tipo = 'dia') {
+            prepararUIHistorialPedidos();
+            document.getElementById('lista-pedidos-tabla').style.display = 'block';
+            document.getElementById('lista-pedidos-comandas').style.display = 'none';
+            document.getElementById('lista-pedidos-mesas').style.display = 'none';
+            const filtros = document.getElementById('filtrosHistorialPedidos');
+            if (filtros) {
+                filtros.style.display = 'flex';
+                filtros.querySelectorAll('button').forEach(btn => btn.classList.toggle('activo', btn.textContent.trim().toLowerCase() === tipo));
+            }
+            document.getElementById('titulo-tabla-info').innerHTML = 'Cargando historial...';
+            const { inicio, fin, etiqueta } = rangoHistorialPedidos(tipo);
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
+            let ordenesHistoricas = [];
+            snapshot.forEach(docSnap => {
+                const ped = docSnap.data();
+                const fechaObj = fechaPedidoComoDate(ped);
+                if (fechaObj >= inicio && fechaObj <= fin) ordenesHistoricas.push({ id: docSnap.id, ...ped });
+            });
+            ordenesHistoricas.sort((a, b) => fechaPedidoComoDate(b) - fechaPedidoComoDate(a));
+            window.pedidosGlobales = ordenesHistoricas;
+            document.getElementById('titulo-tabla-info').innerHTML = `<strong>Historial de pedidos ${etiqueta}</strong>`;
+            renderizarHTMLPedidos(ordenesHistoricas, true);
+        };
+
+        window.cargarHistorial30Dias = window.mostrarHistorialPedidos;
 
         function escaparHtml(valor) {
             return String(valor ?? '').replace(/[&<>"']/g, caracter => ({

@@ -147,6 +147,34 @@ body {
     cursor: pointer;
 }
 
+.historial-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 14px;
+    padding: 10px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+.historial-filtros button {
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font: inherit;
+    font-weight: 850;
+    cursor: pointer;
+}
+.historial-filtros button:hover,
+.historial-filtros button.activo {
+    border-color: var(--primary);
+    background: #eff6ff;
+    color: var(--primary);
+}
+
 .main-content {
     min-height: 100vh;
     margin-left: 280px;
