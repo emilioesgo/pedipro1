@@ -358,15 +358,44 @@
     .form-input:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(245,166,35,0.1) !important; }
     select.form-input option { background: var(--bg-input); color: var(--text-primary); }
 
+    .direccion-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 0.8fr;
+      gap: 8px;
+    }
+    .direccion-grid .form-input { margin: 6px 0; }
+    .direccion-grid .full { grid-column: 1 / -1; }
+
+    .ubicacion-card {
+      margin: 12px 0 4px;
+      padding: 12px;
+      border: 1px solid rgba(59,130,246,0.35);
+      border-radius: var(--radius);
+      background: rgba(59,130,246,0.08);
+    }
+    .ubicacion-card p {
+      margin: 0 0 10px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+    .ubicacion-card strong { color: var(--blue); }
+
     .btn-ubicacion {
-      background: rgba(59,130,246,0.1);
-      color: var(--blue);
-      border: 1px dashed rgba(59,130,246,0.5);
-      width: 100%; padding: 12px; border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(59,130,246,0.24), rgba(37,99,235,0.18));
+      color: #bfdbfe;
+      border: 1.5px solid rgba(59,130,246,0.65);
+      width: 100%; padding: 13px; border-radius: var(--radius);
       font-family: var(--font-ui); font-weight: 700; font-size: 0.9rem;
-      cursor: pointer; margin: 10px 0; transition: 0.2s;
+      cursor: pointer; margin: 0; transition: 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .btn-ubicacion:hover { background: rgba(59,130,246,0.18); }
+
+    @media (max-width: 420px) {
+      .direccion-grid { grid-template-columns: 1fr; }
+      .direccion-grid .full { grid-column: auto; }
+    }
 
     /* ---- LISTA CARRITO EN MODAL ---- */
     .item-carrito-modal {
@@ -595,14 +624,22 @@
 
             <div id="formularioDatosEnvio" style="display: none;">
                 <input type="text" id="domNombre" class="form-input" placeholder="Tu Nombre Completo" required>
-                <input type="tel" id="domTelefono" class="form-input" placeholder="Tu Teléfono (Para contactarte)" required>
+                <input type="tel" id="domTelefono" class="form-input" placeholder="Telefono a 10 digitos" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" oninput="validarTelefonoClienteEnVivo(this)" required>
                 
                 <div id="seccionDireccion">
-                    <textarea id="domDireccion" class="form-input" rows="2" placeholder="Calle, cruzamientos, colonia y referencias..."></textarea>
+                    <div class="direccion-grid">
+                        <input type="text" id="domCalle" class="form-input" placeholder="Calle" autocomplete="street-address">
+                        <input type="text" id="domNumeroExterior" class="form-input" placeholder="Num. exterior" inputmode="numeric">
+                        <input type="text" id="domColonia" class="form-input full" placeholder="Colonia">
+                        <textarea id="domReferencia" class="form-input full" rows="2" placeholder="Referencia: color de fachada, entre calles, punto cercano..."></textarea>
+                    </div>
                     <select id="domZonaEnvio" class="form-input" onchange="actualizarCostoEnvio()" style="margin-top: 10px; font-weight: bold; color: #2c3e50;">
                         <option value="" disabled selected>Selecciona tu zona de envio</option>
                     </select>
-                    <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">📍 Adjuntar mi ubicación (GPS)</button>
+                    <div class="ubicacion-card">
+                        <p><strong>Para entrega mas rapida</strong> adjunta tu ubicacion y ayudanos a llegar sin vueltas.</p>
+                        <button id="btnUbi" class="btn-ubicacion" onclick="obtenerUbicacion()">Adjuntar mi ubicacion GPS</button>
+                    </div>
                 </div>
 
                 <select id="domPago" class="form-input" style="margin-top: 10px; font-weight: bold; color: #2c3e50;" onchange="mostrarInfoTransferencia(this.value)" required>
@@ -1259,6 +1296,33 @@
             document.getElementById('modalCarrito').style.display = 'block';
         }
 
+        function telefonoNormalizado(valor) {
+            return String(valor || '').replace(/\D/g, '').slice(0, 10);
+        }
+
+        window.validarTelefonoClienteEnVivo = function(input) {
+            input.value = telefonoNormalizado(input.value);
+        };
+
+        function telefonoClienteValido(valor) {
+            return /^\d{10}$/.test(telefonoNormalizado(valor));
+        }
+
+        function obtenerDireccionDomicilio() {
+            const calle = document.getElementById('domCalle')?.value.trim() || '';
+            const numeroExterior = document.getElementById('domNumeroExterior')?.value.trim() || '';
+            const colonia = document.getElementById('domColonia')?.value.trim() || '';
+            const referencia = document.getElementById('domReferencia')?.value.trim() || '';
+            const direccion = [
+                calle ? `Calle ${calle}` : '',
+                numeroExterior ? `No. ${numeroExterior}` : '',
+                colonia ? `Col. ${colonia}` : '',
+                referencia ? `Ref. ${referencia}` : ''
+            ].filter(Boolean).join(', ');
+
+            return { calle, numeroExterior, colonia, referencia, direccion };
+        }
+
         window.verificarTipoFormulario = function() {
             const tipo = document.getElementById('tipoPedidoTop').value;
             const form = document.getElementById('formularioDatosEnvio');
@@ -1296,26 +1360,48 @@
         }
 
         window.obtenerUbicacion = function() {
-            const btnUbi = document.getElementById('btnUbi'); btnUbi.innerText = "Obteniendo coordenadas...";
+            const btnUbi = document.getElementById('btnUbi');
+            btnUbi.innerText = "Obteniendo coordenadas...";
+            btnUbi.disabled = true;
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (posicion) => { datosEnvio.mapsLink = `https://www.google.com/maps?q=${posicion.coords.latitude},${posicion.coords.longitude}`; btnUbi.innerText = "¡Ubicación adjuntada con éxito! ✅"; btnUbi.style.background = "#27ae60"; btnUbi.style.color = "white"; },
-                    (error) => { alert("No se pudo obtener la ubicación. Activa tu GPS."); btnUbi.innerText = "📍 Reintentar compartir ubicación"; }, { enableHighAccuracy: true }
+                    (posicion) => {
+                        datosEnvio.mapsLink = `https://www.google.com/maps?q=${posicion.coords.latitude},${posicion.coords.longitude}`;
+                        btnUbi.innerText = "Ubicacion adjuntada correctamente";
+                        btnUbi.style.background = "#27ae60";
+                        btnUbi.style.color = "white";
+                        btnUbi.disabled = false;
+                    },
+                    (error) => {
+                        alert("No se pudo obtener la ubicacion. Activa tu GPS.");
+                        btnUbi.innerText = "Reintentar adjuntar ubicacion";
+                        btnUbi.disabled = false;
+                    }, { enableHighAccuracy: true }
                 );
-            } else alert("Tu navegador no soporta esta función.");
+            } else {
+                btnUbi.disabled = false;
+                alert("Tu navegador no soporta esta funcion.");
+            }
         }
 
         window.procesarYEnviarPedido = async function() {
             const tipo = document.getElementById('tipoPedidoTop').value;
             datosEnvio.nombre = document.getElementById('domNombre').value; 
-            datosEnvio.telefono = document.getElementById('domTelefono').value; 
+            datosEnvio.telefono = telefonoNormalizado(document.getElementById('domTelefono').value); 
+            document.getElementById('domTelefono').value = datosEnvio.telefono;
             datosEnvio.metodoPago = document.getElementById('domPago').value;
             const comentariosExtra = document.getElementById('comentariosPedido').value.trim();
 
-            if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.metodoPago) return alert("Por favor llena Tu Nombre, Teléfono y Método de Pago.");
+            if(!datosEnvio.nombre || !datosEnvio.telefono || !datosEnvio.metodoPago) return alert("Por favor llena tu nombre, telefono y metodo de pago.");
+            if(!telefonoClienteValido(datosEnvio.telefono)) return alert("El telefono debe tener exactamente 10 digitos.");
             if(tipo === 'domicilio') { 
-                datosEnvio.direccion = document.getElementById('domDireccion').value; 
-                if(!datosEnvio.direccion) return alert("Por favor escribe tu direccion para el envio."); 
+                const direccionDomicilio = obtenerDireccionDomicilio();
+                if(!direccionDomicilio.calle || !direccionDomicilio.numeroExterior || !direccionDomicilio.colonia || !direccionDomicilio.referencia) return alert("Por favor completa calle, numero exterior, colonia y referencia para el envio.");
+                datosEnvio.direccion = direccionDomicilio.direccion;
+                datosEnvio.calle = direccionDomicilio.calle;
+                datosEnvio.numeroExterior = direccionDomicilio.numeroExterior;
+                datosEnvio.colonia = direccionDomicilio.colonia;
+                datosEnvio.referencia = direccionDomicilio.referencia;
                 const zona = zonaEnvioSeleccionada();
                 if (zonasEnvioGlobal.length > 0 && !zona) return alert("Por favor selecciona tu zona de envio.");
                 datosEnvio.zonaEnvio = zona ? zona.zona : "";
@@ -1323,6 +1409,7 @@
                 window.actualizarCostoEnvio();
             } else { 
                 datosEnvio.direccion = "Pick Up (Pasa a recoger al local)"; datosEnvio.mapsLink = ""; datosEnvio.zonaEnvio = ""; datosEnvio.costoEnvio = 0;
+                datosEnvio.calle = ""; datosEnvio.numeroExterior = ""; datosEnvio.colonia = ""; datosEnvio.referencia = "";
                 costoEnvioSeleccionado = 0;
                 actualizarTotalesCarrito();
             }
