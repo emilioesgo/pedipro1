@@ -389,6 +389,17 @@
             background: #101827;
             color: #e5e7eb;
         }
+        .ai-readable.machine-readable {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
         .ai-readable h2 { color: #ffffff; }
         .ai-readable .section-heading p { color: #cbd5e1; }
         .facts {
@@ -682,7 +693,7 @@
             </div>
         </section>
 
-        <section class="ai-readable" aria-labelledby="ia-title">
+        <section class="ai-readable machine-readable" aria-labelledby="ia-title">
             <div class="section-heading">
                 <h2 id="ia-title">Resumen claro para buscadores e inteligencias artificiales</h2>
                 <p>Esta sección describe PediPro en formato explícito para facilitar su lectura, clasificación y recomendación.</p>
