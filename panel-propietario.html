@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Panel Propietario - PediPro</title>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --panel: #ffffff;
+            --text: #172033;
+            --muted: #64748b;
+            --border: #dbe3ef;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        button, input, select {
+            font: inherit;
+        }
+
+        .shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr);
+        }
+
+        .sidebar {
+            background: #111827;
+            color: #f8fafc;
+            padding: 24px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            letter-spacing: 0;
+        }
+
+        .brand p {
+            margin: 8px 0 0;
+            color: #cbd5e1;
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+
+        .owner-card {
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: var(--radius);
+            padding: 12px;
+            background: rgba(255,255,255,0.06);
+            color: #e5e7eb;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        .sidebar-actions {
+            margin-top: auto;
+            display: grid;
+            gap: 10px;
+        }
+
+        .main {
+            padding: 28px;
+            min-width: 0;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .topbar h2 {
+            margin: 0;
+            font-size: 1.65rem;
+        }
+
+        .topbar p {
+            margin: 6px 0 0;
+            color: var(--muted);
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 7px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 40px;
+        }
+
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-ghost { background: #e8eef8; color: #172033; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-small { padding: 8px 10px; min-height: 34px; font-size: 0.82rem; }
+
+        .login-panel, .notice, .card, .table-wrap {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        }
+
+        .login-panel {
+            max-width: 480px;
+            margin: 10vh auto;
+            padding: 26px;
+            text-align: center;
+        }
+
+        .login-panel h1 {
+            margin: 0 0 8px;
+            font-size: 1.55rem;
+        }
+
+        .login-panel p {
+            margin: 0 0 20px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .notice {
+            padding: 14px 16px;
+            margin-bottom: 18px;
+            color: #92400e;
+            background: #fffbeb;
+            border-color: #fde68a;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .notice strong { color: #78350f; }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .card {
+            padding: 16px;
+        }
+
+        .metric-label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            margin-top: 8px;
+            font-size: 1.65rem;
+            font-weight: 800;
+        }
+
+        .metric-note {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .search {
+            width: min(460px, 100%);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 10px 12px;
+            background: #fff;
+        }
+
+        .table-wrap {
+            overflow: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1080px;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+
+        td {
+            font-size: 0.9rem;
+        }
+
+        .muted { color: var(--muted); }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 4px 9px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .pill-pagando { background: #dcfce7; color: #166534; }
+        .pill-gratis { background: #e0f2fe; color: #075985; }
+        .pill-pausado { background: #fef3c7; color: #92400e; }
+
+        .inline-form {
+            display: grid;
+            grid-template-columns: 120px 120px 110px;
+            gap: 8px;
+        }
+
+        .inline-form input,
+        .inline-form select {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 8px;
+            background: #fff;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .status {
+            min-height: 22px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin: 10px 0 0;
+        }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 920px) {
+            .shell { grid-template-columns: 1fr; }
+            .sidebar { border-radius: 0; }
+            .main { padding: 18px; }
+            .topbar, .toolbar { flex-direction: column; align-items: stretch; }
+            .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 560px) {
+            .metrics { grid-template-columns: 1fr; }
+            .inline-form { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <section id="loginView" class="login-panel">
+        <h1>Panel propietario PediPro</h1>
+        <p>Acceso interno para consultar restaurantes registrados, suscripciones y eliminaciones administrativas.</p>
+        <button id="btnLoginGoogle" class="btn btn-primary">Entrar con Google</button>
+        <p id="loginStatus" class="status"></p>
+    </section>
+
+    <section id="adminView" class="shell hidden">
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>PediPro Control</h1>
+                <p>Vista general de usuarios, suscripciones e ingresos mensuales.</p>
+            </div>
+            <div class="owner-card">
+                <strong id="ownerEmail">Sesion activa</strong>
+                <div class="muted" style="color:#cbd5e1;">Panel interno del propietario del proyecto.</div>
+            </div>
+            <div class="sidebar-actions">
+                <button id="btnRefresh" class="btn btn-primary">Actualizar datos</button>
+                <button id="btnLogout" class="btn btn-ghost">Cerrar sesion</button>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <div>
+                    <h2>Usuarios registrados</h2>
+                    <p>Consulta restaurantes, datos de contacto, estado de pago e ingresos.</p>
+                </div>
+            </div>
+
+            <div id="securityNotice" class="notice hidden">
+                <strong>Importante:</strong> este panel debe protegerse con reglas de Firebase y correos autorizados.
+                La eliminacion desde el navegador borra Firestore y Storage, pero Firebase Authentication requiere Admin SDK o Cloud Functions.
+            </div>
+
+            <section class="metrics">
+                <div class="card">
+                    <div class="metric-label">Registrados</div>
+                    <div class="metric-value" id="metricRegistrados">0</div>
+                    <div class="metric-note">Restaurantes en Firebase</div>
+                </div>
+                <div class="card">
+                    <div class="metric-label">Pagando</div>
+                    <div class="metric-value" id="metricPagando">0</div>
+                    <div class="metric-note">Suscripcion activa</div>
+                </div>
+                <div class="card">
+                    <div class="metric-label">Ingreso mensual</div>
+                    <div class="metric-value" id="metricIngreso">$0</div>
+                    <div class="metric-note">Suma de planes activos</div>
+                </div>
+                <div class="card">
+                    <div class="metric-label">Ticket promedio SaaS</div>
+                    <div class="metric-value" id="metricPromedio">$0</div>
+                    <div class="metric-note">Ingreso / usuarios pagando</div>
+                </div>
+            </section>
+
+            <div class="toolbar">
+                <input id="buscarUsuario" class="search" type="search" placeholder="Buscar por restaurante, propietario, correo o WhatsApp">
+                <div class="status" id="panelStatus">Cargando datos...</div>
+            </div>
+
+            <section class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Restaurante</th>
+                            <th>Propietario</th>
+                            <th>Contacto</th>
+                            <th>Registro</th>
+                            <th>Suscripcion</th>
+                            <th>Editar pago</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaUsuarios">
+                        <tr><td colspan="7" class="muted">Cargando usuarios...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </section>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, listAll, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
+            authDomain: "pedipro-1853f.firebaseapp.com",
+            projectId: "pedipro-1853f",
+            storageBucket: "pedipro-1853f.firebasestorage.app",
+            messagingSenderId: "346303291186",
+            appId: "1:346303291186:web:7b5e06aead830c54e4812b"
+        };
+
+        // Agrega aqui tu correo de Google para cerrar el panel a una cuenta especifica.
+        // Ejemplo: const OWNER_EMAILS = ["tunombre@gmail.com"];
+        const OWNER_EMAILS = ["emilioesgo@gmail.com"];
+        const SUBCOLECCIONES_RESTAURANTE = ["productos", "pedidos", "mesas", "roles", "personalizaciones"];
+        const ESTADOS_PAGANDO = ["pagando", "activo", "activa", "paid", "pagado"];
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        let restaurantes = [];
+
+        const $ = (id) => document.getElementById(id);
+        const formatoDinero = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+
+        function limpiar(valor) {
+            return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            }[caracter]));
+        }
+
+        function fechaLegible(valor) {
+            if (!valor) return "Sin fecha";
+            const fecha = typeof valor.toDate === "function" ? valor.toDate() : new Date(valor);
+            if (Number.isNaN(fecha.getTime())) return "Sin fecha";
+            return fecha.toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "2-digit" });
+        }
+
+        function usuarioAutorizado(user) {
+            if (!user || !user.email) return false;
+            if (OWNER_EMAILS.length === 0) return true;
+            return OWNER_EMAILS.includes(user.email.toLowerCase());
+        }
+
+        function obtenerPropietario(rest) {
+            return rest.propietario?.nombreCompleto ||
+                `${rest.nombrePropietario || ""} ${rest.apellidoPropietario || ""}`.trim() ||
+                "Sin propietario";
+        }
+
+        function obtenerSuscripcion(rest) {
+            const suscripcion = rest.suscripcion || {};
+            const estado = String(suscripcion.estado || rest.estadoSuscripcion || (rest.pagando ? "pagando" : "gratis")).toLowerCase();
+            const monto = Number(suscripcion.montoMensual ?? rest.montoMensual ?? rest.precioMensual ?? rest.planPrecio ?? 0) || 0;
+            const plan = suscripcion.plan || rest.plan || "Sin plan";
+            return {
+                estado,
+                monto,
+                plan,
+                pagando: ESTADOS_PAGANDO.includes(estado)
+            };
+        }
+
+        function actualizarMetricas() {
+            const total = restaurantes.length;
+            const suscripciones = restaurantes.map(obtenerSuscripcion);
+            const pagando = suscripciones.filter(item => item.pagando).length;
+            const ingreso = suscripciones.reduce((suma, item) => suma + (item.pagando ? item.monto : 0), 0);
+
+            $("metricRegistrados").innerText = total;
+            $("metricPagando").innerText = pagando;
+            $("metricIngreso").innerText = formatoDinero.format(ingreso);
+            $("metricPromedio").innerText = formatoDinero.format(pagando ? ingreso / pagando : 0);
+        }
+
+        function claseEstado(estado) {
+            if (ESTADOS_PAGANDO.includes(estado)) return "pill-pagando";
+            if (estado === "pausado" || estado === "vencido") return "pill-pausado";
+            return "pill-gratis";
+        }
+
+        function renderizarTabla() {
+            const busqueda = $("buscarUsuario").value.trim().toLowerCase();
+            const filtrados = restaurantes.filter(rest => {
+                const texto = [
+                    rest.id,
+                    rest.nombreComercial,
+                    rest.nombre,
+                    obtenerPropietario(rest),
+                    rest.correo,
+                    rest.whatsapp
+                ].join(" ").toLowerCase();
+                return texto.includes(busqueda);
+            });
+
+            if (filtrados.length === 0) {
+                $("tablaUsuarios").innerHTML = '<tr><td colspan="7" class="muted">No hay usuarios que coincidan con la busqueda.</td></tr>';
+                return;
+            }
+
+            $("tablaUsuarios").innerHTML = filtrados.map(rest => {
+                const suscripcion = obtenerSuscripcion(rest);
+                const nombreRestaurante = rest.nombreComercial || rest.nombre || "Mi restaurante";
+                const propietario = obtenerPropietario(rest);
+                const authUid = rest.googleUid || rest.authUid || rest.firebaseAuthUid || rest.googleUser?.uid || "";
+                return `
+                    <tr>
+                        <td>
+                            <strong>${limpiar(nombreRestaurante)}</strong>
+                            <div class="muted">ID: ${limpiar(rest.id)}</div>
+                            <div class="muted">Alias: ${limpiar(rest.slug || "Sin alias")}</div>
+                        </td>
+                        <td>
+                            ${limpiar(propietario)}
+                            <div class="muted">${limpiar(rest.rol || "Administrador")}</div>
+                        </td>
+                        <td>
+                            <div>${limpiar(rest.correo || "Sin correo")}</div>
+                            <div class="muted">${limpiar(rest.whatsapp || "Sin WhatsApp")}</div>
+                            ${authUid ? `<div class="muted">Auth UID: ${limpiar(authUid)}</div>` : ""}
+                        </td>
+                        <td>${fechaLegible(rest.fecha || rest.creadoEn)}</td>
+                        <td>
+                            <span class="pill ${claseEstado(suscripcion.estado)}">${limpiar(suscripcion.estado)}</span>
+                            <div class="muted">${limpiar(suscripcion.plan)}</div>
+                            <strong>${formatoDinero.format(suscripcion.monto)}</strong>
+                        </td>
+                        <td>
+                            <div class="inline-form">
+                                <select id="estado-${rest.id}">
+                                    ${["gratis", "pagando", "pausado", "vencido"].map(estado => `<option value="${estado}" ${suscripcion.estado === estado ? "selected" : ""}>${estado}</option>`).join("")}
+                                </select>
+                                <input id="plan-${rest.id}" type="text" value="${limpiar(suscripcion.plan === "Sin plan" ? "" : suscripcion.plan)}" placeholder="Plan">
+                                <input id="monto-${rest.id}" type="number" min="0" step="1" value="${suscripcion.monto}" placeholder="Monto">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="row-actions">
+                                <button class="btn btn-primary btn-small" onclick="guardarSuscripcion('${rest.id}')">Guardar pago</button>
+                                <button class="btn btn-danger btn-small" onclick="eliminarUsuario('${rest.id}')">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        async function cargarRestaurantes() {
+            $("panelStatus").innerText = "Cargando datos...";
+            const snapshot = await getDocs(collection(db, "restaurantes"));
+            restaurantes = [];
+            snapshot.forEach(docSnap => restaurantes.push({ id: docSnap.id, ...docSnap.data() }));
+            restaurantes.sort((a, b) => {
+                const fechaA = a.fecha?.toDate ? a.fecha.toDate().getTime() : 0;
+                const fechaB = b.fecha?.toDate ? b.fecha.toDate().getTime() : 0;
+                return fechaB - fechaA;
+            });
+            actualizarMetricas();
+            renderizarTabla();
+            $("panelStatus").innerText = `${restaurantes.length} usuarios cargados.`;
+        }
+
+        window.guardarSuscripcion = async function(id) {
+            const estado = $(`estado-${id}`).value;
+            const plan = $(`plan-${id}`).value.trim() || "Sin plan";
+            const monto = Number($(`monto-${id}`).value || 0);
+            if (monto < 0) return alert("El monto no puede ser negativo.");
+
+            $("panelStatus").innerText = "Guardando suscripcion...";
+            const datos = {
+                estadoSuscripcion: estado,
+                plan,
+                montoMensual: monto,
+                pagando: ESTADOS_PAGANDO.includes(estado),
+                suscripcion: {
+                    estado,
+                    plan,
+                    montoMensual: monto,
+                    moneda: "MXN",
+                    actualizadoEn: new Date()
+                }
+            };
+            await updateDoc(doc(db, "restaurantes", id), datos);
+            restaurantes = restaurantes.map(rest => rest.id === id ? { ...rest, ...datos } : rest);
+            actualizarMetricas();
+            renderizarTabla();
+            $("panelStatus").innerText = "Suscripcion guardada.";
+        };
+
+        async function borrarSubcoleccion(restauranteId, nombreSubcoleccion) {
+            const snapshot = await getDocs(collection(db, "restaurantes", restauranteId, nombreSubcoleccion));
+            const eliminaciones = [];
+            snapshot.forEach(docSnap => {
+                eliminaciones.push(deleteDoc(doc(db, "restaurantes", restauranteId, nombreSubcoleccion, docSnap.id)));
+            });
+            await Promise.all(eliminaciones);
+            return eliminaciones.length;
+        }
+
+        async function borrarCarpetaStorage(ruta) {
+            const carpeta = ref(storage, ruta);
+            const listado = await listAll(carpeta);
+            await Promise.all(listado.items.map(item => deleteObject(item)));
+            await Promise.all(listado.prefixes.map(prefix => borrarCarpetaStorage(prefix.fullPath)));
+        }
+
+        window.eliminarUsuario = async function(id) {
+            const rest = restaurantes.find(item => item.id === id);
+            if (!rest) return;
+            const nombre = rest.nombreComercial || rest.nombre || id;
+            const confirmacion = prompt(`Esta accion borra Firestore y Storage del restaurante "${nombre}". Escribe el ID exacto para confirmar:\n\n${id}`);
+            if (confirmacion !== id) return alert("Eliminacion cancelada.");
+
+            $("panelStatus").innerText = "Eliminando usuario y datos relacionados...";
+            try {
+                let documentosEliminados = 0;
+                for (const subcoleccion of SUBCOLECCIONES_RESTAURANTE) {
+                    documentosEliminados += await borrarSubcoleccion(id, subcoleccion);
+                }
+
+                try {
+                    await borrarCarpetaStorage(`restaurantes/${id}`);
+                } catch (storageError) {
+                    console.warn("No se pudo borrar Storage completo:", storageError);
+                }
+
+                await deleteDoc(doc(db, "restaurantes", id));
+                restaurantes = restaurantes.filter(item => item.id !== id);
+                actualizarMetricas();
+                renderizarTabla();
+                $("panelStatus").innerText = `Usuario eliminado. Documentos relacionados borrados: ${documentosEliminados}.`;
+                alert("Usuario eliminado de Firestore y Storage. Si existe en Firebase Authentication, hay que borrarlo con Admin SDK o Cloud Functions.");
+            } catch (error) {
+                console.error(error);
+                $("panelStatus").innerText = "No se pudo eliminar el usuario.";
+                alert("No se pudo eliminar completamente. Revisa reglas de Firebase o permisos del proyecto.");
+            }
+        };
+
+        $("btnLoginGoogle").addEventListener("click", async () => {
+            $("loginStatus").innerText = "Abriendo Google...";
+            try {
+                await signInWithPopup(auth, googleProvider);
+            } catch (error) {
+                console.error(error);
+                $("loginStatus").innerText = "No se pudo iniciar sesion con Google.";
+            }
+        });
+
+        $("btnLogout").addEventListener("click", () => signOut(auth));
+        $("btnRefresh").addEventListener("click", cargarRestaurantes);
+        $("buscarUsuario").addEventListener("input", renderizarTabla);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                $("loginView").classList.remove("hidden");
+                $("adminView").classList.add("hidden");
+                return;
+            }
+
+            if (!usuarioAutorizado(user)) {
+                $("loginStatus").innerText = "Tu correo no esta autorizado para este panel.";
+                await signOut(auth);
+                return;
+            }
+
+            $("loginView").classList.add("hidden");
+            $("adminView").classList.remove("hidden");
+            $("ownerEmail").innerText = user.email || "Propietario";
+            $("securityNotice").classList.toggle("hidden", OWNER_EMAILS.length > 0);
+            await cargarRestaurantes();
+        });
+    </script>
+</body>
+</html>
