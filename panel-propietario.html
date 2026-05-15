@@ -381,7 +381,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, listAll, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -395,6 +395,7 @@
         // Agrega aqui tu correo de Google para cerrar el panel a una cuenta especifica.
         // Ejemplo: const OWNER_EMAILS = ["tunombre@gmail.com"];
         const OWNER_EMAILS = ["emilioesgo@gmail.com"];
+        const OWNER_EMAILS_NORMALIZADOS = OWNER_EMAILS.map(email => String(email).trim().toLowerCase()).filter(Boolean);
         const SUBCOLECCIONES_RESTAURANTE = ["productos", "pedidos", "mesas", "roles", "personalizaciones"];
         const ESTADOS_PAGANDO = ["pagando", "activo", "activa", "paid", "pagado"];
 
@@ -403,6 +404,7 @@
         const storage = getStorage(app);
         const auth = getAuth(app);
         const googleProvider = new GoogleAuthProvider();
+        googleProvider.setCustomParameters({ prompt: "select_account" });
 
         let restaurantes = [];
 
@@ -428,8 +430,8 @@
 
         function usuarioAutorizado(user) {
             if (!user || !user.email) return false;
-            if (OWNER_EMAILS.length === 0) return true;
-            return OWNER_EMAILS.includes(user.email.toLowerCase());
+            if (OWNER_EMAILS_NORMALIZADOS.length === 0) return true;
+            return OWNER_EMAILS_NORMALIZADOS.includes(user.email.trim().toLowerCase());
         }
 
         function obtenerPropietario(rest) {
@@ -630,16 +632,21 @@
         $("btnLoginGoogle").addEventListener("click", async () => {
             $("loginStatus").innerText = "Abriendo Google...";
             try {
-                await signInWithPopup(auth, googleProvider);
+                await signInWithRedirect(auth, googleProvider);
             } catch (error) {
                 console.error(error);
-                $("loginStatus").innerText = "No se pudo iniciar sesion con Google.";
+                $("loginStatus").innerText = `No se pudo iniciar sesion con Google. ${error.code || error.message || ""}`;
             }
         });
 
         $("btnLogout").addEventListener("click", () => signOut(auth));
         $("btnRefresh").addEventListener("click", cargarRestaurantes);
         $("buscarUsuario").addEventListener("input", renderizarTabla);
+
+        getRedirectResult(auth).catch(error => {
+            console.error(error);
+            $("loginStatus").innerText = `No se pudo completar el acceso con Google. ${error.code || error.message || ""}`;
+        });
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
@@ -649,7 +656,7 @@
             }
 
             if (!usuarioAutorizado(user)) {
-                $("loginStatus").innerText = "Tu correo no esta autorizado para este panel.";
+                $("loginStatus").innerText = `El correo ${user.email || "sin correo"} no esta autorizado para este panel.`;
                 await signOut(auth);
                 return;
             }
