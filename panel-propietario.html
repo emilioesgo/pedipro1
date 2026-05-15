@@ -101,23 +101,25 @@
         }
 
         .btn {
-            border: 0;
+            border: 1px solid transparent;
             border-radius: 7px;
-            padding: 10px 14px;
-            font-weight: 700;
+            padding: 8px 12px;
+            font-weight: 750;
+            font-size: 0.84rem;
+            line-height: 1.15;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            min-height: 40px;
+            gap: 6px;
+            min-height: 36px;
         }
 
         .btn-primary { background: var(--primary); color: #fff; }
         .btn-primary:hover { background: var(--primary-dark); }
         .btn-ghost { background: #e8eef8; color: #172033; }
         .btn-danger { background: var(--danger); color: #fff; }
-        .btn-small { padding: 8px 10px; min-height: 34px; font-size: 0.82rem; }
+        .btn-small { padding: 6px 9px; min-height: 32px; font-size: 0.8rem; }
 
         .login-panel, .notice, .card, .table-wrap {
             background: var(--panel);

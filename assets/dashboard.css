@@ -136,13 +136,14 @@ body {
 
 .pedido-alerta-nuevo button {
     flex: 0 0 auto;
-    min-height: 36px;
-    padding: 8px 12px;
-    border: 0;
-    border-radius: 8px;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid transparent;
+    border-radius: 7px;
     background: var(--success);
     color: #ffffff;
     font: inherit;
+    font-size: 0.82rem;
     font-weight: 800;
     cursor: pointer;
 }
@@ -158,13 +159,14 @@ body {
     border-radius: 8px;
 }
 .historial-filtros button {
-    min-height: 38px;
-    padding: 8px 14px;
+    min-height: 34px;
+    padding: 7px 12px;
     border: 1px solid #cbd5e1;
-    border-radius: 8px;
+    border-radius: 7px;
     background: #ffffff;
     color: #334155;
     font: inherit;
+    font-size: 0.84rem;
     font-weight: 850;
     cursor: pointer;
 }
@@ -252,17 +254,23 @@ input[type="file"] {
 .btn-add,
 .btn-completar,
 .qty-btn {
-    border: 0;
-    border-radius: 8px !important;
+    border: 1px solid transparent;
+    border-radius: 7px !important;
     font: inherit;
+    font-size: 0.84rem;
     font-weight: 750;
     cursor: pointer;
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-    transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+    line-height: 1.15;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: none;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, filter 0.15s ease;
 }
 .btn-add {
-    min-height: 42px;
-    padding: 10px 18px;
+    min-height: 36px;
+    padding: 7px 12px;
     background: var(--primary);
     color: #ffffff;
 }
@@ -271,11 +279,16 @@ input[type="file"] {
 .qty-btn:hover {
     filter: brightness(0.98);
     transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
 }
 .btn-add:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
 .btn-completar { background: var(--success); color: #ffffff; }
-.qty-btn { background: var(--primary); color: #ffffff; }
+.qty-btn {
+    min-height: 32px;
+    min-width: 32px;
+    padding: 5px 9px;
+    background: var(--primary);
+    color: #ffffff;
+}
 
 .tabla-profesional,
 .table-horarios {
@@ -461,9 +474,10 @@ input[type="file"] {
 .btn-comanda-print,
 .btn-comanda-complete {
     flex: 1;
-    min-height: 38px;
-    padding: 8px 12px;
-    font-size: 0.86rem;
+    min-height: 34px;
+    padding: 7px 11px;
+    border-radius: 7px !important;
+    font-size: 0.82rem;
 }
 .btn-comanda-print {
     background: #0f172a;
@@ -821,17 +835,21 @@ input:checked + .slider:before { transform: translateX(20px); }
     gap: 6px;
 }
 .qr-mesa-actions button {
-    border: 0;
+    min-height: 34px;
+    border: 1px solid #dbe3ef;
     border-radius: 7px;
-    padding: 8px 6px;
-    color: #ffffff;
+    padding: 7px 6px;
+    background: #ffffff;
+    color: #344054;
     font-size: 0.74rem;
     font-weight: 800;
     cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.qr-mesa-actions button:nth-child(1) { background: #2563eb; }
-.qr-mesa-actions button:nth-child(2) { background: #0f766e; }
-.qr-mesa-actions button:nth-child(3) { background: #ea580c; }
+.qr-mesa-actions button:hover { background: #f8fafc; border-color: #cbd5e1; }
+.qr-mesa-actions button:nth-child(1) { color: #2563eb; border-color: #bfdbfe; }
+.qr-mesa-actions button:nth-child(2) { color: #0f766e; border-color: #99f6e4; }
+.qr-mesa-actions button:nth-child(3) { color: #ea580c; border-color: #fed7aa; }
 .qr-empty-state {
     grid-column: 1 / -1;
     padding: 24px;
@@ -947,10 +965,15 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 .btn-eliminar {
     margin-top: 8px;
+    min-height: 32px;
+    padding: 6px 10px;
     color: var(--danger);
-    background: transparent;
-    border: 0;
+    background: #fff7f7;
+    border: 1px solid #fecaca;
+    border-radius: 7px;
     cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
     font-weight: 800;
 }
 
@@ -994,7 +1017,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 .period-btn {
     min-height: 34px;
     padding: 7px 12px;
-    border: 0;
+    border: 1px solid transparent;
     border-radius: 6px;
     background: transparent;
     color: #475467;
@@ -1006,8 +1029,9 @@ input:checked + .slider:before { transform: translateX(20px); }
 .period-btn.activo,
 .period-btn:hover {
     background: #ffffff;
+    border-color: #dbe3ef;
     color: var(--primary);
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    box-shadow: none;
 }
 .metric-grid {
     display: grid;
@@ -1109,15 +1133,16 @@ input:checked + .slider:before { transform: translateX(20px); }
 .btn-secondary { background: #111827 !important; }
 .btn-soft {
     width: auto !important;
-    min-height: 36px;
-    padding: 8px 12px;
+    min-height: 34px;
+    padding: 7px 12px;
     background: #eef2f7 !important;
     color: #344054 !important;
+    border-color: #dbe3ef !important;
     box-shadow: none;
 }
 .btn-inline {
     width: auto !important;
-    min-width: 138px;
+    min-width: 118px;
     background: #111827 !important;
     white-space: nowrap;
 }
@@ -1181,11 +1206,14 @@ input:checked + .slider:before { transform: translateX(20px); }
 .price-variant-row input { min-height: 38px; }
 .more-options-toggle {
     margin-bottom: 12px;
-    padding: 0;
-    border: 0;
-    background: transparent;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 7px;
+    background: #eff6ff;
     color: var(--primary);
     font: inherit;
+    font-size: 0.82rem;
     font-weight: 850;
     cursor: pointer;
 }
@@ -1285,10 +1313,10 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 .btn-product-delete {
     flex: 0 0 auto;
-    min-height: 34px;
-    padding: 7px 10px;
+    min-height: 32px;
+    padding: 6px 9px;
     border: 1px solid #fecaca;
-    border-radius: 8px;
+    border-radius: 7px;
     background: #fef2f2;
     color: var(--danger);
     font: inherit;
@@ -1518,10 +1546,21 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 /* TABS PARA SUBVISTAS */
-.menu-tabs { display: flex; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 10px; }
-.tab-btn { background: none; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; transition: 0.2s; }
-.tab-btn:hover { background: #e2e8f0; }
-.tab-btn.activo { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.menu-tabs { display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; }
+.tab-btn {
+    min-height: 34px;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 0.84rem;
+    font-weight: 750;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.tab-btn:hover { background: #e2e8f0; border-color: #dbe3ef; }
+.tab-btn.activo { background: white; color: var(--primary); border-color: #dbe3ef; box-shadow: none; }
 
 .variant-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .price-variant-row, .option-row-pers { display: flex; gap: 8px; align-items: center; }
@@ -1607,23 +1646,25 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 .pos-btn {
-    border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-weight: 700;
+    min-height: 36px;
+    border: 1px solid transparent;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-weight: 750;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.78rem;
 }
 
 .btn-turno { background: #10b981; color: white; }
-.btn-turno:hover { background: #059669; transform: translateY(-2px); }
+.btn-turno:hover { background: #059669; transform: translateY(-1px); }
 
 .btn-turno-off { background: #ef4444; color: white; }
-.btn-turno-off:hover { background: #dc2626; transform: translateY(-2px); }
+.btn-turno-off:hover { background: #dc2626; transform: translateY(-1px); }
 
 .btn-corte { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); }
 .btn-corte:hover { background: rgba(255, 255, 255, 0.2); }
@@ -1830,14 +1871,15 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 .pay-method-btn {
     background: #1e293b;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     color: white;
-    padding: 14px 8px;
-    border-radius: 12px;
+    min-height: 42px;
+    padding: 9px 8px;
+    border-radius: 7px;
     cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 700;
-    transition: all 0.2s ease;
+    font-size: 0.78rem;
+    font-weight: 750;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1849,8 +1891,8 @@ input:checked + .slider:before { transform: translateX(20px); }
 .pay-method-btn.selected {
     background: #3b82f6;
     border-color: #fff;
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.5);
+    transform: translateY(-1px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.28);
 }
 
 .pos-amount-display {
@@ -1911,28 +1953,31 @@ input:checked + .slider:before { transform: translateX(20px); }
     flex: 1;
     background: #334155;
     color: white;
-    border: none;
-    padding: 16px;
-    border-radius: 14px;
+    border: 1px solid transparent;
+    min-height: 40px;
+    padding: 10px 12px;
+    border-radius: 7px;
     cursor: pointer;
     font-weight: 700;
-    transition: background 0.2s;
+    font-size: 0.8rem;
+    transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .btn-charge-pos {
     flex: 2;
     background: #10b981;
     color: white;
-    border: none;
-    padding: 16px;
-    border-radius: 14px;
+    border: 1px solid #10b981;
+    min-height: 42px;
+    padding: 11px 16px;
+    border-radius: 7px;
     cursor: pointer;
     font-weight: 800;
-    font-size: 1.2rem;
-    transition: all 0.2s;
+    font-size: 0.92rem;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
-.btn-charge-pos:hover { background: #059669; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4); }
+.btn-charge-pos:hover { background: #059669; border-color: #059669; transform: translateY(-1px); box-shadow: none; }
 .btn-charge-pos:active { transform: scale(0.98); }
 
 .pos-input {

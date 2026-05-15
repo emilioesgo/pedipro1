@@ -187,12 +187,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 44px;
-            padding: 12px 18px;
-            border-radius: var(--radius);
+            min-height: 38px;
+            padding: 9px 14px;
+            border-radius: 7px;
             border: 1px solid transparent;
             cursor: pointer;
-            font-weight: 800;
+            font-weight: 750;
+            font-size: 0.94rem;
+            line-height: 1.15;
             text-decoration: none;
             transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
         }
@@ -200,7 +202,7 @@
         .btn-primary {
             background: var(--brand);
             color: #ffffff;
-            box-shadow: 0 14px 28px rgba(230, 126, 34, 0.26);
+            box-shadow: none;
         }
         .btn-primary:hover { background: var(--brand-dark); }
         .btn-secondary {
@@ -208,7 +210,7 @@
             color: var(--ink);
             border-color: var(--line);
         }
-        .btn-secondary:hover { box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
+        .btn-secondary:hover { border-color: #cbd5e1; box-shadow: none; }
         .nav-login {
             background: var(--ink);
             color: #ffffff;
@@ -538,7 +540,10 @@
         .btn-ghost {
             background: transparent;
             color: var(--muted);
-            border: 0;
+            min-height: 34px;
+            padding: 7px 10px;
+            border: 1px solid transparent;
+            border-radius: 7px;
             cursor: pointer;
             font-weight: 800;
         }
