@@ -107,14 +107,6 @@
         const btn = document.getElementById('btnRegistro');
         const btnGoogle = document.getElementById('btnRegistroGoogle');
 
-        function slugCuenta(texto) {
-            return String(texto || '')
-                .toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
-        }
-
         function separarNombreGoogle(nombreCompleto) {
             const partes = String(nombreCompleto || '').trim().split(/\s+/).filter(Boolean);
             return {
@@ -131,6 +123,7 @@
 
         async function crearCuentaRestaurante({ nombre, apellido, correo, whatsappCompleto, claveEncriptada = null, googleUser = null }) {
             const nombreCompleto = `${nombre} ${apellido}`.trim();
+            const nombreNegocioInicial = 'Mi restaurante';
             const docExistente = await buscarRestaurantePorCorreo(correo);
             if (docExistente) {
                 guardarSesionRestaurante(docExistente.id, { rol: 'administrador', nombre, apellido, correo });
@@ -139,7 +132,8 @@
             }
 
             const payload = {
-                nombre: nombreCompleto,
+                nombre: nombreNegocioInicial,
+                nombreComercial: nombreNegocioInicial,
                 nombrePropietario: nombre,
                 apellidoPropietario: apellido,
                 propietario: {
@@ -149,7 +143,7 @@
                 },
                 whatsapp: whatsappCompleto,
                 correo,
-                slug: slugCuenta(nombreCompleto),
+                slug: '',
                 fecha: new Date()
             };
 
@@ -167,7 +161,6 @@
         btn.addEventListener('click', async () => {
             const nombre = document.getElementById('nombrePersona').value.trim();
             const apellido = document.getElementById('apellidoPersona').value.trim();
-            const nombreCompleto = `${nombre} ${apellido}`.trim();
             const codigoPais = document.getElementById('codigoPais').value;
             const numeroLocal = document.getElementById('telefonoWhatsApp').value.trim();
             const correo = document.getElementById('correo').value.trim().toLowerCase();

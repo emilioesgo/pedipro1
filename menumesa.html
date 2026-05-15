@@ -723,7 +723,9 @@
 
             const data = restSnap.data();
             infoNegocioGlobal = data;
-            document.getElementById('nombreRestaurante').innerText = data.nombre;
+            const nombreRestaurante = data.nombreComercial || data.nombre || 'Mi restaurante';
+            document.getElementById('nombreRestaurante').innerText = nombreRestaurante;
+            document.title = "Menu mesa - " + nombreRestaurante;
             if(data.portada) document.getElementById('headerRestaurante').style.backgroundImage = `url('${data.portada}')`;
             if(data.logo) { 
                 document.getElementById('logoRestaurante').src = data.logo; 

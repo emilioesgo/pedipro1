@@ -370,6 +370,7 @@
                 }
                 if(window.restauranteInfo.logo) { document.getElementById('imgPrevLogo').src = window.restauranteInfo.logo; document.getElementById('prevLogoWrap').style.display = 'inline-block'; }
                 if(window.restauranteInfo.portada) { document.getElementById('imgPrevPortada').src = window.restauranteInfo.portada; document.getElementById('prevPortadaWrap').style.display = 'inline-block'; }
+                if(document.getElementById('confNombreRestaurante')) document.getElementById('confNombreRestaurante').value = obtenerNombreNegocio();
                 if(document.getElementById('confDireccionLocal')) document.getElementById('confDireccionLocal').value = window.restauranteInfo.direccionLocal || '';
                 if(document.getElementById('confUbicacionMaps')) document.getElementById('confUbicacionMaps').value = window.restauranteInfo.ubicacionMaps || '';
                 if(document.getElementById('confWhatsapp')) document.getElementById('confWhatsapp').value = window.restauranteInfo.whatsapp || '';
@@ -833,7 +834,7 @@
         window.imprimirQRMesa = function(numeroMesa) {
             const url = urlMesaDigital(numeroMesa);
             const logo = window.restauranteInfo?.logo || '';
-            const nombre = textoSeguroQR(window.restauranteInfo?.nombre || 'Menu de mesa');
+            const nombre = textoSeguroQR(obtenerNombreNegocio());
             const qrContenedor = buscarCardQRMesa(numeroMesa)?.querySelector('.qr-mesa-render');
             const qrSrc = obtenerSrcQR(qrContenedor);
             if (!qrSrc) return alert("Genera primero el codigo QR de la mesa.");
@@ -1374,9 +1375,10 @@
             const qrSrc = obtenerSrcQR(document.getElementById('qrcode'));
             if (!qrSrc) return alert("Genera primero el codigo QR.");
             const logo = window.restauranteInfo?.logo || '';
+            const nombre = textoSeguroQR(obtenerNombreNegocio());
             const logoHtml = logo ? `<img src="${logo}" style="position:absolute;left:50%;top:50%;width:72px;height:72px;transform:translate(-50%,-50%);object-fit:cover;border-radius:50%;background:#fff;padding:8px;box-shadow:0 2px 12px rgba(0,0,0,.22);">` : '';
             const ventana = window.open('', '_blank');
-            ventana.document.write(`<html><body style="text-align:center;padding:50px;font-family:sans-serif;"><h1>Escanea nuestro Menu</h1><div style="position:relative;display:inline-block;padding:18px;background:#fff;border:1px solid #ddd;border-radius:12px;"><img src="${qrSrc}" style="width:300px;height:300px;display:block;">${logoHtml}</div><p>Haz tu pedido rapido y facil.</p></body></html>`);
+            ventana.document.write(`<html><body style="text-align:center;padding:50px;font-family:sans-serif;"><h1>${nombre}</h1><p>Escanea nuestro Menu</p><div style="position:relative;display:inline-block;padding:18px;background:#fff;border:1px solid #ddd;border-radius:12px;"><img src="${qrSrc}" style="width:300px;height:300px;display:block;">${logoHtml}</div><p>Haz tu pedido rapido y facil.</p></body></html>`);
             ventana.document.close();
             ventana.print();
         };
@@ -1448,7 +1450,7 @@
             const documento = await getDoc(docRef);
             if (documento.exists()) {
                 window.restauranteInfo = documento.data();
-                document.getElementById('saludoDuenio').innerText = "Bienvenido, " + window.restauranteInfo.nombre;
+                document.getElementById('saludoDuenio').innerText = "Bienvenido, " + obtenerNombrePropietario();
                 
                 actualizarEnlaceUI(window.restauranteInfo.slug);
                 if(window.restauranteInfo.slug) document.getElementById('confSlug').value = window.restauranteInfo.slug;
@@ -1461,6 +1463,7 @@
                     const ptEl = document.getElementById('imgPrevPortada'); const ptWrap = document.getElementById('prevPortadaWrap');
                     if(ptEl) ptEl.src = window.restauranteInfo.portada; if(ptWrap) ptWrap.style.display = 'inline-block';
                 }
+                if(document.getElementById('confNombreRestaurante')) document.getElementById('confNombreRestaurante').value = obtenerNombreNegocio();
                 if(document.getElementById('confDireccionLocal')) document.getElementById('confDireccionLocal').value = window.restauranteInfo.direccionLocal || '';
                 if(document.getElementById('confUbicacionMaps')) document.getElementById('confUbicacionMaps').value = window.restauranteInfo.ubicacionMaps || '';
                 if(document.getElementById('confWhatsapp')) document.getElementById('confWhatsapp').value = window.restauranteInfo.whatsapp || '';
@@ -1758,7 +1761,7 @@
 
             const datos = obtenerDatosTicketCaja(ped);
             const ahora = new Date();
-            const nombreNegocio = window.restauranteInfo?.nombre || 'Mi negocio';
+            const nombreNegocio = obtenerNombreNegocio();
             const numeroComanda = ped.numeroComanda || 'S/N';
             const lineas = datos.items.map(item => {
                 const cantidad = Number(item.cantidad || 0);
@@ -2243,11 +2246,20 @@
             btn.innerText = "Guardando..."; btn.disabled = true;
             const logoInput = document.getElementById('confLogo');
             const portadaInput = document.getElementById('confPortada');
+            const nombreRestaurante = document.getElementById('confNombreRestaurante')?.value.trim() || '';
             let dataActualizada = {
+                nombre: nombreRestaurante,
+                nombreComercial: nombreRestaurante,
                 direccionLocal: document.getElementById('confDireccionLocal')?.value.trim() || '',
                 ubicacionMaps: document.getElementById('confUbicacionMaps')?.value.trim() || '',
                 whatsapp: (document.getElementById('confWhatsapp')?.value || '').replace(/\D/g, '')
             };
+            if (!dataActualizada.nombreComercial) {
+                alert("Ingresa el nombre del restaurante.");
+                btn.innerText = "Guardar Datos de Sucursal";
+                btn.disabled = false;
+                return;
+            }
             if (!dataActualizada.whatsapp) {
                 alert("Ingresa el WhatsApp vinculado al menu.");
                 btn.innerText = "Guardar Datos de Sucursal";
@@ -2271,6 +2283,7 @@
                 }
                 await updateDoc(doc(db, "restaurantes", idRestaurante), dataActualizada);
                 window.restauranteInfo = { ...window.restauranteInfo, ...dataActualizada };
+                document.getElementById('saludoDuenio').innerText = "Bienvenido, " + obtenerNombrePropietario();
                 alert("Datos de sucursal guardados correctamente.");
             } catch (error) { console.error(error); alert("Error al guardar datos de sucursal."); }
             finally { btn.innerText = "Guardar Datos de Sucursal"; btn.disabled = false; }
@@ -2493,6 +2506,15 @@
             }[caracter]));
         }
 
+        function obtenerNombreNegocio() {
+            return window.restauranteInfo?.nombreComercial || window.restauranteInfo?.nombre || 'Mi restaurante';
+        }
+
+        function obtenerNombrePropietario() {
+            const info = window.restauranteInfo || {};
+            return info.propietario?.nombreCompleto || `${info.nombrePropietario || ''} ${info.apellidoPropietario || ''}`.trim() || obtenerNombreNegocio();
+        }
+
         function fechaPedidoComoDate(pedido) {
             if (!pedido || !pedido.fecha) return new Date();
             if (typeof pedido.fecha.toDate === 'function') return pedido.fecha.toDate();
@@ -2586,6 +2608,7 @@
             const ped = window.pedidosGlobales.find(p => p.id === idPedido);
             if (!ped) return;
             const fechaInicio = fechaPedidoComoDate(ped);
+            const nombreNegocio = obtenerNombreNegocio();
             const itemsTicket = (ped.items || []).map(item => {
                 const cantidad = Number(item.cantidad || 0);
                 const nombre = escaparHtml(item.nombre || 'Producto');
@@ -2608,7 +2631,8 @@
                     </style>
                 </head>
                 <body>
-                    <h1>COMANDA</h1>
+                    <h1>${escaparHtml(nombreNegocio)}</h1>
+                    <div class="center">COMANDA</div>
                     <div class="center"><strong>${escaparHtml(ped.numeroComanda || 'S/N')}</strong></div>
                     <div class="meta">
                         <div><strong>Tipo:</strong> ${escaparHtml(textoTipoComanda(ped))}</div>
