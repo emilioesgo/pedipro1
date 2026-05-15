@@ -64,7 +64,7 @@
     <!-- CARGA DE LIBRERÍAS DE FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -126,6 +126,16 @@
             const nombreNegocioInicial = 'Mi restaurante';
             const docExistente = await buscarRestaurantePorCorreo(correo);
             if (docExistente) {
+                if (googleUser?.uid) {
+                    await updateDoc(doc(db, "restaurantes", docExistente.id), {
+                        googleAuth: true,
+                        googleUid: googleUser.uid,
+                        authUid: googleUser.uid,
+                        firebaseAuthUid: googleUser.uid,
+                        provider: 'google',
+                        fotoPropietario: googleUser.photoURL || ''
+                    });
+                }
                 guardarSesionRestaurante(docExistente.id, { rol: 'administrador', nombre, apellido, correo });
                 window.location.href = "dashboard.html?id=" + docExistente.id;
                 return null;
@@ -151,6 +161,8 @@
             if (googleUser) {
                 payload.googleAuth = true;
                 payload.googleUid = googleUser.uid;
+                payload.authUid = googleUser.uid;
+                payload.firebaseAuthUid = googleUser.uid;
                 payload.provider = 'google';
                 payload.fotoPropietario = googleUser.photoURL || '';
             }

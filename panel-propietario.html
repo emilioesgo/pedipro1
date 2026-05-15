@@ -567,7 +567,8 @@
                 const suscripcion = obtenerSuscripcion(rest);
                 const nombreRestaurante = rest.nombreComercial || rest.nombre || "Mi restaurante";
                 const propietario = obtenerPropietario(rest);
-                const authUid = rest.googleUid || rest.authUid || rest.firebaseAuthUid || rest.googleUser?.uid || "";
+                const authUid = rest.authUid || rest.firebaseAuthUid || rest.googleUid || rest.googleUser?.uid || "";
+                const tieneFirebaseAuth = Boolean(authUid);
                 return `
                     <tr>
                         <td>
@@ -582,6 +583,7 @@
                         <td>
                             <div>${limpiar(rest.correo || "Sin correo")}</div>
                             <div class="muted">${limpiar(rest.whatsapp || "Sin WhatsApp")}</div>
+                            <div class="muted">Firebase Auth: ${tieneFirebaseAuth ? "Si" : "No detectado"}</div>
                             ${authUid ? `<div class="muted">Auth UID: ${limpiar(authUid)}</div>` : ""}
                         </td>
                         <td>${fechaLegible(rest.fecha || rest.creadoEn)}</td>
