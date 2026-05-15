@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Registro de Mi Restaurante</title>
+    <title>Registro de cuenta | PediPro</title>
     <style>
         body { font-family: sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; padding-top: 50px; }
         .formulario { background: white; padding: 30px; border-radius: 10px; box-shadow: 0px 5px 15px rgba(0,0,0,0.1); width: 350px; }
@@ -28,8 +28,9 @@
 <body>
 
     <div class="formulario">
-        <h2>Registra tu Negocio</h2>
-        <input type="text" id="nombreNegocio" placeholder="Nombre del Restaurante">
+        <h2>Crea tu cuenta</h2>
+        <input type="text" id="nombrePersona" placeholder="Tu nombre">
+        <input type="text" id="apellidoPersona" placeholder="Tu apellido">
         
         <!-- Nuevo selector de código internacional -->
         <div class="telefono-container">
@@ -47,8 +48,8 @@
         <!-- Campo de contraseña -->
         <input type="password" id="clave" placeholder="Crea una Contraseña">
         
-        <button id="btnRegistro">Crear mi Menú Digital</button>
-        <p id="textoExito" class="mensaje-exito">¡Negocio registrado con éxito! Redirigiendo...</p>
+        <button id="btnRegistro">Crear mi cuenta</button>
+        <p id="textoExito" class="mensaje-exito">Cuenta creada con exito. Redirigiendo...</p>
 
         <!-- Enlace para iniciar sesión -->
         <p class="link-login">¿Ya tienes cuenta? <a href="index.html">Inicia sesión aquí</a></p>
@@ -96,14 +97,16 @@
         const btn = document.getElementById('btnRegistro');
         
         btn.addEventListener('click', async () => {
-            const nombre = document.getElementById('nombreNegocio').value;
+            const nombre = document.getElementById('nombrePersona').value.trim();
+            const apellido = document.getElementById('apellidoPersona').value.trim();
+            const nombreCompleto = `${nombre} ${apellido}`.trim();
             const codigoPais = document.getElementById('codigoPais').value;
-            const numeroLocal = document.getElementById('telefonoWhatsApp').value;
+            const numeroLocal = document.getElementById('telefonoWhatsApp').value.trim();
             const correo = document.getElementById('correo').value.trim().toLowerCase();
             const claveViva = document.getElementById('clave').value;
 
             // Validación de campos vacíos
-            if (nombre === "" || numeroLocal === "" || correo === "" || claveViva === "") {
+            if (nombre === "" || apellido === "" || numeroLocal === "" || correo === "" || claveViva === "") {
                 alert("Por favor, llena todos los campos.");
                 return;
             }
@@ -113,14 +116,21 @@
 
             // Unimos el código del país con el número
             const whatsappCompleto = codigoPais + numeroLocal;
-            const linkPersonalizado = nombre.toLowerCase().trim().replace(/\s+/g, "-");
+            const linkPersonalizado = nombreCompleto.toLowerCase().trim().replace(/\s+/g, "-");
 
             try {
                 // Encriptamos la contraseña antes de mandarla a Firebase
                 const claveEncriptada = await encriptarContrasena(claveViva);
 
                 const docRef = await addDoc(collection(db, "restaurantes"), {
-                    nombre: nombre,
+                    nombre: nombreCompleto,
+                    nombrePropietario: nombre,
+                    apellidoPropietario: apellido,
+                    propietario: {
+                        nombre,
+                        apellido,
+                        nombreCompleto
+                    },
                     whatsapp: whatsappCompleto,
                     correo: correo,
                     clave: claveEncriptada, // Guardamos el Hash, no el texto real
@@ -129,7 +139,7 @@
                 });
 
                 document.getElementById('textoExito').style.display = "block";
-                guardarSesionRestaurante(docRef.id, { rol: 'administrador', nombre: 'Administrador' });
+                guardarSesionRestaurante(docRef.id, { rol: 'administrador', nombre, apellido, correo });
                 
                 setTimeout(() => {
                     window.location.href = "dashboard.html?id=" + docRef.id;
@@ -138,7 +148,7 @@
             } catch (error) {
                 console.error("Error al guardar: ", error);
                 alert("Hubo un error al guardar los datos.");
-                btn.innerText = "Crear mi Menú Digital";
+                btn.innerText = "Crear mi cuenta";
                 btn.disabled = false;
             }
         });
