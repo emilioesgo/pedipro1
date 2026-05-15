@@ -197,6 +197,71 @@
     }
     .delivery-time-info strong { color: var(--accent); }
 
+    .pedido-status-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      padding: 14px;
+      margin-bottom: 20px;
+    }
+
+    .pedido-status-panel h3 {
+      margin: 0 0 6px;
+      color: var(--accent);
+      font-family: var(--font-ui);
+      font-size: 1.15rem;
+      letter-spacing: 0.5px;
+    }
+
+    .pedido-status-panel p {
+      margin: 0 0 12px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .pedido-status-search {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pedido-status-btn {
+      border: 0;
+      border-radius: 8px;
+      padding: 11px 14px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .pedido-status-resultado {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .pedido-status-card {
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: rgba(13,16,23,0.72);
+      padding: 12px;
+      color: var(--text-primary);
+    }
+
+    .pedido-status-card strong { color: var(--accent); }
+    .pedido-status-card .muted { color: var(--text-muted); font-size: 0.84rem; margin-top: 4px; }
+
+    @media (max-width: 520px) {
+      .pedido-status-search { grid-template-columns: 1fr; }
+      .pedido-status-btn { width: 100%; }
+    }
+
     /* ---- SWITCH CONTAINER WRAPPER ---- */
     .switch-container + p, .container > div[style*="background: white"] {
       background: var(--bg-card) !important;
@@ -584,6 +649,16 @@
                 <div class="switch-selector"></div>
             </div>
             <div id="tiempoServicioInfo" class="delivery-time-info"></div>
+        </div>
+
+        <div class="pedido-status-panel">
+            <h3>Consulta el estatus de tu pedido</h3>
+            <p>Ingresa el telefono que usaste al pedir para ver si tu pedido sigue en preparacion, listo, enviado o entregado.</p>
+            <div class="pedido-status-search">
+                <input type="tel" id="consultaTelefonoPedido" class="form-input" placeholder="Telefono a 10 digitos" inputmode="numeric" maxlength="10" oninput="validarTelefonoClienteEnVivo(this)">
+                <button type="button" class="pedido-status-btn" onclick="consultarEstatusPedido()">Consultar</button>
+            </div>
+            <div id="resultadoEstatusPedido" class="pedido-status-resultado"></div>
         </div>
 
         <div id="listaMenu"></div>
@@ -1308,6 +1383,100 @@
         function telefonoClienteValido(valor) {
             return /^\d{10}$/.test(telefonoNormalizado(valor));
         }
+
+        function limpiarHtml(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, caracter => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[caracter]));
+        }
+
+        function textoEstadoPedidoCliente(estado) {
+            switch (estado) {
+                case 'pendiente': return 'En preparacion';
+                case 'preparado': return 'Listo para entregar';
+                case 'enviado': return 'En camino';
+                case 'entregado': return 'Entregado';
+                case 'completado': return 'Completado';
+                case 'cancelado': return 'Cancelado';
+                default: return estado || 'Pendiente';
+            }
+        }
+
+        function fechaPedidoComoDate(pedido) {
+            if (!pedido || !pedido.fecha) return new Date(0);
+            if (typeof pedido.fecha.toDate === 'function') return pedido.fecha.toDate();
+            const fecha = new Date(pedido.fecha);
+            return isNaN(fecha.getTime()) ? new Date(0) : fecha;
+        }
+
+        function pedidoActivoParaCliente(pedido) {
+            const estado = String(pedido.estado || '').toLowerCase();
+            if (['cancelado', 'completado'].includes(estado)) return false;
+            const fechaPedido = fechaPedidoComoDate(pedido);
+            const hace24Horas = Date.now() - (24 * 60 * 60 * 1000);
+            return fechaPedido.getTime() >= hace24Horas;
+        }
+
+        function tiempoEstimadoParaPedidoCliente(pedido) {
+            const tiempos = infoNegocioGlobal?.tiemposEntrega || {};
+            if (pedido.tipoOrigen === 'domicilio') {
+                return textoIntervaloTiempo(tiempos.domicilioMin, tiempos.domicilioMax);
+            }
+            if (pedido.tipoOrigen === 'pickup') {
+                return textoIntervaloTiempo(tiempos.pickupMin, tiempos.pickupMax);
+            }
+            return '';
+        }
+
+        window.consultarEstatusPedido = async function() {
+            const input = document.getElementById('consultaTelefonoPedido');
+            const resultado = document.getElementById('resultadoEstatusPedido');
+            const telefono = telefonoNormalizado(input.value);
+            input.value = telefono;
+            if (!telefonoClienteValido(telefono)) {
+                resultado.innerHTML = '<div class="pedido-status-card">Ingresa un telefono valido de 10 digitos.</div>';
+                return;
+            }
+
+            resultado.innerHTML = '<div class="pedido-status-card">Buscando pedidos activos...</div>';
+            try {
+                const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
+                const qPedidos = query(pedidosRef, where("clienteEnvio.telefono", "==", telefono));
+                const snapshot = await getDocs(qPedidos);
+                const pedidos = [];
+                snapshot.forEach(docSnap => {
+                    const pedido = { id: docSnap.id, ...docSnap.data() };
+                    if (pedidoActivoParaCliente(pedido)) pedidos.push(pedido);
+                });
+                pedidos.sort((a, b) => fechaPedidoComoDate(b) - fechaPedidoComoDate(a));
+
+                if (pedidos.length === 0) {
+                    resultado.innerHTML = '<div class="pedido-status-card">No encontramos pedidos activos con ese telefono.</div>';
+                    return;
+                }
+
+                resultado.innerHTML = pedidos.slice(0, 5).map(pedido => {
+                    const fecha = fechaPedidoComoDate(pedido);
+                    const estatus = textoEstadoPedidoCliente(pedido.estado);
+                    const tiempo = tiempoEstimadoParaPedidoCliente(pedido);
+                    const tipo = pedido.tipoOrigen === 'domicilio' ? 'Domicilio' : (pedido.tipoOrigen === 'pickup' ? 'Pick Up' : 'Pedido');
+                    return `
+                        <div class="pedido-status-card">
+                            <div><strong>${limpiarHtml(pedido.numeroComanda || 'Pedido')}</strong> - ${limpiarHtml(estatus)}</div>
+                            <div class="muted">${tipo} · ${fecha.toLocaleDateString('es-MX')} ${fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div class="muted">Total: $${Number(pedido.total || 0).toFixed(2)}${tiempo ? ` · Tiempo estimado: ${tiempo}` : ''}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                resultado.innerHTML = '<div class="pedido-status-card">No pudimos consultar el estatus. Intenta de nuevo.</div>';
+            }
+        };
 
         function obtenerDireccionDomicilio() {
             const calle = document.getElementById('domCalle')?.value.trim() || '';

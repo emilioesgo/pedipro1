@@ -2462,7 +2462,7 @@
             const filtros = document.getElementById('filtrosHistorialPedidos');
             if (filtros) filtros.style.display = 'flex';
             document.getElementById('titulo-tabla-info').innerHTML = 'Historial de pedidos: selecciona Dia, Semana o Mes para cargar la lista.';
-            document.getElementById('tbody-pedidos').innerHTML = '<tr><td colspan="7" style="text-align:center;">Selecciona un filtro para ver pedidos.</td></tr>';
+            document.getElementById('tbody-pedidos').innerHTML = '<tr><td colspan="8" style="text-align:center;">Selecciona un filtro para ver pedidos.</td></tr>';
             const contComandas = document.getElementById('lista-pedidos-comandas');
             if (contComandas) contComandas.innerHTML = '';
         };
@@ -2550,6 +2550,67 @@
             if (pedido.clienteEnvio?.zonaEnvio) partes.push(`Zona: ${pedido.clienteEnvio.zonaEnvio}`);
             return partes.join(' | ') || 'Sin datos de entrega';
         }
+
+        function textoIntervaloTiempoPedido(min, max) {
+            const minimo = Number(min || 0);
+            const maximo = Number(max || 0);
+            if (!minimo && !maximo) return '';
+            if (minimo && maximo && minimo !== maximo) return `${minimo} a ${maximo} minutos`;
+            return `${maximo || minimo} minutos`;
+        }
+
+        function tiempoEstimadoPedido(pedido) {
+            const tiempos = window.restauranteInfo?.tiemposEntrega || {};
+            if (pedido.tipoOrigen === 'domicilio') {
+                return textoIntervaloTiempoPedido(tiempos.domicilioMin, tiempos.domicilioMax) || 'el tiempo estimado de entrega';
+            }
+            if (pedido.tipoOrigen === 'pickup') {
+                return textoIntervaloTiempoPedido(tiempos.pickupMin, tiempos.pickupMax) || 'el tiempo estimado para recoger';
+            }
+            return 'lo antes posible';
+        }
+
+        function telefonoWhatsAppCliente(pedido) {
+            const digitos = String(pedido.clienteEnvio?.telefono || '').replace(/\D/g, '');
+            if (digitos.length === 10) return `52${digitos}`;
+            if (digitos.length > 10) return digitos;
+            return '';
+        }
+
+        function mensajeConfirmacionPedido(pedido) {
+            const nombre = pedido.clienteEnvio?.nombre || 'cliente';
+            const numero = pedido.numeroComanda || 'S/N';
+            const total = Number(pedido.total || 0).toFixed(2);
+            const tiempo = tiempoEstimadoPedido(pedido);
+            return [
+                `Hola ${nombre}.`,
+                `Confirmamos su pedido ${numero}.`,
+                `Monto a pagar: $${total}.`,
+                `Estara listo aproximadamente en ${tiempo}.`,
+                `Gracias por su preferencia.`
+            ].join('\n');
+        }
+
+        window.confirmarPedidoWhatsApp = async function(idPedido) {
+            const pedido = window.pedidosGlobales.find(p => p.id === idPedido);
+            if (!pedido) return alert('No se encontro el pedido.');
+            const telefono = telefonoWhatsAppCliente(pedido);
+            if (!telefono) return alert('Este pedido no tiene un telefono valido del cliente.');
+
+            const mensaje = mensajeConfirmacionPedido(pedido);
+            window.open(`https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(mensaje)}`, '_blank');
+
+            try {
+                await updateDoc(doc(db, "restaurantes", idRestaurante, "pedidos", idPedido), {
+                    confirmadoWhatsApp: true,
+                    fechaConfirmacionWhatsApp: new Date()
+                });
+                pedido.confirmadoWhatsApp = true;
+                renderizarHTMLPedidos(window.pedidosGlobales, false);
+            } catch (error) {
+                console.error(error);
+            }
+        };
 
         window.actualizarCronometrosComandas = function() {
             document.querySelectorAll('[data-comanda-inicio]').forEach(el => {
@@ -2657,7 +2718,7 @@
         function renderizarHTMLPedidosLegacy(ordenes, esModoHistorial) {
             const tbody = document.getElementById('tbody-pedidos'); const contComandas = document.getElementById('lista-pedidos-comandas');
             tbody.innerHTML = ''; if(!esModoHistorial) contComandas.innerHTML = '';
-            if(ordenes.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay pedidos.</td></tr>'; if(!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>'; return; }
+            if(ordenes.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay pedidos.</td></tr>'; if(!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>'; return; }
             ordenes.forEach(ped => {
                 const numComanda = ped.numeroComanda || "S/N"; const fechaObj = ped.fecha.toDate(); const fechaFormat = fechaObj.toLocaleDateString() + " " + fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const esMesa = ped.tipoOrigen === 'mesa'; const tipoStr = esMesa ? "En Mesa" : "Domicilio/Pick"; const badgeClass = esMesa ? "badge-mesa" : "badge-online";
@@ -2666,7 +2727,7 @@
                 let badgePagoHtml = `<span style="background:${colorPago}; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; display:inline-block; text-align:center;">${estadoPago}</span>`;
                 let textoEstatus = ''; let colorEstatus = ''; switch(ped.estado) { case 'pendiente': textoEstatus = '👨‍🍳 En Preparación'; colorEstatus = '#e67e22'; break; case 'preparado': textoEstatus = '✅ Listo para entregar'; colorEstatus = '#3498db'; break; case 'entregado': textoEstatus = '🍽️ Entregado'; colorEstatus = '#27ae60'; break; case 'enviado': textoEstatus = '🛵 Enviado'; colorEstatus = '#9b59b6'; break; default: textoEstatus = ped.estado || 'Desconocido'; colorEstatus = '#95a5a6'; }
                 let badgeEstatus = `<span style="background:${colorEstatus}; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; display:inline-block; text-align:center;">${textoEstatus}</span>`;
-                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td><td>${fechaFormat}</td><td>${badgeEstatus}</td><td>${badgePagoHtml}</td><td><strong>$${ped.total.toFixed(2)}</strong></td></tr>`;
+                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${numComanda}</strong></td><td>${clienteInfo}</td><td><span class="badge-tipo ${badgeClass}">${tipoStr}</span></td><td>${fechaFormat}</td><td>${badgeEstatus}</td><td>${badgePagoHtml}</td><td><strong>$${ped.total.toFixed(2)}</strong></td><td>-</td></tr>`;
                 if (!esModoHistorial && ped.estado === 'pendiente') {
                     let itemsHtml = ''; ped.items.forEach(i => itemsHtml += `<li><strong>${i.cantidad}x</strong> ${i.nombre}</li>`);
                     let comentariosHtml = ped.comentarios ? `<p style="margin:5px 0; font-size:0.9rem; color:#e67e22;"><strong>📝 Notas:</strong> ${ped.comentarios}</p>` : '';
@@ -2683,7 +2744,7 @@
             if (!esModoHistorial) contComandas.innerHTML = '';
 
             if (ordenes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay pedidos.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay pedidos.</td></tr>';
                 if (!esModoHistorial) contComandas.innerHTML = '<p style="color: #7f8c8d; grid-column: 1 / -1;">No hay comandas pendientes.</p>';
                 return;
             }
@@ -2709,8 +2770,12 @@
                     default: textoEstatus = ped.estado || 'Desconocido'; colorEstatus = '#95a5a6';
                 }
                 const badgeEstatus = `<span style="background:${colorEstatus}; color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; display:inline-block; text-align:center;">${escaparHtml(textoEstatus)}</span>`;
+                const puedeConfirmarWhatsApp = !esModoHistorial && !esMesa && Boolean(ped.clienteEnvio?.telefono);
+                const accionConfirmarHtml = puedeConfirmarWhatsApp
+                    ? `<button class="btn-add" style="background:#25d366; width:auto; padding:7px 10px; font-size:0.78rem;" onclick="event.stopPropagation(); window.confirmarPedidoWhatsApp('${ped.id}')">${ped.confirmadoWhatsApp ? 'Reenviar WhatsApp' : 'Confirmar WhatsApp'}</button>${ped.confirmadoWhatsApp ? '<div style="margin-top:5px; color:#16a34a; font-size:0.75rem; font-weight:700;">Confirmado</div>' : ''}`
+                    : '-';
 
-                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${escaparHtml(numComanda)}</strong></td><td>${escaparHtml(clienteInfo)}</td><td><span class="badge-tipo ${badgeClass}">${escaparHtml(tipoStr)}</span></td><td>${fechaFormat}</td><td>${badgeEstatus}</td><td>${badgePagoHtml}</td><td><strong>$${Number(ped.total || 0).toFixed(2)}</strong></td></tr>`;
+                tbody.innerHTML += `<tr onclick="window.verDetallePedido('${ped.id}')" style="cursor: pointer;"><td><strong>${escaparHtml(numComanda)}</strong></td><td>${escaparHtml(clienteInfo)}</td><td><span class="badge-tipo ${badgeClass}">${escaparHtml(tipoStr)}</span></td><td>${fechaFormat}</td><td>${badgeEstatus}</td><td>${badgePagoHtml}</td><td><strong>$${Number(ped.total || 0).toFixed(2)}</strong></td><td>${accionConfirmarHtml}</td></tr>`;
 
                 if (!esModoHistorial && ped.estado === 'pendiente') {
                     const itemsHtml = htmlItemsComanda(ped, false);
