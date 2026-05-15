@@ -17,6 +17,10 @@
 
         button { width: 100%; padding: 12px; margin-top: 10px; background-color: #25d366; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         button:hover { background-color: #128c7e; }
+        .btn-google { background: #ffffff; color: #1f2937; border: 1px solid #dadce0; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-google:hover { background: #f8fafc; }
+        .divider { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; color: #7f8c8d; font-size: 0.85rem; }
+        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #e5e7eb; }
         
         .mensaje-exito { color: green; text-align: center; font-weight: bold; display: none; }
         
@@ -49,6 +53,8 @@
         <input type="password" id="clave" placeholder="Crea una Contraseña">
         
         <button id="btnRegistro">Crear mi cuenta</button>
+        <div class="divider">o</div>
+        <button id="btnRegistroGoogle" class="btn-google" type="button">Registrarme con Google</button>
         <p id="textoExito" class="mensaje-exito">Cuenta creada con exito. Redirigiendo...</p>
 
         <!-- Enlace para iniciar sesión -->
@@ -58,7 +64,8 @@
     <!-- CARGA DE LIBRERÍAS DE FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -71,6 +78,9 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
+        googleProvider.setCustomParameters({ prompt: 'select_account' });
 
         const SESION_RESTAURANTE_KEY = 'pediproSesionRestaurante';
         const SESION_CERRADA_KEY = 'pediproSesionCerrada';
@@ -95,6 +105,64 @@
         }
 
         const btn = document.getElementById('btnRegistro');
+        const btnGoogle = document.getElementById('btnRegistroGoogle');
+
+        function slugCuenta(texto) {
+            return String(texto || '')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        function separarNombreGoogle(nombreCompleto) {
+            const partes = String(nombreCompleto || '').trim().split(/\s+/).filter(Boolean);
+            return {
+                nombre: partes.shift() || '',
+                apellido: partes.join(' ')
+            };
+        }
+
+        async function buscarRestaurantePorCorreo(correo) {
+            const q = query(collection(db, "restaurantes"), where("correo", "==", correo));
+            const snap = await getDocs(q);
+            return snap.empty ? null : snap.docs[0];
+        }
+
+        async function crearCuentaRestaurante({ nombre, apellido, correo, whatsappCompleto, claveEncriptada = null, googleUser = null }) {
+            const nombreCompleto = `${nombre} ${apellido}`.trim();
+            const docExistente = await buscarRestaurantePorCorreo(correo);
+            if (docExistente) {
+                guardarSesionRestaurante(docExistente.id, { rol: 'administrador', nombre, apellido, correo });
+                window.location.href = "dashboard.html?id=" + docExistente.id;
+                return null;
+            }
+
+            const payload = {
+                nombre: nombreCompleto,
+                nombrePropietario: nombre,
+                apellidoPropietario: apellido,
+                propietario: {
+                    nombre,
+                    apellido,
+                    nombreCompleto
+                },
+                whatsapp: whatsappCompleto,
+                correo,
+                slug: slugCuenta(nombreCompleto),
+                fecha: new Date()
+            };
+
+            if (claveEncriptada) payload.clave = claveEncriptada;
+            if (googleUser) {
+                payload.googleAuth = true;
+                payload.googleUid = googleUser.uid;
+                payload.provider = 'google';
+                payload.fotoPropietario = googleUser.photoURL || '';
+            }
+
+            return addDoc(collection(db, "restaurantes"), payload);
+        }
         
         btn.addEventListener('click', async () => {
             const nombre = document.getElementById('nombrePersona').value.trim();
@@ -116,27 +184,13 @@
 
             // Unimos el código del país con el número
             const whatsappCompleto = codigoPais + numeroLocal;
-            const linkPersonalizado = nombreCompleto.toLowerCase().trim().replace(/\s+/g, "-");
 
             try {
                 // Encriptamos la contraseña antes de mandarla a Firebase
                 const claveEncriptada = await encriptarContrasena(claveViva);
 
-                const docRef = await addDoc(collection(db, "restaurantes"), {
-                    nombre: nombreCompleto,
-                    nombrePropietario: nombre,
-                    apellidoPropietario: apellido,
-                    propietario: {
-                        nombre,
-                        apellido,
-                        nombreCompleto
-                    },
-                    whatsapp: whatsappCompleto,
-                    correo: correo,
-                    clave: claveEncriptada, // Guardamos el Hash, no el texto real
-                    slug: linkPersonalizado,
-                    fecha: new Date()
-                });
+                const docRef = await crearCuentaRestaurante({ nombre, apellido, correo, whatsappCompleto, claveEncriptada });
+                if (!docRef) return;
 
                 document.getElementById('textoExito').style.display = "block";
                 guardarSesionRestaurante(docRef.id, { rol: 'administrador', nombre, apellido, correo });
@@ -150,6 +204,60 @@
                 alert("Hubo un error al guardar los datos.");
                 btn.innerText = "Crear mi cuenta";
                 btn.disabled = false;
+            }
+        });
+
+        btnGoogle.addEventListener('click', async () => {
+            const codigoPais = document.getElementById('codigoPais').value;
+            const numeroLocal = document.getElementById('telefonoWhatsApp').value.trim();
+            if (!numeroLocal) {
+                alert("Ingresa tu WhatsApp antes de registrarte con Google.");
+                return;
+            }
+
+            btnGoogle.innerText = "Conectando con Google...";
+            btnGoogle.disabled = true;
+
+            try {
+                const resultado = await signInWithPopup(auth, googleProvider);
+                const usuarioGoogle = resultado.user;
+                const correo = (usuarioGoogle.email || '').trim().toLowerCase();
+                if (!correo) throw new Error("Google no devolvio un correo valido.");
+
+                const nombreManual = document.getElementById('nombrePersona').value.trim();
+                const apellidoManual = document.getElementById('apellidoPersona').value.trim();
+                const desdeGoogle = separarNombreGoogle(usuarioGoogle.displayName);
+                const nombre = nombreManual || desdeGoogle.nombre;
+                const apellido = apellidoManual || desdeGoogle.apellido;
+
+                if (!nombre || !apellido) {
+                    alert("No pudimos obtener tu nombre y apellido desde Google. Llena esos campos y vuelve a intentarlo.");
+                    btnGoogle.innerText = "Registrarme con Google";
+                    btnGoogle.disabled = false;
+                    return;
+                }
+
+                const whatsappCompleto = codigoPais + numeroLocal;
+                const docRef = await crearCuentaRestaurante({
+                    nombre,
+                    apellido,
+                    correo,
+                    whatsappCompleto,
+                    googleUser: usuarioGoogle
+                });
+                if (!docRef) return;
+
+                document.getElementById('textoExito').style.display = "block";
+                guardarSesionRestaurante(docRef.id, { rol: 'administrador', nombre, apellido, correo });
+
+                setTimeout(() => {
+                    window.location.href = "dashboard.html?id=" + docRef.id;
+                }, 1000);
+            } catch (error) {
+                console.error("Error con Google: ", error);
+                alert("No se pudo completar el registro con Google. Verifica que Google este habilitado en Firebase Auth.");
+                btnGoogle.innerText = "Registrarme con Google";
+                btnGoogle.disabled = false;
             }
         });
     </script>
