@@ -8,14 +8,14 @@
                     </div>
                     <button type="button" onclick="window.ocultarNotificacionPedidoNuevo()">Entendido</button>
                 </div>
-                <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn-add" style="background: #2c3e50; width: auto;" onclick="filtrarPestana('tabla')">📊 Pedidos Activos</button>
-                    <button class="btn-add" style="background: #e67e22; width: auto;" onclick="filtrarPestana('comandas')">👨‍🍳 Comandas</button>
-                    <button class="btn-add" style="background: #8e44ad; width: auto;" onclick="filtrarPestana('mesas')">🗺️ Mapa de Mesas</button>
-                    <button class="btn-add" style="background: #7f8c8d; width: auto;" onclick="window.cargarHistorial30Dias()">📅 Historial 30 Días</button>
-                    
-                    <!-- NUEVO BOTÓN: PEDIDO MANUAL (POS) -->
-                    <button class="btn-add" style="background: #c0392b; width: auto; margin-left: auto;" onclick="abrirPOS()">📝 Tomar Pedido Manual</button>
+                <div class="orders-toolbar">
+                    <div class="orders-tabs">
+                        <button type="button" class="orders-tab" onclick="filtrarPestana('tabla')">Pedidos Activos</button>
+                        <button type="button" class="orders-tab" onclick="filtrarPestana('comandas')">Comandas</button>
+                        <button type="button" class="orders-tab" onclick="filtrarPestana('mesas')">Mapa de Mesas</button>
+                        <button type="button" class="orders-tab" onclick="window.cargarHistorial30Dias()">Historial</button>
+                    </div>
+                    <button type="button" class="orders-primary-action" onclick="abrirPOS()">Tomar Pedido</button>
                 </div>
 
                 <div id="lista-pedidos-tabla" style="display: block; overflow-x: auto;">
@@ -35,10 +35,10 @@
                 <div id="lista-pedidos-comandas" class="comanda-grid" style="display: none;"></div>
 
                 <div id="lista-pedidos-mesas" style="display: none;">
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
-                        <button id="btnModoEdicionMesa" class="btn-add" style="width: auto; background: #e67e22;" onclick="window.toggleModoEdicionMesas()">🛠️ Modo Edición (Plano)</button>
-                        <button id="btnAgregarMesaLienzo" class="btn-add" style="width: auto; background: #34495e; display: none;" onclick="window.agregarMesaLienzo()">➕ Agregar Mesa</button>
-                        <button id="btnGuardarMesas" class="btn-add" style="width: auto; background: #27ae60; display: none;" onclick="window.guardarDistribucionMesas()">💾 Guardar Distribución</button>
+                    <div class="mesa-toolbar">
+                        <button id="btnModoEdicionMesa" class="mesa-tool-btn" onclick="window.toggleModoEdicionMesas()">Modo Edición</button>
+                        <button id="btnAgregarMesaLienzo" class="mesa-tool-btn" style="display: none;" onclick="window.agregarMesaLienzo()">Agregar Mesa</button>
+                        <button id="btnGuardarMesas" class="mesa-tool-btn mesa-tool-primary" style="display: none;" onclick="window.guardarDistribucionMesas()">Guardar</button>
                     </div>
                     <p id="textoMesaInfo" style="font-size: 0.85rem; color: #7f8c8d; margin-top: 5px;">
                         Toca una mesa para cambiar su estado: 🟩 Libre ➔ 🟨 Espera ➔ 🟥 Ocupada.

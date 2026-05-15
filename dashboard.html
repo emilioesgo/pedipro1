@@ -2947,9 +2947,33 @@
         }
 
         window.cargarDisponibilidad = async function() {
-            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos")); const contenedor = document.getElementById('lista-disponibilidad'); contenedor.innerHTML = '';
-            if(snapshot.empty) return contenedor.innerHTML = '<p style="padding:15px; color:#7f8c8d;">No hay productos.</p>';
-            snapshot.forEach(docSnap => { const p = docSnap.data(); const isChecked = p.disponible !== false ? 'checked' : ''; contenedor.innerHTML += `<div class="disp-item"><div style="display: flex; align-items: center; gap: 15px;">${p.imagen ? `<img src="${p.imagen}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">` : `<div style="width: 50px; height: 50px; background: #eee; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #ccc;">🍽️</div>`}<div><strong style="color: #2c3e50;">${p.nombre}</strong><br><small style="color:#7f8c8d; font-weight: bold;">$${p.precio.toFixed(2)}</small></div></div><label class="switch"><input type="checkbox" ${isChecked} onchange="window.toggleDisponibilidad('${docSnap.id}', this.checked)"><span class="slider"></span></label></div>`; });
+            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
+            const contenedor = document.getElementById('lista-disponibilidad');
+            contenedor.innerHTML = '';
+            if(snapshot.empty) return contenedor.innerHTML = '<div class="dispo-empty">No hay productos para administrar.</div>';
+            const productos = [];
+            snapshot.forEach(docSnap => productos.push({ id: docSnap.id, ...docSnap.data() }));
+            productos.sort((a, b) => (a.categoria || '').localeCompare(b.categoria || '') || (a.nombre || '').localeCompare(b.nombre || ''));
+            productos.forEach(p => {
+                const disponible = p.disponible !== false;
+                const estadoTexto = disponible ? 'Disponible' : 'Pausado';
+                const estadoClase = disponible ? 'dispo-status-on' : 'dispo-status-off';
+                contenedor.innerHTML += `
+                    <div class="disp-item ${disponible ? '' : 'disp-item-off'}">
+                        <div class="dispo-product">
+                            ${p.imagen ? `<img src="${p.imagen}" alt="${escaparHtml(p.nombre || 'Producto')}">` : `<div class="dispo-thumb-placeholder">🍽️</div>`}
+                            <div class="dispo-info">
+                                <strong>${escaparHtml(p.nombre || 'Producto')}</strong>
+                                <span>${escaparHtml(p.categoria || 'Sin categoria')} · $${Number(p.precio || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="dispo-control">
+                            <span class="dispo-status ${estadoClase}">${estadoTexto}</span>
+                            <label class="switch"><input type="checkbox" ${disponible ? 'checked' : ''} onchange="window.toggleDisponibilidad('${p.id}', this.checked)"><span class="slider"></span></label>
+                        </div>
+                    </div>
+                `;
+            });
         }
         window.toggleDisponibilidad = async function(docId, estaDisponible) { await updateDoc(doc(db, "restaurantes", idRestaurante, "productos", docId), { disponible: estaDisponible }); }
         

@@ -323,6 +323,69 @@ input[type="file"] {
 .badge-online { background: var(--primary); }
 .badge-pago { background: var(--warning); }
 
+.orders-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.orders-tabs,
+.mesa-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+.orders-tabs {
+    padding: 4px;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+.orders-tab,
+.mesa-tool-btn,
+.orders-primary-action {
+    border: 1px solid transparent;
+    border-radius: 7px;
+    min-height: 34px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 750;
+    cursor: pointer;
+    box-shadow: none;
+}
+.orders-tab {
+    background: transparent;
+    color: #475467;
+}
+.orders-tab:hover,
+.orders-tab:focus {
+    background: #ffffff;
+    color: #172033;
+    border-color: #dbe3ef;
+}
+.orders-primary-action {
+    background: #172033;
+    color: #ffffff;
+    white-space: nowrap;
+}
+.mesa-toolbar {
+    margin-bottom: 10px;
+}
+.mesa-tool-btn {
+    background: #f8fafc;
+    color: #334155;
+    border-color: #dbe3ef;
+}
+.mesa-tool-primary {
+    background: var(--success);
+    color: #ffffff;
+    border-color: var(--success);
+}
+
 .comanda-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -474,16 +537,117 @@ input[type="file"] {
     margin-top: 18px;
 }
 
+.dispo-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.dispo-header h2 { margin-bottom: 6px; }
+.dispo-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+.dispo-header-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #ecfdf3;
+    color: #027a48;
+    border: 1px solid #abefc6;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.dispo-list {
+    display: grid;
+    gap: 10px;
+}
 .disp-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
+    gap: 14px;
+    padding: 12px;
     background: #ffffff;
-    border-bottom: 1px solid var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
 }
-.disp-item:last-child { border-bottom: 0; }
+.disp-item-off { background: #f8fafc; }
 .disp-item:hover { background: #f9fafb; }
+.dispo-product {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.dispo-product img,
+.dispo-thumb-placeholder {
+    width: 54px;
+    height: 54px;
+    flex: 0 0 54px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #f1f5f9;
+    border: 1px solid #e4e7ec;
+}
+.dispo-thumb-placeholder {
+    display: grid;
+    place-items: center;
+    color: #98a2b3;
+    font-size: 1.35rem;
+}
+.dispo-info { min-width: 0; }
+.dispo-info strong {
+    display: block;
+    color: #172033;
+    font-size: 0.96rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+.dispo-info span {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+.dispo-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.dispo-status {
+    min-width: 82px;
+    text-align: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 850;
+}
+.dispo-status-on {
+    background: #ecfdf3;
+    color: #027a48;
+}
+.dispo-status-off {
+    background: #fff1f3;
+    color: #c01048;
+}
+.dispo-empty {
+    padding: 18px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: var(--muted);
+    text-align: center;
+    font-weight: 700;
+}
 
 .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
 .switch input { opacity: 0; width: 0; height: 0; }
@@ -1265,6 +1429,41 @@ input:checked + .slider:before { transform: translateX(20px); }
     }
     .pedido-alerta-nuevo button {
         width: 100%;
+    }
+    .orders-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .orders-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+    .orders-tab,
+    .orders-primary-action,
+    .mesa-tool-btn {
+        width: 100%;
+        min-height: 36px;
+        padding-inline: 8px;
+        font-size: 0.82rem;
+    }
+    .mesa-toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .dispo-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .dispo-header-badge {
+        align-self: flex-start;
+    }
+    .disp-item {
+        align-items: flex-start;
+    }
+    .dispo-control {
+        flex-direction: column;
+        align-items: flex-end;
     }
     .comanda-info-grid {
         grid-template-columns: 1fr;
