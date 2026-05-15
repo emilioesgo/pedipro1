@@ -1022,6 +1022,39 @@
             return nuevaFecha;
         }
 
+        function refPedidosRestaurante() {
+            return collection(db, "restaurantes", idRestaurante, "pedidos");
+        }
+
+        async function obtenerPedidosPorRango(inicio, fin = null) {
+            const filtros = [where("fecha", ">=", inicio)];
+            if (fin) filtros.push(where("fecha", "<=", fin));
+            const snapshot = await getDocs(query(refPedidosRestaurante(), ...filtros));
+            const pedidos = [];
+            snapshot.forEach(docSnap => pedidos.push({ id: docSnap.id, ...docSnap.data() }));
+            return pedidos;
+        }
+
+        function obtenerInicioPedidosActivos() {
+            const now = new Date();
+            let cierreStr = obtenerHoraCierreHoy();
+            let [horaCierre, minCierre] = cierreStr.split(':').map(Number);
+            let limiteCierreHora = horaCierre + 1;
+            if (limiteCierreHora >= 24) limiteCierreHora -= 24;
+
+            const fechaLimiteLimpieza = new Date();
+            fechaLimiteLimpieza.setHours(limiteCierreHora, minCierre, 0, 0);
+
+            if (now < fechaLimiteLimpieza) fechaLimiteLimpieza.setDate(fechaLimiteLimpieza.getDate() - 1);
+            return fechaLimiteLimpieza;
+        }
+
+        function esMismoDia(fechaA, fechaB) {
+            return fechaA.getFullYear() === fechaB.getFullYear() &&
+                fechaA.getMonth() === fechaB.getMonth() &&
+                fechaA.getDate() === fechaB.getDate();
+        }
+
         function obtenerRangoInicio(periodo, fechaBase) {
             const base = inicioDeDia(fechaBase);
             let inicio = new Date(base);
@@ -1434,10 +1467,9 @@
 
             estado.innerText = 'Cargando métricas...';
             try {
-                const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
-                const ordenes = [];
-                snapshot.forEach(docSnap => ordenes.push({ id: docSnap.id, ...docSnap.data() }));
                 const rango = obtenerRangoInicio(periodoInicioActual, fechaInicioReferencia);
+                const finConsulta = new Date(rango.fin.getTime() - 1);
+                const ordenes = await obtenerPedidosPorRango(rango.inicio, finConsulta);
                 renderizarGraficasInicio(ordenes, periodoInicioActual, rango);
             } catch (error) {
                 console.error(error);
@@ -1488,7 +1520,7 @@
             if (!urlMenuDigitalActual) actualizarEnlaceUI(idRestaurante);
             window.cargarInicioDashboard();
 
-            onSnapshot(collection(db, "restaurantes", idRestaurante, "pedidos"), (snapshot) => {
+            onSnapshot(query(refPedidosRestaurante(), where("fecha", ">=", obtenerInicioPedidosActivos())), (snapshot) => {
                 const ordenesActivasTiempoReal = [];
                 snapshot.forEach(docSnap => {
                     const ped = { id: docSnap.id, ...docSnap.data() };
@@ -1520,7 +1552,14 @@
                 }
                 // Actualizar bandeja de caja en tiempo real si la vista está activa
                 if(document.getElementById('vista-caja').classList.contains('activa')) window.cargarCaja();
-                if(document.getElementById('vista-inicio').classList.contains('activa')) window.cargarInicioDashboard();
+                if(document.getElementById('vista-inicio').classList.contains('activa')) {
+                    const rangoInicio = obtenerRangoInicio(periodoInicioActual, fechaInicioReferencia);
+                    if (periodoInicioActual === 'dia' && esMismoDia(rangoInicio.inicio, new Date())) {
+                        renderizarGraficasInicio(ordenesActivasTiempoReal, periodoInicioActual, rangoInicio);
+                    } else {
+                        window.cargarInicioDashboard();
+                    }
+                }
             });
             onSnapshot(collection(db, "restaurantes", idRestaurante, "mesas"), () => { 
                 if(!window.modoEdicionMesas) window.cargarMesas(); 
@@ -2389,28 +2428,14 @@
         }
 
         function esPedidoDeHoy(fechaPedidoFirebase) {
-            const fechaOrd = fechaPedidoFirebase.toDate();
-            const now = new Date();
-            let cierreStr = obtenerHoraCierreHoy();
-            let [horaCierre, minCierre] = cierreStr.split(':').map(Number);
-            let limiteCierreHora = horaCierre + 1;
-            if (limiteCierreHora >= 24) limiteCierreHora -= 24;
-
-            let fechaLimiteLimpieza = new Date();
-            fechaLimiteLimpieza.setHours(limiteCierreHora, minCierre, 0, 0);
-
-            if (now < fechaLimiteLimpieza) { fechaLimiteLimpieza.setDate(fechaLimiteLimpieza.getDate() - 1); }
-            return fechaOrd >= fechaLimiteLimpieza;
+            const fechaOrd = fechaPedidoComoDate({ fecha: fechaPedidoFirebase });
+            return fechaOrd >= obtenerInicioPedidosActivos();
         }
 
         window.cargarPedidos = async function() {
-            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
-            let ordenesActivas = [];
-            snapshot.forEach(docSnap => {
-                const ped = docSnap.data();
-                if (esPedidoDeHoy(ped.fecha)) ordenesActivas.push({ id: docSnap.id, ...ped });
-            });
-            ordenesActivas.sort((a, b) => b.fecha.toDate() - a.fecha.toDate());
+            let ordenesActivas = await obtenerPedidosPorRango(obtenerInicioPedidosActivos());
+            ordenesActivas = ordenesActivas.filter(ped => !ped.fecha || esPedidoDeHoy(ped.fecha));
+            ordenesActivas.sort((a, b) => fechaPedidoComoDate(b) - fechaPedidoComoDate(a));
             window.pedidosGlobales = ordenesActivas;
             renderizarHTMLPedidos(ordenesActivas, false);
         }
@@ -2418,16 +2443,10 @@
         window.cargarHistorial30Dias = async function() {
             document.getElementById('lista-pedidos-tabla').style.display = 'block'; document.getElementById('lista-pedidos-comandas').style.display = 'none'; document.getElementById('lista-pedidos-mesas').style.display = 'none';
             document.getElementById('titulo-tabla-info').innerHTML = '⏳ Cargando...';
-            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
             const limite30Dias = new Date(); limite30Dias.setDate(limite30Dias.getDate() - 30);
-            let ordenesHistoricas = [];
-            snapshot.forEach(docSnap => {
-                const ped = docSnap.data(); const pedId = docSnap.id; const fechaObj = ped.fecha.toDate();
-                if (fechaObj < limite30Dias) { deleteDoc(doc(db, "restaurantes", idRestaurante, "pedidos", pedId)); } 
-                else { ordenesHistoricas.push({ id: pedId, ...ped }); }
-            });
-            ordenesHistoricas.sort((a, b) => b.fecha.toDate() - a.fecha.toDate()); window.pedidosGlobales = ordenesHistoricas;
-            document.getElementById('titulo-tabla-info').innerHTML = '📅 <strong>Historial 30 días</strong> (Limpieza automática aplicada).';
+            let ordenesHistoricas = await obtenerPedidosPorRango(limite30Dias);
+            ordenesHistoricas.sort((a, b) => fechaPedidoComoDate(b) - fechaPedidoComoDate(a)); window.pedidosGlobales = ordenesHistoricas;
+            document.getElementById('titulo-tabla-info').innerHTML = '📅 <strong>Historial 30 días</strong>.';
             renderizarHTMLPedidos(ordenesHistoricas, true); 
         }
 
@@ -2481,13 +2500,7 @@
             }
             document.getElementById('titulo-tabla-info').innerHTML = 'Cargando historial...';
             const { inicio, fin, etiqueta } = rangoHistorialPedidos(tipo);
-            const snapshot = await getDocs(collection(db, "restaurantes", idRestaurante, "pedidos"));
-            let ordenesHistoricas = [];
-            snapshot.forEach(docSnap => {
-                const ped = docSnap.data();
-                const fechaObj = fechaPedidoComoDate(ped);
-                if (fechaObj >= inicio && fechaObj <= fin) ordenesHistoricas.push({ id: docSnap.id, ...ped });
-            });
+            let ordenesHistoricas = await obtenerPedidosPorRango(inicio, fin);
             ordenesHistoricas.sort((a, b) => fechaPedidoComoDate(b) - fechaPedidoComoDate(a));
             window.pedidosGlobales = ordenesHistoricas;
             document.getElementById('titulo-tabla-info').innerHTML = `<strong>Historial de pedidos ${etiqueta}</strong>`;
