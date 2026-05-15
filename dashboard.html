@@ -2578,15 +2578,19 @@
         }
 
         function mensajeConfirmacionPedido(pedido) {
+            const negocio = obtenerNombreNegocio();
             const nombre = pedido.clienteEnvio?.nombre || 'cliente';
             const numero = pedido.numeroComanda || 'S/N';
             const total = Number(pedido.total || 0).toFixed(2);
             const tiempo = tiempoEstimadoPedido(pedido);
             return [
+                `${negocio}`,
+                ``,
                 `Hola ${nombre}.`,
                 `Confirmamos su pedido ${numero}.`,
                 `Monto a pagar: $${total}.`,
                 `Estara listo aproximadamente en ${tiempo}.`,
+                `Puede consultar el estado de su pedido desde nuestro menu digital en la opcion "Consultar pedido".`,
                 `Gracias por su preferencia.`
             ].join('\n');
         }

@@ -206,6 +206,24 @@
       margin-bottom: 20px;
     }
 
+    .pedido-status-trigger {
+      width: 100%;
+      border: 1px solid rgba(59,130,246,0.5);
+      border-radius: var(--radius);
+      padding: 13px 14px;
+      margin-bottom: 20px;
+      background: rgba(59,130,246,0.14);
+      color: var(--text-primary);
+      font-weight: 850;
+      font-size: 0.96rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+    }
+
     .pedido-status-panel h3 {
       margin: 0 0 6px;
       color: var(--accent);
@@ -651,20 +669,27 @@
             <div id="tiempoServicioInfo" class="delivery-time-info"></div>
         </div>
 
-        <div class="pedido-status-panel">
-            <h3>Consulta el estatus de tu pedido</h3>
-            <p>Ingresa el telefono que usaste al pedir para ver si tu pedido sigue en preparacion, listo, enviado o entregado.</p>
-            <div class="pedido-status-search">
-                <input type="tel" id="consultaTelefonoPedido" class="form-input" placeholder="Telefono a 10 digitos" inputmode="numeric" maxlength="10" oninput="validarTelefonoClienteEnVivo(this)">
-                <button type="button" class="pedido-status-btn" onclick="consultarEstatusPedido()">Consultar</button>
-            </div>
-            <div id="resultadoEstatusPedido" class="pedido-status-resultado"></div>
-        </div>
+        <button type="button" class="pedido-status-trigger" onclick="abrirConsultaPedido()">Consultar pedido</button>
 
         <div id="listaMenu"></div>
     </div>
 
     <!-- MODAL 1: VER CARRITO Y COMENTARIOS -->
+    <div id="modalConsultaPedido" class="modal">
+        <div class="modal-content">
+            <div class="pedido-status-panel" style="box-shadow:none; margin-bottom:0;">
+                <h3>Consulta el estatus de tu pedido</h3>
+                <p>Ingresa el telefono que usaste al pedir para ver si tu pedido sigue en preparacion, listo, enviado o entregado.</p>
+                <div class="pedido-status-search">
+                    <input type="tel" id="consultaTelefonoPedido" class="form-input" placeholder="Telefono a 10 digitos" inputmode="numeric" maxlength="10" oninput="validarTelefonoClienteEnVivo(this)">
+                    <button type="button" class="pedido-status-btn" onclick="consultarEstatusPedido()">Consultar</button>
+                </div>
+                <div id="resultadoEstatusPedido" class="pedido-status-resultado"></div>
+                <button onclick="cerrarModales()" style="background:none; border:none; margin-top:14px; color:#7f8c8d; width: 100%; font-weight: bold; cursor: pointer;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalCarrito" class="modal">
         <div class="modal-content">
             <h3>🛒 Tu Pedido</h3>
@@ -1327,10 +1352,18 @@
 
         // FUNCIONES DE MODALES Y CARRITO
         window.cerrarModales = function() {
+            document.getElementById('modalConsultaPedido').style.display = 'none';
             document.getElementById('modalCarrito').style.display = 'none';
             document.getElementById('modalDomicilio').style.display = 'none';
             document.getElementById('modalHorarios').style.display = 'none';
             document.getElementById('modalProducto').style.display = 'none';
+        }
+
+        window.abrirConsultaPedido = function() {
+            const resultado = document.getElementById('resultadoEstatusPedido');
+            if (resultado) resultado.innerHTML = '';
+            document.getElementById('modalConsultaPedido').style.display = 'block';
+            setTimeout(() => document.getElementById('consultaTelefonoPedido')?.focus(), 120);
         }
 
         window.abrirCarrito = function() {
