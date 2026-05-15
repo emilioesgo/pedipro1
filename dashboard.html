@@ -279,6 +279,11 @@
         window.rolSesion = window.rolSesion || 'administrador';
         const ULTIMA_VISTA_DASHBOARD_KEY = 'pediproUltimaVistaDashboard';
         const ULTIMA_PESTANA_PEDIDOS_KEY = 'pediproUltimaPestanaPedidos';
+        const SERVICIOS_PAGO = ['mesa', 'pickup', 'domicilio'];
+        const METODOS_PAGO = ['efectivo', 'tarjeta', 'transferencia'];
+        const LABEL_SERVICIOS_PAGO = { mesa: 'Mesas', pickup: 'Pick Up', domicilio: 'Domicilio' };
+        const IDS_SERVICIO_PAGO = { mesa: 'Mesa', pickup: 'Pickup', domicilio: 'Domicilio' };
+        const IDS_METODO_PAGO = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' };
 
         function claveDashboardLocal(base) {
             return `${base}_${window.dashboardRestauranteId || 'global'}`;
@@ -301,6 +306,57 @@
         function leerUltimaPestanaPedidos() {
             return localStorage.getItem(claveDashboardLocal(ULTIMA_PESTANA_PEDIDOS_KEY)) || 'tabla';
         }
+
+        function normalizarFormasPago(fp = {}) {
+            const base = {
+                efectivo: fp.efectivo !== false,
+                tarjeta: fp.tarjeta !== false,
+                transferencia: fp.transferencia === true
+            };
+            const porServicio = {};
+            SERVICIOS_PAGO.forEach(servicio => {
+                const guardado = fp.porServicio?.[servicio] || {};
+                porServicio[servicio] = {
+                    efectivo: guardado.efectivo ?? base.efectivo,
+                    tarjeta: guardado.tarjeta ?? base.tarjeta,
+                    transferencia: guardado.transferencia ?? base.transferencia
+                };
+            });
+            return { ...fp, ...base, porServicio };
+        }
+
+        function idCheckboxPago(servicio, metodo) {
+            return `pago${IDS_SERVICIO_PAGO[servicio]}${IDS_METODO_PAGO[metodo]}`;
+        }
+
+        function hayTransferenciaActiva(fp) {
+            return SERVICIOS_PAGO.some(servicio => fp?.porServicio?.[servicio]?.transferencia === true);
+        }
+
+        function cargarFormasPagoConfig(fpOriginal = {}) {
+            const fp = normalizarFormasPago(fpOriginal);
+            SERVICIOS_PAGO.forEach(servicio => {
+                METODOS_PAGO.forEach(metodo => {
+                    const input = document.getElementById(idCheckboxPago(servicio, metodo));
+                    if (input) input.checked = fp.porServicio[servicio][metodo] === true;
+                });
+            });
+            const transActiva = hayTransferenciaActiva(fp);
+            if (document.getElementById('transBeneficiario')) document.getElementById('transBeneficiario').value = fp.transBeneficiario || '';
+            if (document.getElementById('transClabe')) document.getElementById('transClabe').value = fp.transClabe || '';
+            if (document.getElementById('transNumTarjeta')) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta || '';
+            if (window.toggleSeccionTransferencia) window.toggleSeccionTransferencia(transActiva);
+        }
+
+        window.actualizarVistaTransferenciaPagos = function() {
+            const fp = { porServicio: {} };
+            SERVICIOS_PAGO.forEach(servicio => {
+                fp.porServicio[servicio] = {
+                    transferencia: document.getElementById(idCheckboxPago(servicio, 'transferencia'))?.checked === true
+                };
+            });
+            if (window.toggleSeccionTransferencia) window.toggleSeccionTransferencia(hayTransferenciaActiva(fp));
+        };
 
         function usuarioPuedeAcceder(idVista) {
             const permisos = window.permisosPorRol[window.rolSesion] || window.permisosPorRol.administrador;
@@ -375,17 +431,7 @@
                 if(document.getElementById('confUbicacionMaps')) document.getElementById('confUbicacionMaps').value = window.restauranteInfo.ubicacionMaps || '';
                 if(document.getElementById('confWhatsapp')) document.getElementById('confWhatsapp').value = window.restauranteInfo.whatsapp || '';
                 if(window.cargarTiemposEntregaConfig) window.cargarTiemposEntregaConfig(window.restauranteInfo.tiemposEntrega);
-                const fp = window.restauranteInfo.formasPago || {};
-                document.getElementById('pagoEfectivo').checked = fp.efectivo !== false;
-                document.getElementById('pagoTarjeta').checked = fp.tarjeta !== false;
-                const transActiva = fp.transferencia === true;
-                document.getElementById('pagoTransferencia').checked = transActiva;
-                window.toggleSeccionTransferencia(transActiva);
-                if(transActiva) {
-                    if(fp.transBeneficiario) document.getElementById('transBeneficiario').value = fp.transBeneficiario;
-                    if(fp.transClabe) document.getElementById('transClabe').value = fp.transClabe;
-                    if(fp.transNumTarjeta) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta;
-                }
+                cargarFormasPagoConfig(window.restauranteInfo.formasPago || {});
                 window.renderizarZonasEnvio(window.restauranteInfo.zonasEnvio);
                 if (window.renderizarTablaHorarios) window.renderizarTablaHorarios(window.restauranteInfo.horarios);
             }
@@ -1502,17 +1548,7 @@
                 if(window.cargarTiemposEntregaConfig) window.cargarTiemposEntregaConfig(window.restauranteInfo.tiemposEntrega);
 
                 // Cargar formas de pago guardadas
-                const fp = window.restauranteInfo.formasPago || {};
-                if(document.getElementById('pagoEfectivo')) document.getElementById('pagoEfectivo').checked = fp.efectivo !== false;
-                if(document.getElementById('pagoTarjeta')) document.getElementById('pagoTarjeta').checked = fp.tarjeta !== false;
-                const transActiva = fp.transferencia === true;
-                if(document.getElementById('pagoTransferencia')) document.getElementById('pagoTransferencia').checked = transActiva;
-                if(transActiva) {
-                    if(document.getElementById('seccionDatosTransferencia')) document.getElementById('seccionDatosTransferencia').style.display = 'block';
-                    if(document.getElementById('transBeneficiario') && fp.transBeneficiario) document.getElementById('transBeneficiario').value = fp.transBeneficiario;
-                    if(document.getElementById('transClabe') && fp.transClabe) document.getElementById('transClabe').value = fp.transClabe;
-                    if(document.getElementById('transNumTarjeta') && fp.transNumTarjeta) document.getElementById('transNumTarjeta').value = fp.transNumTarjeta;
-                }
+                cargarFormasPagoConfig(window.restauranteInfo.formasPago || {});
 
                 window.renderizarZonasEnvio(window.restauranteInfo.zonasEnvio);
                 renderizarTablaHorarios(window.restauranteInfo.horarios);
@@ -2359,17 +2395,32 @@
         window.guardarFormasPago = async function() {
             const btn = document.getElementById('btnGuardarPagos');
             btn.innerText = "Guardando..."; btn.disabled = true;
-            const transActiva = document.getElementById('pagoTransferencia').checked;
+            const porServicio = {};
+            SERVICIOS_PAGO.forEach(servicio => {
+                porServicio[servicio] = {};
+                METODOS_PAGO.forEach(metodo => {
+                    porServicio[servicio][metodo] = document.getElementById(idCheckboxPago(servicio, metodo))?.checked === true;
+                });
+            });
+            const servicioSinPago = SERVICIOS_PAGO.find(servicio => !METODOS_PAGO.some(metodo => porServicio[servicio][metodo]));
+            if (servicioSinPago) {
+                alert(`Selecciona al menos una forma de pago para ${LABEL_SERVICIOS_PAGO[servicioSinPago]}.`);
+                btn.innerText = "Guardar Formas de Pago"; btn.disabled = false; return;
+                btn.innerText = "ðŸ’¾ Guardar Formas de Pago"; btn.disabled = false; return;
+            }
+            const transActiva = SERVICIOS_PAGO.some(servicio => porServicio[servicio].transferencia);
             const fp = {
-                efectivo: document.getElementById('pagoEfectivo').checked,
-                tarjeta: document.getElementById('pagoTarjeta').checked,
+                efectivo: SERVICIOS_PAGO.some(servicio => porServicio[servicio].efectivo),
+                tarjeta: SERVICIOS_PAGO.some(servicio => porServicio[servicio].tarjeta),
                 transferencia: transActiva,
+                porServicio,
                 transBeneficiario: transActiva ? document.getElementById('transBeneficiario').value.trim() : '',
                 transClabe: transActiva ? document.getElementById('transClabe').value.trim() : '',
                 transNumTarjeta: transActiva ? document.getElementById('transNumTarjeta').value.trim() : '',
             };
             if(transActiva && (!fp.transBeneficiario || !fp.transClabe)) {
                 alert("Para Transferencia debes ingresar el Nombre del Beneficiario y la CLABE.");
+                btn.innerText = "Guardar Formas de Pago"; btn.disabled = false; return;
                 btn.innerText = "💾 Guardar Formas de Pago"; btn.disabled = false; return;
             }
             try {

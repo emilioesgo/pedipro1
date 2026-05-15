@@ -900,10 +900,10 @@
                 document.getElementById('dynamic-favicon').href = data.logo;
             }
 
-            renderizarFormasPago(data.formasPago);
             renderizarZonasEnvioMenu(data.zonasEnvio);
             document.getElementById('switchPickup').checked = true;
             sincronizarTipoPedido('pickup');
+            renderizarFormasPago(data.formasPago);
             renderizarTiempoServicio();
 
             // 2. LÓGICA DE HORARIOS AVANZADOS O SIMPLES
@@ -1544,6 +1544,7 @@
                 const zonaSelect = document.getElementById('domZonaEnvio');
                 if (zonaSelect) zonaSelect.value = '';
             }
+            renderizarFormasPago(infoNegocioGlobal?.formasPago);
             renderizarTiempoServicio();
             window.actualizarCostoEnvio();
 
@@ -1672,6 +1673,39 @@
             if (!fp || fp.efectivo !== false) sel.innerHTML += '<option value="Efectivo">💵 Efectivo</option>';
             if (!fp || fp.tarjeta !== false) sel.innerHTML += '<option value="Tarjeta de Débito">💳 Tarjeta de Débito (Terminal)</option>';
             if (fp && fp.transferencia === true) sel.innerHTML += '<option value="Transferencia">🏦 Transferencia Electrónica</option>';
+        }
+
+        function normalizarFormasPagoMenu(fp = {}) {
+            const base = {
+                efectivo: fp.efectivo !== false,
+                tarjeta: fp.tarjeta !== false,
+                transferencia: fp.transferencia === true
+            };
+            const porServicio = {};
+            ['mesa', 'pickup', 'domicilio'].forEach(servicio => {
+                const guardado = fp.porServicio?.[servicio] || {};
+                porServicio[servicio] = {
+                    efectivo: guardado.efectivo ?? base.efectivo,
+                    tarjeta: guardado.tarjeta ?? base.tarjeta,
+                    transferencia: guardado.transferencia ?? base.transferencia
+                };
+            });
+            return { ...fp, ...base, porServicio };
+        }
+
+        renderizarFormasPago = function(fp) {
+            const sel = document.getElementById('domPago');
+            if (!sel) return;
+            const valorActual = sel.value;
+            const tipo = document.getElementById('tipoPedidoTop')?.value || 'pickup';
+            const pagos = normalizarFormasPagoMenu(fp || {}).porServicio[tipo] || {};
+            sel.innerHTML = '<option value="" disabled selected>Forma de pago</option>';
+            if (pagos.efectivo) sel.innerHTML += '<option value="Efectivo">Efectivo</option>';
+            if (pagos.tarjeta) sel.innerHTML += '<option value="Tarjeta de Debito">Tarjeta de Debito (Terminal)</option>';
+            if (pagos.transferencia) sel.innerHTML += '<option value="Transferencia">Transferencia Electronica</option>';
+            if (sel.options.length === 1) sel.innerHTML += '<option value="" disabled>No hay formas de pago disponibles</option>';
+            if ([...sel.options].some(opt => opt.value === valorActual)) sel.value = valorActual;
+            else mostrarInfoTransferencia('');
         }
 
         window.mostrarInfoTransferencia = function(valor) {

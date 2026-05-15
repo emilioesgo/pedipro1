@@ -601,6 +601,17 @@
 
             <label style="font-weight: bold; color: #2c3e50; font-size: 0.9rem;">📝 Notas o Comentarios para la cocina:</label>
             <textarea id="comentariosPedido" class="form-input" rows="2" placeholder="Ej: Sin cebolla, extra salsa..."></textarea>
+
+            <label style="font-weight: bold; color: #2c3e50; font-size: 0.9rem; margin-top: 12px; display:block;">Metodo de pago:</label>
+            <select id="mesaPago" class="form-input" onchange="mostrarInfoTransferenciaMesa(this.value)">
+                <option value="" disabled selected>Forma de pago</option>
+            </select>
+            <div id="infoTransferenciaMesa" style="display:none; background:#eaf4fb; border:1px solid #3498db; border-radius:8px; padding:12px; margin-top:8px; font-size:0.9rem;">
+                <p style="margin:0 0 6px; font-weight:bold; color:#2980b9;">Datos para Transferencia:</p>
+                <p style="margin:3px 0;"><strong>Beneficiario:</strong> <span id="mesaTransBeneficiarioDisplay"></span></p>
+                <p style="margin:3px 0;"><strong>CLABE:</strong> <span id="mesaTransClabeDisplay" style="letter-spacing:2px;"></span></p>
+                <p style="margin:3px 0;"><strong>No. Tarjeta:</strong> <span id="mesaTransNumTarjetaDisplay" style="letter-spacing:2px;"></span></p>
+            </div>
             
             <button class="btn-pedir" id="btnEnviarCocina" onclick="enviarPedidoACocina()" style="margin-top: 15px;">👨‍🍳 Enviar a Cocina</button>
             <button onclick="cerrarModales()" style="background:none; border:none; margin-top:10px; color:#7f8c8d; width: 100%; font-weight: bold; cursor: pointer;">Volver al Menú</button>
@@ -731,6 +742,7 @@
                 document.getElementById('logoRestaurante').src = data.logo; 
                 document.getElementById('logoRestaurante').style.display = 'inline-block'; 
             }
+            renderizarFormasPagoMesa(data.formasPago);
 
             try {
                 const snapProds = await getDocs(collection(db, "restaurantes", idRestaurante, "productos"));
@@ -982,6 +994,7 @@
         window.abrirCarrito = function() {
             if (Object.keys(carrito).length === 0) return alert("Aún no has agregado productos a tu pedido.");
             renderizarListaCarrito();
+            renderizarFormasPagoMesa(infoNegocioGlobal?.formasPago);
             document.getElementById('modalCarrito').style.display = 'block';
         }
 
@@ -1006,6 +1019,51 @@
             }
         }
 
+        function normalizarFormasPagoMesa(fp = {}) {
+            const base = {
+                efectivo: fp.efectivo !== false,
+                tarjeta: fp.tarjeta !== false,
+                transferencia: fp.transferencia === true
+            };
+            const guardadoMesa = fp.porServicio?.mesa || {};
+            return {
+                ...fp,
+                mesa: {
+                    efectivo: guardadoMesa.efectivo ?? base.efectivo,
+                    tarjeta: guardadoMesa.tarjeta ?? base.tarjeta,
+                    transferencia: guardadoMesa.transferencia ?? base.transferencia
+                }
+            };
+        }
+
+        function renderizarFormasPagoMesa(fp) {
+            const sel = document.getElementById('mesaPago');
+            if (!sel) return;
+            const valorActual = sel.value;
+            const pagos = normalizarFormasPagoMesa(fp || {}).mesa;
+            sel.innerHTML = '<option value="" disabled selected>Forma de pago</option>';
+            if (pagos.efectivo) sel.innerHTML += '<option value="Efectivo">Efectivo</option>';
+            if (pagos.tarjeta) sel.innerHTML += '<option value="Tarjeta de Debito">Tarjeta de Debito (Terminal)</option>';
+            if (pagos.transferencia) sel.innerHTML += '<option value="Transferencia">Transferencia Electronica</option>';
+            if (sel.options.length === 1) sel.innerHTML += '<option value="" disabled>No hay formas de pago disponibles</option>';
+            if ([...sel.options].some(opt => opt.value === valorActual)) sel.value = valorActual;
+            else mostrarInfoTransferenciaMesa('');
+        }
+
+        window.mostrarInfoTransferenciaMesa = function(valor) {
+            const div = document.getElementById('infoTransferenciaMesa');
+            if (!div) return;
+            if(valor === 'Transferencia' && infoNegocioGlobal && infoNegocioGlobal.formasPago) {
+                const fp = infoNegocioGlobal.formasPago;
+                document.getElementById('mesaTransBeneficiarioDisplay').innerText = fp.transBeneficiario || 'No especificado';
+                document.getElementById('mesaTransClabeDisplay').innerText = fp.transClabe || 'No especificada';
+                document.getElementById('mesaTransNumTarjetaDisplay').innerText = fp.transNumTarjeta || 'No especificada';
+                div.style.display = 'block';
+            } else {
+                div.style.display = 'none';
+            }
+        };
+
         window.enviarPedidoACocina = async function() {
             const arrayItems = Object.keys(carrito).map(nombre => ({ nombre: nombre, precio: carrito[nombre].precio, cantidad: carrito[nombre].cantidad }));
             if (arrayItems.length === 0) return;
@@ -1014,6 +1072,12 @@
             btnPedir.innerText = "Procesando..."; btnPedir.disabled = true;
 
             const comentariosExtra = document.getElementById('comentariosPedido').value.trim();
+            const metodoPagoMesa = document.getElementById('mesaPago')?.value || '';
+            if (!metodoPagoMesa) {
+                alert("Selecciona una forma de pago.");
+                btnPedir.innerText = "Enviar a Cocina"; btnPedir.disabled = false;
+                return;
+            }
 
             try {
                 const pedidosRef = collection(db, "restaurantes", idRestaurante, "pedidos");
@@ -1034,7 +1098,7 @@
                     total: totalGeneral,
                     tipoOrigen: 'mesa', 
                     numeroMesa: clienteMesa,
-                    clienteEnvio: { nombre: clienteNombre, telefono: "En Mesa", direccion: "Mesa #" + clienteMesa, metodoPago: "Pendiente" },
+                    clienteEnvio: { nombre: clienteNombre, telefono: "En Mesa", direccion: "Mesa #" + clienteMesa, metodoPago: metodoPagoMesa },
                     fecha: new Date(), 
                     estado: 'pendiente', 
                     estadoPago: 'Pendiente',

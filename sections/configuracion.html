@@ -153,6 +153,33 @@
                 .cfg-toggle-row:last-child { border-bottom: 0; padding-bottom: 0; }
                 .cfg-toggle-info .t-title { font-size: 0.88rem; font-weight: 600; color: #111827; }
                 .cfg-toggle-info .t-sub   { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+                .cfg-payment-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 12px;
+                }
+                .cfg-payment-card {
+                    border: 1px solid #e5e7eb;
+                    border-radius: 10px;
+                    background: #fbfdff;
+                    overflow: hidden;
+                }
+                .cfg-payment-card h5 {
+                    margin: 0;
+                    padding: 12px 14px;
+                    border-bottom: 1px solid #eef2f7;
+                    color: #0f172a;
+                    font-size: 0.9rem;
+                }
+                .cfg-payment-card .cfg-toggle-row {
+                    padding: 11px 14px;
+                }
+                .cfg-payment-card .cfg-toggle-info .t-title {
+                    font-size: 0.82rem;
+                }
+                .cfg-payment-card .cfg-toggle-info .t-sub {
+                    font-size: 0.72rem;
+                }
 
                 /* Transfer fields */
                 .cfg-transfer-fields {
@@ -354,6 +381,7 @@
                     .cfg-zona-actions button { flex: 1; }
                     .cfg-role-grid { grid-template-columns: 1fr; }
                     .cfg-role-card { grid-template-columns: 1fr; }
+                    .cfg-payment-grid { grid-template-columns: 1fr; }
                 }
             </style>
 
@@ -512,26 +540,45 @@
                                     <div><h4>Métodos de Pago Aceptados</h4><p>Solo los activos aparecerán en el menú digital de tus clientes</p></div>
                                 </div>
                                 <div class="cfg-section-body">
+                                    <p class="cfg-input-hint" style="margin:0 0 12px;">Activa los metodos que aceptaras para cada tipo de pedido. Estos cambios se reflejan en menu.html y menumesa.html.</p>
+                                    <div class="cfg-payment-grid">
+                                        <div class="cfg-payment-card">
+                                            <h5>Mesas</h5>
                                     <div class="cfg-toggle-row">
                                         <div class="cfg-toggle-info">
                                             <div class="t-title">💵 Efectivo</div>
                                             <div class="t-sub">Pago en moneda física al entregar el pedido</div>
                                         </div>
-                                        <label class="switch"><input type="checkbox" id="pagoEfectivo"><span class="slider"></span></label>
+                                        <label class="switch"><input type="checkbox" id="pagoMesaEfectivo"><span class="slider"></span></label>
                                     </div>
                                     <div class="cfg-toggle-row">
                                         <div class="cfg-toggle-info">
                                             <div class="t-title">💳 Tarjeta de Débito</div>
                                             <div class="t-sub">Terminal punto de venta (TPV)</div>
                                         </div>
-                                        <label class="switch"><input type="checkbox" id="pagoTarjeta"><span class="slider"></span></label>
+                                        <label class="switch"><input type="checkbox" id="pagoMesaTarjeta"><span class="slider"></span></label>
                                     </div>
                                     <div class="cfg-toggle-row">
                                         <div class="cfg-toggle-info">
                                             <div class="t-title">🏦 Transferencia Electrónica (SPEI)</div>
                                             <div class="t-sub">Pago por app bancaria con CLABE o número de tarjeta</div>
                                         </div>
-                                        <label class="switch"><input type="checkbox" id="pagoTransferencia" onchange="window.toggleSeccionTransferencia(this.checked)"><span class="slider"></span></label>
+                                        <label class="switch"><input type="checkbox" id="pagoMesaTransferencia" onchange="window.actualizarVistaTransferenciaPagos()"><span class="slider"></span></label>
+                                    </div>
+
+                                        </div>
+                                        <div class="cfg-payment-card">
+                                            <h5>Pick Up</h5>
+                                            <div class="cfg-toggle-row"><div class="cfg-toggle-info"><div class="t-title">Efectivo</div><div class="t-sub">Pago al recoger</div></div><label class="switch"><input type="checkbox" id="pagoPickupEfectivo"><span class="slider"></span></label></div>
+                                            <div class="cfg-toggle-row"><div class="cfg-toggle-info"><div class="t-title">Tarjeta</div><div class="t-sub">Terminal en sucursal</div></div><label class="switch"><input type="checkbox" id="pagoPickupTarjeta"><span class="slider"></span></label></div>
+                                            <div class="cfg-toggle-row"><div class="cfg-toggle-info"><div class="t-title">Transferencia</div><div class="t-sub">Pago antes de recoger</div></div><label class="switch"><input type="checkbox" id="pagoPickupTransferencia" onchange="window.actualizarVistaTransferenciaPagos()"><span class="slider"></span></label></div>
+                                        </div>
+                                        <div class="cfg-payment-card">
+                                            <h5>Envio a domicilio</h5>
+                                            <div class="cfg-toggle-row"><div class="cfg-toggle-info"><div class="t-title">Efectivo</div><div class="t-sub">Pago al recibir</div></div><label class="switch"><input type="checkbox" id="pagoDomicilioEfectivo"><span class="slider"></span></label></div>
+                                            <div class="cfg-toggle-row"><div class="cfg-toggle-info"><div class="t-title">Tarjeta</div><div class="t-sub">Terminal en entrega</div></div><label class="switch"><input type="checkbox" id="pagoDomicilioTarjeta"><span class="slider"></span></label></div>
+                                            <div class="cfg-toggle-row"><div class="cfg-toggle-info"><div class="t-title">Transferencia</div><div class="t-sub">Pago antes del envio</div></div><label class="switch"><input type="checkbox" id="pagoDomicilioTransferencia" onchange="window.actualizarVistaTransferenciaPagos()"><span class="slider"></span></label></div>
+                                        </div>
                                     </div>
 
                                     <!-- Datos bancarios para transferencia -->
