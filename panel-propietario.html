@@ -669,15 +669,33 @@
             await Promise.all(listado.prefixes.map(prefix => borrarCarpetaStorage(prefix.fullPath)));
         }
 
+        async function validarPinPropietario(pin) {
+            if (!panelConfig?.pinHash || !panelConfig?.salt) {
+                const snap = await getDoc(panelConfigRef);
+                panelConfig = snap.exists() ? snap.data() : null;
+            }
+            if (!panelConfig?.pinHash || !panelConfig?.salt) return false;
+            const pinHash = await hashPin(pin, panelConfig.salt);
+            return pinHash === panelConfig.pinHash;
+        }
+
         window.eliminarUsuario = async function(id) {
             const rest = restaurantes.find(item => item.id === id);
             if (!rest) return;
             const nombre = rest.nombreComercial || rest.nombre || id;
-            const confirmacion = prompt(`Esta accion borra Firestore y Storage del restaurante "${nombre}". Escribe el ID exacto para confirmar:\n\n${id}`);
-            if (confirmacion !== id) return alert("Eliminacion cancelada.");
+            const pinConfirmacion = prompt(`Esta accion borrara Firestore y Storage del restaurante "${nombre}".\n\nIngresa tu PIN de propietario para confirmar:`);
+            if (!pinConfirmacion) return alert("Eliminacion cancelada.");
+            if (!/^\d{4,12}$/.test(pinConfirmacion.trim())) return alert("PIN invalido.");
 
             $("panelStatus").innerText = "Eliminando usuario y datos relacionados...";
             try {
+                const pinValido = await validarPinPropietario(pinConfirmacion.trim());
+                if (!pinValido) {
+                    $("panelStatus").innerText = "Eliminacion cancelada: PIN incorrecto.";
+                    alert("PIN incorrecto. No se elimino la cuenta.");
+                    return;
+                }
+
                 let documentosEliminados = 0;
                 for (const subcoleccion of SUBCOLECCIONES_RESTAURANTE) {
                     documentosEliminados += await borrarSubcoleccion(id, subcoleccion);
