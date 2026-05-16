@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isProjectAdmin() {
+      return signedIn() && request.auth.token.projectAdmin == true;
+    }
+
+    function restaurantDoc(restauranteId) {
+      return get(/databases/$(database)/documents/restaurantes/$(restauranteId));
+    }
+
+    function isRestaurantOwner(restauranteId) {
+      return signedIn()
+        && restaurantDoc(restauranteId).data.authUid == request.auth.uid;
+    }
+
+    function isActiveStaff(restauranteId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuariosRoles/$(request.auth.uid))
+        && get(/databases/$(database)/documents/usuariosRoles/$(request.auth.uid)).data.restauranteId == restauranteId
+        && get(/databases/$(database)/documents/usuariosRoles/$(request.auth.uid)).data.activo == true;
+    }
+
+    function canManageRestaurant(restauranteId) {
+      return isProjectAdmin() || isRestaurantOwner(restauranteId) || isActiveStaff(restauranteId);
+    }
+
+    function onlyChanged(keys) {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(keys);
+    }
+
+    match /slugs/{slug} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if signedIn()
+        && request.resource.data.restauranteId is string
+        && isRestaurantOwner(request.resource.data.restauranteId);
+      allow delete: if signedIn()
+        && resource.data.restauranteId is string
+        && (isRestaurantOwner(resource.data.restauranteId) || isProjectAdmin());
+    }
+
+    match /restaurantes/{restauranteId} {
+      // Production target:
+      // Public menus should read restaurant data by direct document id or a public slug mapping.
+      // Do not allow public collection listing in production.
+      allow get: if true;
+      allow list: if isProjectAdmin();
+
+      allow create: if signedIn()
+        && request.resource.data.authUid == request.auth.uid;
+
+      allow update: if canManageRestaurant(restauranteId);
+      allow delete: if isProjectAdmin();
+
+      match /productos/{productoId} {
+        allow read: if true;
+        allow write: if canManageRestaurant(restauranteId);
+      }
+
+      match /personalizaciones/{personalizacionId} {
+        allow read: if true;
+        allow write: if canManageRestaurant(restauranteId);
+      }
+
+      match /pedidos/{pedidoId} {
+        // Public order creation is kept for menu.html and menumesa.html.
+        // Before final production, add App Check and stronger server-side validation.
+        allow create: if request.resource.data.keys().hasAll(['items', 'total', 'tipoOrigen', 'fecha', 'estado'])
+          && request.resource.data.items is list
+          && request.resource.data.total is number
+          && request.resource.data.tipoOrigen in ['pickup', 'domicilio', 'mesa']
+          && request.resource.data.estado in ['pendiente', 'preparado', 'enviado', 'entregado'];
+
+        // Dashboard reads and status changes must be authenticated.
+        // Client-side order tracking should move to a status token or callable endpoint.
+        allow read, update, delete: if canManageRestaurant(restauranteId);
+      }
+
+      match /mesas/{mesaId} {
+        allow read: if true;
+        allow create: if canManageRestaurant(restauranteId);
+        allow update: if canManageRestaurant(restauranteId)
+          || (
+            onlyChanged(['estado'])
+            && request.resource.data.estado in ['ocupada', 'llamar_mesero', 'pedir_cuenta']
+          );
+        allow delete: if canManageRestaurant(restauranteId);
+      }
+
+      match /roles/{rolId} {
+        allow read, write: if canManageRestaurant(restauranteId);
+      }
+    }
+
+    match /usuariosRoles/{usuarioId} {
+      // Production target: document id should be the Firebase Auth uid for each staff user.
+      allow read: if isProjectAdmin()
+        || (signedIn() && usuarioId == request.auth.uid)
+        || (signedIn() && resource.data.restauranteId != null && isRestaurantOwner(resource.data.restauranteId));
+
+      allow create, update, delete: if isProjectAdmin()
+        || (signedIn() && request.resource.data.restauranteId != null && isRestaurantOwner(request.resource.data.restauranteId));
+    }
+
+    match /sistema/{documento} {
+      allow read, write: if isProjectAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

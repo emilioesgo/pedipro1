@@ -1,0 +1,16 @@
+{
+  "name": "pedipro-functions",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "find-auth-user": "node scripts/find-auth-user.js",
+    "set-project-admin": "node scripts/set-project-admin.js"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.2"
+  }
+}

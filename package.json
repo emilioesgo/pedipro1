@@ -1,0 +1,15 @@
+{
+  "name": "pedipro",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "check": "node --check functions/index.js && node --check functions/scripts/set-project-admin.js",
+    "functions:install": "npm --prefix functions install",
+    "functions:find-auth-user": "npm --prefix functions run find-auth-user --",
+    "functions:set-admin": "npm --prefix functions run set-project-admin --",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:all": "firebase deploy"
+  }
+}

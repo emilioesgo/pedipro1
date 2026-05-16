@@ -795,7 +795,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -808,6 +809,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         const SESION_RESTAURANTE_KEY = 'pediproSesionRestaurante';
         const SESION_CERRADA_KEY = 'pediproSesionCerrada';
@@ -864,6 +866,120 @@
             return hashHex;
         }
 
+        async function buscarRestaurantePorAuthUid(uid) {
+            const q = query(collection(db, "restaurantes"), where("authUid", "==", uid));
+            const snap = await getDocs(q);
+            return snap.empty ? null : snap.docs[0];
+        }
+
+        async function buscarRestaurantePorCorreo(correo) {
+            const q = query(collection(db, "restaurantes"), where("correo", "==", correo));
+            const snap = await getDocs(q);
+            return snap.empty ? null : snap.docs[0];
+        }
+
+        async function buscarRolPorAuthUid(uid) {
+            const directo = await getDoc(doc(db, "usuariosRoles", uid));
+            if (directo.exists()) return directo;
+
+            const q = query(collection(db, "usuariosRoles"), where("authUid", "==", uid));
+            const snap = await getDocs(q);
+            return snap.empty ? null : snap.docs[0];
+        }
+
+        async function iniciarSesionConFirebaseAuth(correo, claveViva) {
+            const credencial = await signInWithEmailAndPassword(auth, correo, claveViva);
+            let docRestaurante = await buscarRestaurantePorAuthUid(credencial.user.uid);
+
+            if (!docRestaurante) {
+                const docRol = await buscarRolPorAuthUid(credencial.user.uid);
+                if (docRol) {
+                    const usuario = docRol.data();
+                    if (usuario.activo === false) throw new Error('usuario-rol-inactivo');
+                    guardarSesionRestaurante(usuario.restauranteId, {
+                        id: docRol.id,
+                        rol: usuario.rol,
+                        nombre: usuario.nombre,
+                        apellido: usuario.apellido,
+                        correo: usuario.correo || correo,
+                        authUid: credencial.user.uid
+                    });
+                    window.location.href = `dashboard.html?id=${usuario.restauranteId}`;
+                    return;
+                }
+            }
+
+            if (!docRestaurante) {
+                docRestaurante = await buscarRestaurantePorCorreo(correo);
+                if (docRestaurante) {
+                    await updateDoc(doc(db, "restaurantes", docRestaurante.id), {
+                        authUid: credencial.user.uid,
+                        firebaseAuthUid: credencial.user.uid,
+                        provider: 'password'
+                    });
+                }
+            }
+
+            if (!docRestaurante) {
+                throw new Error('restaurante-no-encontrado');
+            }
+
+            const datos = docRestaurante.data();
+            guardarSesionRestaurante(docRestaurante.id, {
+                rol: 'administrador',
+                nombre: datos.nombrePropietario || datos.propietario?.nombre || 'Administrador',
+                apellido: datos.apellidoPropietario || datos.propietario?.apellido || '',
+                correo,
+                authUid: credencial.user.uid
+            });
+            window.location.href = `dashboard.html?id=${docRestaurante.id}`;
+        }
+
+        async function iniciarSesionLegacy(correo, claveViva) {
+            const claveIngresadaHash = await encriptarContrasena(claveViva);
+
+            const q = query(
+                collection(db, "restaurantes"),
+                where("correo", "==", correo),
+                where("clave", "==", claveIngresadaHash)
+            );
+
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                querySnapshot.forEach((doc) => {
+                    guardarSesionRestaurante(doc.id, { rol: 'administrador', nombre: 'Administrador', correo });
+                    window.location.href = `dashboard.html?id=${doc.id}`;
+                });
+                return true;
+            }
+
+            const qPersonal = query(
+                collection(db, "usuariosRoles"),
+                where("correo", "==", correo),
+                where("clave", "==", claveIngresadaHash),
+                where("activo", "==", true)
+            );
+
+            const personalSnapshot = await getDocs(qPersonal);
+            if (!personalSnapshot.empty) {
+                personalSnapshot.forEach((docPersonal) => {
+                    const usuario = docPersonal.data();
+                    guardarSesionRestaurante(usuario.restauranteId, {
+                        id: docPersonal.id,
+                        rol: usuario.rol,
+                        nombre: usuario.nombre,
+                        apellido: usuario.apellido,
+                        correo: usuario.correo
+                    });
+                    window.location.href = `dashboard.html?id=${usuario.restauranteId}`;
+                });
+                return true;
+            }
+
+            return false;
+        }
+
         window.abrirModal = () => {
             const modal = document.getElementById('modalLogin');
             modal.style.display = 'block';
@@ -878,6 +994,40 @@
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') window.cerrarModal();
         });
+
+        document.getElementById('btnEntrar').addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const correo = document.getElementById('loginCorreo').value.trim().toLowerCase();
+            const claveViva = document.getElementById('loginClave').value;
+            const btn = document.getElementById('btnEntrar');
+
+            if (!correo || !claveViva) return alert("Ingresa tu correo y contrasena");
+
+            btn.innerText = "Verificando...";
+            btn.disabled = true;
+
+            try {
+                try {
+                    await iniciarSesionConFirebaseAuth(correo, claveViva);
+                    return;
+                } catch (authError) {
+                    console.warn("Login Auth no disponible para esta cuenta, intentando compatibilidad temporal:", authError.code || authError.message);
+                }
+
+                const ingresoLegacy = await iniciarSesionLegacy(correo, claveViva);
+                if (!ingresoLegacy) {
+                    alert("Correo o contrasena incorrectos.");
+                    btn.innerText = "Acceder";
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error al intentar iniciar sesion.");
+                btn.innerText = "Acceder";
+                btn.disabled = false;
+            }
+        }, true);
 
         document.getElementById('btnEntrar').addEventListener('click', async () => {
             const correo = document.getElementById('loginCorreo').value.trim().toLowerCase();

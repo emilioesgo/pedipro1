@@ -523,9 +523,11 @@
 
     <!-- SCRIPT DE FIREBASE -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, getDocs, updateDoc, onSnapshot, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, getDocs, setDoc, updateDoc, onSnapshot, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { getAuth, createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -539,6 +541,9 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app); 
+        const auth = getAuth(app);
+        const functions = getFunctions(app);
+        const deleteStaffRole = httpsCallable(functions, "deleteStaffRole");
 
         const SESION_RESTAURANTE_KEY = 'pediproSesionRestaurante';
         const SESION_CERRADA_KEY = 'pediproSesionCerrada';
@@ -590,8 +595,13 @@
             guardarSesionRestaurante(idRestaurante);
         }
 
-        window.cerrarSesion = function() {
+        window.cerrarSesion = async function() {
             cerrandoSesion = true;
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.warn("No se pudo cerrar Firebase Auth:", error);
+            }
             localStorage.removeItem(SESION_RESTAURANTE_KEY);
             localStorage.setItem(SESION_CERRADA_KEY, 'true');
             window.location.replace('index.html');
@@ -603,8 +613,8 @@
         const bloqueoPorCierreManual = localStorage.getItem(SESION_CERRADA_KEY) === 'true' && idDesdeUrl;
         const idRestaurante = (sesionRestauranteExpirada || bloqueoPorCierreManual) ? null : (idDesdeUrl || (sesionGuardada ? sesionGuardada.id : null));
         window.dashboardRestauranteId = idRestaurante || 'global';
-        const usuarioSesion = sesionGuardada?.usuario || { rol: 'administrador', nombre: 'Administrador' };
-        const rolSesion = usuarioSesion.rol || 'administrador';
+        let usuarioSesion = sesionGuardada?.usuario || { rol: 'administrador', nombre: 'Administrador' };
+        let rolSesion = usuarioSesion.rol || 'administrador';
         const permisosPorRol = {
             administrador: ['vista-inicio', 'vista-pedidos', 'vista-menu', 'vista-caja', 'vista-disponibilidad', 'vista-qr', 'vista-configuracion'],
             cajero: ['vista-pedidos', 'vista-caja', 'vista-disponibilidad'],
@@ -644,6 +654,78 @@
         let comandaDetalleActualId = null;
 
         if (!idRestaurante) { window.location.href = "index.html"; }
+
+        function esperarUsuarioAuth() {
+            return new Promise((resolve) => {
+                const cancelar = onAuthStateChanged(auth, (usuario) => {
+                    cancelar();
+                    resolve(usuario || null);
+                });
+            });
+        }
+
+        async function buscarRolAuth(uid) {
+            const directo = await getDoc(doc(db, "usuariosRoles", uid));
+            if (directo.exists()) return { id: directo.id, ...directo.data() };
+
+            const qRol = query(collection(db, "usuariosRoles"), where("authUid", "==", uid));
+            const snapRol = await getDocs(qRol);
+            return snapRol.empty ? null : { id: snapRol.docs[0].id, ...snapRol.docs[0].data() };
+        }
+
+        async function validarSesionDashboardConAuth(infoRestaurante) {
+            const usuarioAuth = await esperarUsuarioAuth();
+            const restauranteAuthUid = infoRestaurante?.authUid || infoRestaurante?.firebaseAuthUid || '';
+            const sesionAuthUid = usuarioSesion?.authUid || '';
+
+            if (!usuarioAuth) {
+                if (restauranteAuthUid || sesionAuthUid) {
+                    localStorage.removeItem(SESION_RESTAURANTE_KEY);
+                    window.location.replace('index.html');
+                    return false;
+                }
+                return true;
+            }
+
+            if (restauranteAuthUid && restauranteAuthUid === usuarioAuth.uid) {
+                usuarioSesion = {
+                    ...usuarioSesion,
+                    rol: 'administrador',
+                    correo: usuarioAuth.email || usuarioSesion.correo || '',
+                    authUid: usuarioAuth.uid
+                };
+                rolSesion = usuarioSesion.rol || 'administrador';
+                window.rolSesion = rolSesion;
+                guardarSesionRestaurante(idRestaurante, usuarioSesion);
+                aplicarPermisosUsuario(true);
+                return true;
+            }
+
+            const rolAuth = await buscarRolAuth(usuarioAuth.uid);
+            if (rolAuth && rolAuth.restauranteId === idRestaurante && rolAuth.activo !== false) {
+                usuarioSesion = {
+                    id: rolAuth.id,
+                    rol: rolAuth.rol,
+                    nombre: rolAuth.nombre,
+                    apellido: rolAuth.apellido,
+                    correo: rolAuth.correo || usuarioAuth.email || '',
+                    authUid: usuarioAuth.uid
+                };
+                rolSesion = usuarioSesion.rol || 'administrador';
+                window.rolSesion = rolSesion;
+                guardarSesionRestaurante(idRestaurante, usuarioSesion);
+                aplicarPermisosUsuario(true);
+                return true;
+            }
+
+            if (!restauranteAuthUid && !sesionAuthUid) {
+                return true;
+            }
+
+            localStorage.removeItem(SESION_RESTAURANTE_KEY);
+            window.location.replace('index.html');
+            return false;
+        }
 
         function claveTurnoCaja() {
             return `pediproTurnoCaja_${idRestaurante}`;
@@ -1528,6 +1610,8 @@
             const documento = await getDoc(docRef);
             if (documento.exists()) {
                 window.restauranteInfo = documento.data();
+                const sesionValida = await validarSesionDashboardConAuth(window.restauranteInfo);
+                if (!sesionValida) return;
                 document.getElementById('saludoDuenio').innerText = "Bienvenido, " + obtenerNombrePropietario();
                 
                 actualizarEnlaceUI(window.restauranteInfo.slug);
@@ -2177,6 +2261,25 @@
             if (selectRol) selectRol.value = 'cajero';
         }
 
+        async function crearUsuarioAuthRol(correo, clave) {
+            const nombreAppSecundaria = `pedipro-rol-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            const appSecundaria = initializeApp(firebaseConfig, nombreAppSecundaria);
+            const authSecundario = getAuth(appSecundaria);
+            try {
+                const credencial = await createUserWithEmailAndPassword(authSecundario, correo, clave);
+                return { appSecundaria, authSecundario, usuario: credencial.user };
+            } catch (error) {
+                await deleteApp(appSecundaria).catch(() => {});
+                throw error;
+            }
+        }
+
+        async function cerrarUsuarioAuthRol(contextoAuth) {
+            if (!contextoAuth) return;
+            await signOut(contextoAuth.authSecundario).catch(() => {});
+            await deleteApp(contextoAuth.appSecundaria).catch(() => {});
+        }
+
         window.mostrarFormularioRol = function() {
             if (!esAdministrador()) return alert("Solo el administrador puede agregar roles.");
             const form = document.getElementById('formRolPersonal');
@@ -2245,24 +2348,52 @@
                 return;
             }
 
+            let contextoAuthRol = null;
             try {
-                const claveEncriptada = await encriptarContrasena(clave);
-                await addDoc(collection(db, "usuariosRoles"), {
+                const qExistente = query(
+                    collection(db, "usuariosRoles"),
+                    where("restauranteId", "==", idRestaurante),
+                    where("correo", "==", correo)
+                );
+                const snapExistente = await getDocs(qExistente);
+                if (!snapExistente.empty) {
+                    alert("Ya existe un usuario con ese correo en este restaurante.");
+                    return;
+                }
+
+                contextoAuthRol = await crearUsuarioAuthRol(correo, clave);
+                const authUid = contextoAuthRol.usuario.uid;
+
+                await setDoc(doc(db, "usuariosRoles", authUid), {
                     restauranteId: idRestaurante,
                     nombre,
                     apellido,
                     correo,
-                    clave: claveEncriptada,
+                    authUid,
+                    firebaseAuthUid: authUid,
+                    provider: 'password',
                     rol,
                     activo: true,
                     fecha: new Date()
                 });
+
                 window.cancelarFormularioRol();
                 await window.cargarRolesPersonal();
                 alert("Rol guardado.");
             } catch (error) {
                 console.error(error);
-                alert("Error al guardar rol.");
+                if (contextoAuthRol?.usuario) {
+                    await deleteUser(contextoAuthRol.usuario).catch(() => {});
+                }
+                if (error.code === 'auth/email-already-in-use') {
+                    alert("Ese correo ya existe en Firebase Authentication. Usa otro correo o migra ese usuario.");
+                } else if (error.code === 'auth/weak-password') {
+                    alert("La contrasena debe tener al menos 6 caracteres.");
+                } else {
+                    alert("Error al guardar rol.");
+                }
+            } finally {
+                await cerrarUsuarioAuthRol(contextoAuthRol);
             }
         };
 
@@ -2270,14 +2401,20 @@
             if (!esAdministrador()) return alert("Solo el administrador puede eliminar roles.");
             const usuario = rolesPersonalActuales.find(item => item.id === idRol);
             if (!usuario) return;
-            if (!confirm(`Eliminar a ${usuario.nombre} ${usuario.apellido}?`)) return;
+            if (!confirm(`Eliminar a ${usuario.nombre} ${usuario.apellido}? Se quitara tambien su acceso de Firebase Authentication.`)) return;
             try {
-                await deleteDoc(doc(db, "usuariosRoles", idRol));
+                await deleteStaffRole({ restauranteId: idRestaurante, usuarioId: idRol });
                 await window.cargarRolesPersonal();
-                alert("Rol eliminado.");
+                alert("Rol y acceso eliminados.");
             } catch (error) {
                 console.error(error);
-                alert("Error al eliminar rol.");
+                if (error.code === 'functions/unauthenticated') {
+                    alert("Para eliminar accesos completos necesitas iniciar sesion nuevamente.");
+                } else if (error.code === 'functions/permission-denied') {
+                    alert("No tienes permiso para eliminar este rol.");
+                } else {
+                    alert("Error al eliminar rol. Revisa que Cloud Functions este desplegado.");
+                }
             }
         };
 
@@ -2368,8 +2505,29 @@
             const btn = document.getElementById('btnGuardarSlug');
             btn.innerText = "Guardando..."; btn.disabled = true;
             const slug = document.getElementById('confSlug').value.trim();
+            const slugAnterior = window.restauranteInfo?.slug || '';
             try {
+                if (!slug) return alert("Ingresa un alias para el link.");
+                const slugRef = doc(db, "slugs", slug);
+                const slugSnap = await getDoc(slugRef);
+                if (slugSnap.exists() && slugSnap.data().restauranteId !== idRestaurante) {
+                    alert("Ese alias ya esta ocupado. Elige otro.");
+                    return;
+                }
                 await updateDoc(doc(db, "restaurantes", idRestaurante), { slug });
+                await setDoc(slugRef, {
+                    restauranteId: idRestaurante,
+                    slug,
+                    activo: true,
+                    actualizado: new Date()
+                });
+                if (slugAnterior && slugAnterior !== slug) {
+                    const anteriorRef = doc(db, "slugs", slugAnterior);
+                    const anteriorSnap = await getDoc(anteriorRef);
+                    if (anteriorSnap.exists() && anteriorSnap.data().restauranteId === idRestaurante) {
+                        await deleteDoc(anteriorRef);
+                    }
+                }
                 window.restauranteInfo = { ...window.restauranteInfo, slug };
                 actualizarEnlaceUI(slug);
                 alert("✅ Link personalizado guardado.");

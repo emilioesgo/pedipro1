@@ -298,7 +298,9 @@
         <h1>Panel propietario PediPro</h1>
         <p id="loginIntro">Acceso interno para consultar restaurantes registrados, suscripciones y eliminaciones administrativas.</p>
         <form id="pinForm">
-            <input id="ownerPin" class="search" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN de propietario" maxlength="12" style="margin-bottom:10px; text-align:center;">
+            <input id="ownerEmailAccess" class="search" type="email" autocomplete="username" placeholder="Correo administrador" style="margin-bottom:10px; text-align:center;">
+            <input id="ownerPasswordAccess" class="search" type="password" autocomplete="current-password" placeholder="Contraseña" style="margin-bottom:10px; text-align:center;">
+            <input id="ownerPin" class="search" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN de propietario" maxlength="12" style="margin-bottom:10px; text-align:center;">
             <input id="ownerPinConfirm" class="search hidden" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Confirmar PIN" maxlength="12" style="margin-bottom:10px; text-align:center;">
             <button id="btnLoginPin" class="btn btn-primary" type="submit">Entrar con PIN</button>
         </form>
@@ -317,6 +319,7 @@
             </div>
             <div class="sidebar-actions">
                 <button id="btnRefresh" class="btn btn-primary">Actualizar datos</button>
+                <button id="btnMigrarSlugs" class="btn btn-ghost">Migrar aliases</button>
                 <button id="btnLogout" class="btn btn-ghost">Cerrar sesion</button>
             </div>
         </aside>
@@ -385,8 +388,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getStorage, ref, listAll, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA5TZ5h2Bpij_EuLJoLWAgKOi4qkAzSVp4",
@@ -403,14 +407,18 @@
         const PANEL_SESSION_MS = 8 * 60 * 60 * 1000;
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
-        const storage = getStorage(app);
+        const functions = getFunctions(app);
         const panelConfigRef = doc(db, "sistema", "panelPropietario");
+        const deleteRestaurantAccount = httpsCallable(functions, "deleteRestaurantAccount");
+        const migrateRestaurantSlugs = httpsCallable(functions, "migrateRestaurantSlugs");
 
         let restaurantes = [];
         let panelConfig = null;
         let modoCrearPin = false;
         let intentosPin = 0;
+        const authInicial = new Promise(resolve => onAuthStateChanged(auth, resolve));
 
         const $ = (id) => document.getElementById(id);
         const formatoDinero = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
@@ -446,10 +454,12 @@
             sessionStorage.setItem(PANEL_SESSION_KEY, JSON.stringify({ activa: true, inicio: Date.now() }));
         }
 
-        function cerrarSesionPanel() {
+        async function cerrarSesionPanel() {
             sessionStorage.removeItem(PANEL_SESSION_KEY);
+            await signOut(auth).catch(() => null);
             $("loginView").classList.remove("hidden");
             $("adminView").classList.add("hidden");
+            $("ownerPasswordAccess").value = "";
             $("ownerPin").value = "";
             $("ownerPinConfirm").value = "";
             $("loginStatus").innerText = "";
@@ -490,7 +500,7 @@
         async function mostrarPanel() {
             $("loginView").classList.add("hidden");
             $("adminView").classList.remove("hidden");
-            $("ownerEmail").innerText = "Sesion con PIN activa";
+            $("ownerEmail").innerText = auth.currentUser?.email || "Sesion administradora activa";
             $("securityNotice").classList.remove("hidden");
             await cargarRestaurantes();
         }
@@ -502,7 +512,8 @@
                 panelConfig = snap.exists() ? snap.data() : null;
                 const existePin = Boolean(panelConfig?.pinHash && panelConfig?.salt);
                 prepararFormularioPin(!existePin);
-                if (existePin && leerSesionPanel()) await mostrarPanel();
+                const usuario = await authInicial;
+                if (existePin && leerSesionPanel() && usuario) await mostrarPanel();
             } catch (error) {
                 console.error(error);
                 $("loginStatus").innerText = "No se pudo leer el PIN desde Firestore. Revisa reglas y conexion.";
@@ -656,23 +667,6 @@
             $("panelStatus").innerText = "Suscripcion guardada.";
         };
 
-        async function borrarSubcoleccion(restauranteId, nombreSubcoleccion) {
-            const snapshot = await getDocs(collection(db, "restaurantes", restauranteId, nombreSubcoleccion));
-            const eliminaciones = [];
-            snapshot.forEach(docSnap => {
-                eliminaciones.push(deleteDoc(doc(db, "restaurantes", restauranteId, nombreSubcoleccion, docSnap.id)));
-            });
-            await Promise.all(eliminaciones);
-            return eliminaciones.length;
-        }
-
-        async function borrarCarpetaStorage(ruta) {
-            const carpeta = ref(storage, ruta);
-            const listado = await listAll(carpeta);
-            await Promise.all(listado.items.map(item => deleteObject(item)));
-            await Promise.all(listado.prefixes.map(prefix => borrarCarpetaStorage(prefix.fullPath)));
-        }
-
         async function validarPinPropietario(pin) {
             if (!panelConfig?.pinHash || !panelConfig?.salt) {
                 const snap = await getDoc(panelConfigRef);
@@ -683,16 +677,27 @@
             return pinHash === panelConfig.pinHash;
         }
 
+        async function validarAdministradorProyecto() {
+            if (!auth.currentUser) {
+                throw new Error("auth-required");
+            }
+            const token = await auth.currentUser.getIdTokenResult(true);
+            if (token.claims.projectAdmin !== true) {
+                throw new Error("project-admin-required");
+            }
+        }
+
         window.eliminarUsuario = async function(id) {
             const rest = restaurantes.find(item => item.id === id);
             if (!rest) return;
             const nombre = rest.nombreComercial || rest.nombre || id;
-            const pinConfirmacion = prompt(`Esta accion borrara Firestore y Storage del restaurante "${nombre}".\n\nIngresa tu PIN de propietario para confirmar:`);
+            const pinConfirmacion = prompt(`Esta accion borrara Firestore, Storage, aliases, roles y Firebase Authentication del restaurante "${nombre}".\n\nIngresa tu PIN de propietario para confirmar:`);
             if (!pinConfirmacion) return alert("Eliminacion cancelada.");
             if (!/^\d{4,12}$/.test(pinConfirmacion.trim())) return alert("PIN invalido.");
 
-            $("panelStatus").innerText = "Eliminando usuario y datos relacionados...";
+            $("panelStatus").innerText = "Eliminando cuenta desde servidor seguro...";
             try {
+                await validarAdministradorProyecto();
                 const pinValido = await validarPinPropietario(pinConfirmacion.trim());
                 if (!pinValido) {
                     $("panelStatus").innerText = "Eliminacion cancelada: PIN incorrecto.";
@@ -700,34 +705,61 @@
                     return;
                 }
 
-                let documentosEliminados = 0;
-                for (const subcoleccion of SUBCOLECCIONES_RESTAURANTE) {
-                    documentosEliminados += await borrarSubcoleccion(id, subcoleccion);
-                }
-
-                try {
-                    await borrarCarpetaStorage(`restaurantes/${id}`);
-                } catch (storageError) {
-                    console.warn("No se pudo borrar Storage completo:", storageError);
-                }
-
-                await deleteDoc(doc(db, "restaurantes", id));
+                const resultado = await deleteRestaurantAccount({ restauranteId: id });
+                const datos = resultado.data || {};
                 restaurantes = restaurantes.filter(item => item.id !== id);
                 actualizarMetricas();
                 renderizarTabla();
-                $("panelStatus").innerText = `Usuario eliminado. Documentos relacionados borrados: ${documentosEliminados}.`;
-                alert("Usuario eliminado de Firestore y Storage. Si existe en Firebase Authentication, hay que borrarlo con Admin SDK o Cloud Functions.");
+                $("panelStatus").innerText = `Cuenta eliminada. Documentos: ${datos.documentosBorrados || 0}. Archivos: ${datos.archivosBorrados || 0}. Auth: ${datos.authEliminados || 0}.`;
+                alert("Cuenta eliminada completamente desde el servidor.");
             } catch (error) {
                 console.error(error);
-                $("panelStatus").innerText = "No se pudo eliminar el usuario.";
-                alert("No se pudo eliminar completamente. Revisa reglas de Firebase o permisos del proyecto.");
+                if (error.message === "project-admin-required" || error.code === "functions/permission-denied") {
+                    $("panelStatus").innerText = "Tu cuenta no tiene permiso projectAdmin.";
+                    alert("Tu cuenta de Firebase Authentication todavia no tiene permiso projectAdmin.");
+                    return;
+                }
+                $("panelStatus").innerText = "No se pudo eliminar la cuenta.";
+                alert("No se pudo eliminar completamente. Revisa Cloud Functions y permisos del proyecto.");
             }
         };
 
+        async function migrarAliasesMenu() {
+            if (!confirm("Esto creara o actualizara los aliases publicos del menu para los restaurantes existentes. Deseas continuar?")) return;
+
+            $("panelStatus").innerText = "Migrando aliases del menu...";
+            try {
+                await validarAdministradorProyecto();
+                const resultado = await migrateRestaurantSlugs();
+                const datos = resultado.data || {};
+                $("panelStatus").innerText = `Aliases revisados: ${datos.revisados || 0}. Migrados: ${datos.migrados || 0}. Conflictos: ${(datos.conflictos || []).length}.`;
+                if ((datos.conflictos || []).length) {
+                    alert("Migracion terminada con conflictos. Revisa el estado del panel para ver el total.");
+                } else {
+                    alert("Aliases migrados correctamente.");
+                }
+            } catch (error) {
+                console.error(error);
+                if (error.message === "project-admin-required" || error.code === "functions/permission-denied") {
+                    $("panelStatus").innerText = "Tu cuenta no tiene permiso projectAdmin.";
+                    alert("Tu cuenta de Firebase Authentication todavia no tiene permiso projectAdmin.");
+                    return;
+                }
+                $("panelStatus").innerText = "No se pudieron migrar los aliases.";
+                alert("No se pudieron migrar los aliases. Revisa Cloud Functions y permisos del proyecto.");
+            }
+        }
+
         $("pinForm").addEventListener("submit", async (event) => {
             event.preventDefault();
+            const email = $("ownerEmailAccess").value.trim();
+            const password = $("ownerPasswordAccess").value;
             const pin = $("ownerPin").value.trim();
             const pinConfirm = $("ownerPinConfirm").value.trim();
+            if (!email || !password) {
+                $("loginStatus").innerText = "Ingresa correo y contrasena de administrador.";
+                return;
+            }
             if (!/^\d{4,12}$/.test(pin)) {
                 $("loginStatus").innerText = "El PIN debe tener de 4 a 12 digitos.";
                 return;
@@ -735,6 +767,9 @@
 
             try {
                 $("btnLoginPin").disabled = true;
+                $("loginStatus").innerText = "Validando acceso administrador...";
+                await signInWithEmailAndPassword(auth, email, password);
+                await validarAdministradorProyecto();
                 if (modoCrearPin) {
                     if (pin !== pinConfirm) {
                         $("loginStatus").innerText = "Los PIN no coinciden.";
@@ -777,6 +812,7 @@
 
         $("btnLogout").addEventListener("click", cerrarSesionPanel);
         $("btnRefresh").addEventListener("click", cargarRestaurantes);
+        $("btnMigrarSlugs").addEventListener("click", migrarAliasesMenu);
         $("buscarUsuario").addEventListener("input", renderizarTabla);
 
         cargarConfigPin();

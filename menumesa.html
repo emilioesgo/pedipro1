@@ -708,6 +708,29 @@
 
         aplicarMesaDesdeQR();
 
+        async function resolverRestaurantePorIdOSlug(valor) {
+            let restRef = doc(db, "restaurantes", valor);
+            let restSnap = await getDoc(restRef);
+            if (restSnap.exists()) return { restRef, restSnap, restauranteId: valor };
+
+            const slugSnap = await getDoc(doc(db, "slugs", valor));
+            if (slugSnap.exists() && slugSnap.data().restauranteId) {
+                const restauranteId = slugSnap.data().restauranteId;
+                restRef = doc(db, "restaurantes", restauranteId);
+                restSnap = await getDoc(restRef);
+                if (restSnap.exists()) return { restRef, restSnap, restauranteId };
+            }
+
+            const qBusquedaAlias = query(collection(db, "restaurantes"), where("slug", "==", valor));
+            const queryAlias = await getDocs(qBusquedaAlias);
+            if (!queryAlias.empty) {
+                restSnap = queryAlias.docs[0];
+                return { restRef: restSnap.ref, restSnap, restauranteId: restSnap.id };
+            }
+
+            return null;
+        }
+
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('navCategorias');
             if (window.scrollY > 280) nav.classList.add('visible');
@@ -717,20 +740,13 @@
         async function cargarMenu() {
             if (!idRestaurante) return;
 
-            let restRef = doc(db, "restaurantes", idRestaurante);
-            let restSnap = await getDoc(restRef);
-            
-            if (!restSnap.exists()) {
-                const qBusquedaAlias = query(collection(db, "restaurantes"), where("slug", "==", idRestaurante));
-                const queryAlias = await getDocs(qBusquedaAlias);
-                if (!queryAlias.empty) {
-                    restSnap = queryAlias.docs[0];
-                    idRestaurante = restSnap.id; 
-                } else {
-                    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; font-family:sans-serif;'>Restaurante no encontrado 😢</h2>";
-                    return;
-                }
+            const restauranteResuelto = await resolverRestaurantePorIdOSlug(idRestaurante);
+            if (!restauranteResuelto) {
+                document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; font-family:sans-serif;'>Restaurante no encontrado 😢</h2>";
+                return;
             }
+            let restSnap = restauranteResuelto.restSnap;
+            idRestaurante = restauranteResuelto.restauranteId;
 
             const data = restSnap.data();
             infoNegocioGlobal = data;
