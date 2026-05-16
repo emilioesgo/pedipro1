@@ -44,6 +44,12 @@ Despues de aplicar el permiso, cierra sesion y vuelve a entrar en el panel propi
 npm run deploy:functions
 ```
 
+Si una sola funcion falla, puedes reintentar solo la migracion de aliases:
+
+```bash
+npm run deploy:functions:migrate-slugs
+```
+
 ## 5. Migrar aliases del menu
 
 Entra a `panel-propietario.html`, inicia sesion con correo, contrasena y PIN, y usa el boton `Migrar aliases`.

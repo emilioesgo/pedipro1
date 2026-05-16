@@ -8,6 +8,7 @@
     "functions:find-auth-user": "npm --prefix functions run find-auth-user --",
     "functions:set-admin": "npm --prefix functions run set-project-admin --",
     "deploy:functions": "firebase deploy --only functions",
+    "deploy:functions:migrate-slugs": "firebase deploy --only functions:migrateRestaurantSlugs",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules,storage",
     "deploy:all": "firebase deploy"

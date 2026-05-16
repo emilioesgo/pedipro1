@@ -6,6 +6,15 @@ admin.initializeApp();
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
+const FUNCTION_OPTIONS = {
+  region: "us-central1",
+  cors: [
+    "https://emilioesgo.github.io",
+    /^http:\/\/127\.0\.0\.1:\d+$/,
+    /^http:\/\/localhost:\d+$/,
+  ],
+};
+
 const SUBCOLECCIONES_RESTAURANTE = [
   "productos",
   "pedidos",
@@ -97,7 +106,7 @@ async function migrarSlugRestaurante(restauranteDoc) {
   return { migrado: true, slug };
 }
 
-exports.migrateRestaurantSlugs = onCall(async (request) => {
+exports.migrateRestaurantSlugs = onCall(FUNCTION_OPTIONS, async (request) => {
   exigirProjectAdmin(request);
 
   const restaurantesSnap = await db.collection("restaurantes").get();
@@ -138,7 +147,7 @@ exports.migrateRestaurantSlugs = onCall(async (request) => {
   };
 });
 
-exports.deleteStaffRole = onCall(async (request) => {
+exports.deleteStaffRole = onCall(FUNCTION_OPTIONS, async (request) => {
   const restauranteId = String(request.data?.restauranteId || "").trim();
   const usuarioId = String(request.data?.usuarioId || "").trim();
 
@@ -186,7 +195,7 @@ exports.deleteStaffRole = onCall(async (request) => {
   };
 });
 
-exports.deleteRestaurantAccount = onCall(async (request) => {
+exports.deleteRestaurantAccount = onCall(FUNCTION_OPTIONS, async (request) => {
   exigirProjectAdmin(request);
 
   const restauranteId = String(request.data?.restauranteId || "").trim();
