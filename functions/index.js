@@ -8,6 +8,7 @@ const bucket = admin.storage().bucket();
 
 const FUNCTION_OPTIONS = {
   region: "us-central1",
+  invoker: "public",
   cors: [
     "https://emilioesgo.github.io",
     /^http:\/\/127\.0\.0\.1:\d+$/,
